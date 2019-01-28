@@ -1,4 +1,7 @@
 requests_oauthlib
 oauthlib
 google_auth_oauthlib
+flake8
+aws
+Sphinx
 -r requirements.txt

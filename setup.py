@@ -14,7 +14,7 @@ setup(
     author="Andrey Kislyuk",
     author_email="kislyuk@gmail.com",
     description="Federated User Identity Login & Access Decision Engine",
-    long_description=open("README.rst").read(),
+    long_description=open("Readme.md").read(),
     install_requires=install_requires,
     extras_require={
         ':python_version == "2.7"': ["enum34 >= 1.1.6, < 2"]
