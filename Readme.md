@@ -49,6 +49,8 @@ Installing and configuring Fusillade
 - pip install -r ./requirements-dev
 - brew install jq
 - brew install pandoc
+- brew install gettext
+- brew link --force gettext 
 
 Using Fusillade as a service
 ----------------------------
