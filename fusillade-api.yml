@@ -4,34 +4,10 @@ info:
   description: |
     Human Cell Atlas Data Coordination Platform Fusillade app demo
 
-    Log in: [Auth0](/login?state=ABC&redirect_uri=https://auth.dev.data.humancellatlas.org/echo)
+    Log in: [Auth0](/login?state=ABC&redirect_uri=https://auth.data.humancellatlas.org/echo)
   version: "0.0.1"
-host: $API_DOMAIN_NAME
-schemes:
-  - https
-produces:
-  - application/json
-components:
-  securitySchemes:
-    Authorization:
-      type: http
-      scheme: bearer
-      in: header
-      bearerFormat: JWT
-#      type: apiKey
-#      name: Authorization
-#      in: header
-#    openId:
-#      type: openIdConnect
-#      openIdConnectUrl: https://accounts.google.com/.well-known/openid-configuration
-#    oauth2:
-#      type: oauth2
-#      flow:
-#        authorizationCode:
-#          authorizationUrl: https://accounts.google.com/o/oauth2/v2/auth
-#          scopes:
-#            https://www.googleapis.com/auth/userinfo.email: read user email
-# FIXME: https://github.com/swagger-api/swagger-ui/issues/3641
+servers:
+  - url: https://$API_DOMAIN_NAME
 paths:
   /login:
     get:
@@ -39,129 +15,454 @@ paths:
       parameters:
         - name: openid_provider
           in: query
+          schema:
+           type: object
         - name: nav_src
           in: query
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected error
   /policies/evaluate:
     post:
       summary: Given a set of principals, actions, and resources return a set of access control decisions.
-      parameters:
-        - name: json_request_body
-          in: body
-          required: true
-          schema:
-            type: object
-            properties:
-              principal:
-                description: Attested user identifier
-                type: string
-              action:
-                description: The action the principal is attempting to perform
-                type: string
-              resource:
-                description: The resource the principal will perform the action against
-                type: string
-      response:
-        200:
-          description: the principal is authorized
-        401:
-          description: the principal is not authorized
-        default:
-          description: Unexpected error
-  /users:
-    put:
-      summary: Create or update a user and attached policy.
-      security:
-        - openId:
-            - https://www.googleapis.com/auth/userinfo.email
-      parameters:
-        - name: json_request_body
-          in: body
-          required: true
-          schema:
-            type: object
-            properties:
-              policy:
-                description: IAM policy to attach to the user, if any
-                type: object
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - principal
+                - action
+                - resource
+              type: object
+              properties:
+                principal:
+                  description: Attested user identifier
+                  type: string
+                action:
+                  description: The action the principal is attempting to perform
+                  type: string
+                resource:
+                  description: The resource the principal will perform the action against
+                  type: string
       responses:
-        201:
-          description: OK
-          schema:
-            type: object
+        200:
+          description: The result of the policy evaluation
+          content:
+            application/json:
+              schema:
+                decision:
+                  type: boolean
         default:
           description: Unexpected error
   /users/{user_id}:
     get:
-      summary: "Retrieve information about a user."
+      summary: Retrieve information about a user
       security:
-        - Authorization:
-            - null
-        - openId:
-            - https://www.googleapis.com/auth/userinfo.email
+        - bearerAuth: []
       parameters:
-        - name: user_id
-          in: path
-          description: User ID (email)
-          required: true
-          type: string
+        - $ref: '#/components/parameters/user_id'
+      responses:
+        200:
+          description: Information about the user is returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        404:
+          description: Resource not found.
+        default:
+          description: Unexpected error
+    put:
+      summary: Create a new user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/user_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                groups:
+                  type: array
+                  items:
+                    type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
+                policy:
+                  type: string
+      responses:
+        200:
+          description: User was created
+        401:
+          description: The user is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+        default:
+          description: Unexpected error
+  /users/{user_id}/groups:
+    get:
+      summary: Retrieve groups a user is in.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/user_id'
       responses:
         200:
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  - group:
+                      type: array
+                      items:
+                        type: string
+        404:
+          description: Resource not found.
         default:
           description: Unexpected error
-  /groups:
     put:
-      summary: Create or update a group and attached policy.
+      summary: Add user to groups
       security:
-        - openId:
-            - https://www.googleapis.com/auth/userinfo.email
+        - bearerAuth: []
       parameters:
-        - name: json_request_body
-          in: body
-          required: true
-          schema:
-            type: object
-            properties:
-              policy:
-                description: IAM policy to attach, if any
-                type: object
+        - $ref: '#/components/parameters/user_id'
+        - $ref: '#/components/parameters/action'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                groups:
+                  type: array
+                  items:
+                    type: string
       responses:
-        201:
+        200:
+          description: User added to groups
+        401:
+          description: The user is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+        409:
+          description: The user is already apart of the group
+        default:
+          description: Unexpected error
+  /users/{user_id}/roles:
+    get:
+      summary: Retrieve roles a user is in.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/user_id'
+      responses:
+        200:
           description: OK
-          schema:
-            type: object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  - role:
+                      type: array
+                      items:
+                        type: string
+        404:
+          description: Resource not found.
+        default:
+          description: Unexpected error
+    put:
+      summary: Add user to roles
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/user_id'
+        - $ref: '#/components/parameters/action'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roles:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        200:
+          description: User added to roles
+        401:
+          description: The user is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+        409:
+          description: The user is already apart of the role
+        default:
+          description: Unexpected error
+  /users/{user_id}/policy:
+    put:
+      summary: Modify policy
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/user_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policy:
+                  type: string
+      responses:
+        200:
+          description: policy modified
+        401:
+          description: The group is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
         default:
           description: Unexpected error
   /groups/{group_id}:
     get:
-      summary: Retrieve a group.
+      summary: Get properties of a group
       security:
-        - openId:
-            - https://www.googleapis.com/auth/userinfo.email
+        - bearerAuth: []
       parameters:
-        - name: group_id
-          in: path
-          required: true
-          type: string
+        - $ref: '#/components/parameters/group_id'
+      responses:
+        200:
+          description: Information about the role is returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        404:
+          description: Resource not found.
+        default:
+          description: Unexpected error
+    put:
+      summary: Create a new group
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+        - $ref: '#/components/parameters/action'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policy:
+                  type: string
+      responses:
+        200:
+          description: Group was created
+        401:
+          description: The user is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+        default:
+          description: Unexpected error
+  /groups/{group_id}/roles:
+    get:
+      summary: Retrieve roles a group is in.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
       responses:
         200:
           description: OK
-          schema:
-            type: object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  - role:
+                      type: array
+                      items:
+                        type: string
+        404:
+          description: Resource not found.
         default:
           description: Unexpected error
-    delete:
-      summary: Delete a group.
+    put:
+      summary: Add group to roles
       security:
-        - openId:
-            - https://www.googleapis.com/auth/userinfo.email
+        - bearerAuth: []
       parameters:
-        - name: group_id
-          in: path
-          required: true
-          type: string
+        - $ref: '#/components/parameters/group_id'
+        - $ref: '#/components/parameters/action'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roles:
+                  type: array
+                  items:
+                    type: string
       responses:
         200:
-          description: OK
+          description: group added to roles
+        401:
+          description: The group is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+        409:
+          description: The group is already apart of the role
         default:
           description: Unexpected error
+  /groups/{group_id}/policy:
+    put:
+      summary: Modify policy
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policy:
+                  type: string
+      responses:
+        200:
+          description: policy modified
+        401:
+          description: The group is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+        default:
+          description: Unexpected error
+  /roles/{role_id}:
+    get:
+      summary: Get properties of a role
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/role_id'
+      responses:
+        200:
+          description: Information about the role is returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        404:
+          description: Resource not found.
+        default:
+          description: Unexpected error
+    put:
+      summary: Create a new role
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/role_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policy:
+                  type: string
+      responses:
+        200:
+          description: Role was created
+        401:
+          description: The user is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+        default:
+          description: Unexpected error
+components:
+  parameters:
+    user_id:
+      name: user_id
+      in: path
+      required: true
+      description: User ID (email)
+      schema:
+        type: string
+    role_id:
+      name: role_id
+      in: path
+      description: The name of the role
+      required: true
+      schema:
+        type: string
+    group_id:
+      name: group_id
+      in: path
+      description: The name of the group
+      required: true
+      schema:
+        type: string
+    action:
+      name: action
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [add, remove]
+  schemas:
+    User:
+      type: object
+      properties:
+        name:
+          type: string
+        policy:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        groups:
+          type: array
+          items:
+            type: string
+    Group:
+      type: object
+      properties:
+        name:
+          type: string
+        policy:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        users:
+          type: array
+          items:
+            type: string
+    Role:
+      type: object
+      properties:
+        name:
+          type: string
+        policy:
+          type: string
+  securitySchemes:
+      BearerAuth:
+        type: http
+        scheme: bearer
+        bearerFormat: JWT
+      ApiKeyAuth:
+        type: apiKey
+        in: header
+        name: X-API-Key
+      OpenID:
+        type: openIdConnect
+        openIdConnectUrl: https://example.com/.well-known/openid-configuration
+      OAuth2:
+        type: oauth2
+        flows:
+          authorizationCode:
+            authorizationUrl: https://example.com/oauth/authorize
+            tokenUrl: https://example.com/oauth/token
+            scopes:
+              read: Grants read access
+              write: Grants write access
+              admin: Grants access to admin operations
+
