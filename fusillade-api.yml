@@ -73,7 +73,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
         404:
-          description: Resource not found.
+          - $ref: '#/components/responses/404'
         default:
           description: Unexpected error
     put:
@@ -99,10 +99,23 @@ paths:
                 policy:
                   type: string
       responses:
-        200:
+        201:
           description: User was created
         401:
-          description: The user is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+          - $ref: '#/components/responses/401'
+        default:
+          description: Unexpected error
+    delete:
+      summary: Remove user from the system.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/user_id'
+      responses:
+        200:
+          description: User was deleted
+        401:
+          - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
   /users/{user_id}/groups:
@@ -125,11 +138,11 @@ paths:
                       items:
                         type: string
         404:
-          description: Resource not found.
+          - $ref: '#/components/responses/404'
         default:
           description: Unexpected error
     put:
-      summary: Add user to groups
+      summary: Add or remove groups from user
       security:
         - bearerAuth: []
       parameters:
@@ -147,10 +160,10 @@ paths:
                     type: string
       responses:
         200:
-          description: User added to groups
+          description: Action successful
         401:
-          description: The user is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
-        409:
+          - $ref: '#/components/responses/401'
+        304:
           description: The user is already apart of the group
         default:
           description: Unexpected error
@@ -174,11 +187,11 @@ paths:
                       items:
                         type: string
         404:
-          description: Resource not found.
+          - $ref: '#/components/responses/404'
         default:
           description: Unexpected error
     put:
-      summary: Add user to roles
+      summary: Add or remove roles from user
       security:
         - bearerAuth: []
       parameters:
@@ -196,10 +209,10 @@ paths:
                     type: string
       responses:
         200:
-          description: User added to roles
+          description: Action successful
         401:
-          description: The user is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
-        409:
+          - $ref: '#/components/responses/401'
+        304:
           description: The user is already apart of the role
         default:
           description: Unexpected error
@@ -222,7 +235,7 @@ paths:
         200:
           description: policy modified
         401:
-          description: The group is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+          - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
   /groups/{group_id}:
@@ -240,7 +253,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Group'
         404:
-          description: Resource not found.
+          - $ref: '#/components/responses/404'
         default:
           description: Unexpected error
     put:
@@ -249,7 +262,6 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
-        - $ref: '#/components/parameters/action'
       requestBody:
         content:
           application/json:
@@ -259,10 +271,23 @@ paths:
                 policy:
                   type: string
       responses:
-        200:
+        201:
           description: Group was created
         401:
-          description: The user is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+          - $ref: '#/components/responses/401'
+        default:
+          description: Unexpected error
+    delete:
+      summary: Remove Group from the system.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      responses:
+        200:
+          description: Group was deleted
+        401:
+          - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
   /groups/{group_id}/roles:
@@ -272,6 +297,7 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
+
       responses:
         200:
           description: OK
@@ -285,11 +311,11 @@ paths:
                       items:
                         type: string
         404:
-          description: Resource not found.
+          - $ref: '#/components/responses/404'
         default:
           description: Unexpected error
     put:
-      summary: Add group to roles
+      summary: Add or remove role from group.
       security:
         - bearerAuth: []
       parameters:
@@ -307,10 +333,10 @@ paths:
                     type: string
       responses:
         200:
-          description: group added to roles
+          description: Action successful
         401:
-          description: The group is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
-        409:
+          - $ref: '#/components/responses/401'
+        304:
           description: The group is already apart of the role
         default:
           description: Unexpected error
@@ -333,7 +359,7 @@ paths:
         200:
           description: policy modified
         401:
-          description: The group is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+          - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
   /roles/{role_id}:
@@ -351,7 +377,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Role'
         404:
-          description: Resource not found.
+          - $ref: '#/components/responses/404'
         default:
           description: Unexpected error
     put:
@@ -369,10 +395,23 @@ paths:
                 policy:
                   type: string
       responses:
-        200:
+        201:
           description: Role was created
         401:
-          description: The user is not authorized because the object has already been created and the user does not have permission to modify, or user does not have permission to create objects.
+          - $ref: '#/components/responses/401'
+        default:
+          description: Unexpected error
+    delete:
+      summary: Remove role from the system.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/role_id'
+      responses:
+        200:
+          description: Role was deleted
+        401:
+          - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
 components:
@@ -443,6 +482,12 @@ components:
           type: string
         policy:
           type: string
+  responses:
+    401:
+      description: The user is not authorized because the object has already been created and the user does not
+        have permission to modify, or user does not have permission to create objects.
+    404:
+      description: Resource not found.
   securitySchemes:
       BearerAuth:
         type: http
