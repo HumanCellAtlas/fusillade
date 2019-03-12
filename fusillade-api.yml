@@ -470,6 +470,22 @@ paths:
           description: Unexpected error
       tags:
         - role
+  /status:
+    get:
+      summary: get the system's status
+      response:
+        200:
+          description: system is passing
+        500:
+          description: system is failing
+  /version:
+    get:
+      summary: get the current version of the system
+      response:
+        200:
+          description: OK
+        default:
+          description: Unexpected error
 components:
   parameters:
     user_id:
