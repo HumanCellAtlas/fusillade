@@ -164,7 +164,7 @@ paths:
         401:
           - $ref: '#/components/responses/401'
         304:
-          description: The user is already apart of the group
+          description: The user is already a part of the group
         default:
           description: Unexpected error
   /users/{user_id}/roles:
