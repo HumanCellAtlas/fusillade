@@ -65,6 +65,8 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
+      tags:
+        - user
       responses:
         200:
           description: Information about the user is returned
@@ -98,6 +100,8 @@ paths:
                     type: string
                 policy:
                   type: string
+      tags:
+        - user
       responses:
         201:
           description: User was created
@@ -111,6 +115,8 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
+      tags:
+        - user
       responses:
         200:
           description: User was deleted
@@ -125,6 +131,8 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
+      tags:
+        - user
       responses:
         200:
           description: OK
@@ -158,6 +166,8 @@ paths:
                   type: array
                   items:
                     type: string
+      tags:
+        - user
       responses:
         200:
           description: Action successful
@@ -174,6 +184,8 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
+      tags:
+        - user
       responses:
         200:
           description: OK
@@ -207,6 +219,8 @@ paths:
                   type: array
                   items:
                     type: string
+      tags:
+        - user
       responses:
         200:
           description: Action successful
@@ -238,6 +252,8 @@ paths:
           - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
+      tags:
+        - user
   /groups/{group_id}:
     get:
       summary: Get properties of a group
@@ -256,6 +272,8 @@ paths:
           - $ref: '#/components/responses/404'
         default:
           description: Unexpected error
+      tags:
+        - group
     put:
       summary: Create a new group
       security:
@@ -277,6 +295,8 @@ paths:
           - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
+      tags:
+        - group
     delete:
       summary: Remove Group from the system.
       security:
@@ -290,6 +310,8 @@ paths:
           - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
+      tags:
+        - group
   /groups/{group_id}/roles:
     get:
       summary: Retrieve roles a group is in.
@@ -297,7 +319,6 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
-
       responses:
         200:
           description: OK
@@ -314,6 +335,8 @@ paths:
           - $ref: '#/components/responses/404'
         default:
           description: Unexpected error
+      tags:
+        - group
     put:
       summary: Add or remove role from group.
       security:
@@ -340,6 +363,8 @@ paths:
           description: The group is already apart of the role
         default:
           description: Unexpected error
+      tags:
+        - group
   /groups/{group_id}/policy:
     put:
       summary: Modify policy
@@ -362,6 +387,8 @@ paths:
           - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
+      tags:
+        - group
   /roles/{role_id}:
     get:
       summary: Get properties of a role
@@ -380,6 +407,8 @@ paths:
           - $ref: '#/components/responses/404'
         default:
           description: Unexpected error
+      tags:
+        - role
     put:
       summary: Create a new role
       security:
@@ -394,6 +423,8 @@ paths:
               properties:
                 policy:
                   type: string
+      tags:
+        - role
       responses:
         201:
           description: Role was created
@@ -414,6 +445,8 @@ paths:
           - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
+      tags:
+        - role
 components:
   parameters:
     user_id:
@@ -493,21 +526,3 @@ components:
         type: http
         scheme: bearer
         bearerFormat: JWT
-      ApiKeyAuth:
-        type: apiKey
-        in: header
-        name: X-API-Key
-      OpenID:
-        type: openIdConnect
-        openIdConnectUrl: https://example.com/.well-known/openid-configuration
-      OAuth2:
-        type: oauth2
-        flows:
-          authorizationCode:
-            authorizationUrl: https://example.com/oauth/authorize
-            tokenUrl: https://example.com/oauth/token
-            scopes:
-              read: Grants read access
-              write: Grants write access
-              admin: Grants access to admin operations
-
