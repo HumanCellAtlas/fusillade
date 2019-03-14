@@ -129,17 +129,39 @@ class TestApi(unittest.TestCase):
         self.assertEqual(resp.status_code, 500)  # TODO fix
 
     def test_evaluate_policy(self):
-        kwargs = dict()
-        json_request_body  = {
-            "Action": "dss:CreateSubscription",
-            "Resource": "arn:hca:dss:*:*:subscriptions/${user_id}/*",
-            "Principle": "test@email.com"
-        }
-        kwargs['data'] = json.dumps(json_request_body)
-        kwargs['headers'] = {}
-        kwargs['headers']['Content-Type'] = "application/json"
-        resp = self.app.get('/policies/evaluate', kwargs)
-        self.assertEqual(resp.status_code, 405)  # TODO fix
+        email = "test@email.com"
+        tests = [
+            {
+                'json_request_body': {
+                    "action": "dss:CreateSubscription",
+                    "resource": f"arn:hca:dss:*:*:subscriptions/{email}/*",
+                    "principal": "test@email.com"
+                },
+                'response': {
+                    'code': 200,
+                    'result': ['implicitDeny']
+                }
+            },
+            {
+                'json_request_body': {
+                    "action": "fus:GetUser",
+                    "resource": f"arn:hca:fus:*:*:user/{email}/policy",
+                    "principal": email
+                },
+                'response': {
+                    'code': 200,
+                    'result': ['allowed']
+                }
+            }
+        ]
+        for test in tests:
+            with self.subTest(test['json_request_body']):
+                data=json.dumps(test['json_request_body'])
+                headers={'Content-Type': "application/json"}
+                resp = self.app.post('/policies/evaluate', headers=headers, data=data)
+                self.assertEqual(test['response']['code'], resp.status_code)  # TODO fix
+                result = [i['EvalDecision'] for i in json.loads(resp.body)['result']['EvaluationResults']]
+                self.assertListEqual(test['response']['result'], result)
 
     def test_put_user(self):
         pass
