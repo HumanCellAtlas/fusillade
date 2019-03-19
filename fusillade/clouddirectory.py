@@ -16,7 +16,7 @@ from urllib.parse import quote, unquote
 import os
 
 project_arn = "arn:aws:clouddirectory:us-east-1:861229788715:"  # TODO move to config.py
-ad = boto3.client("clouddirectory")
+cd_client = boto3.client("clouddirectory")
 
 
 def get_directory_schema():
@@ -45,19 +45,19 @@ def get_default_user_role():
 
 
 def get_published_schema_from_directory(dir_arn: str) -> str:
-    schema = ad.list_applied_schema_arns(DirectoryArn=dir_arn)['SchemaArns'][0]
+    schema = cd_client.list_applied_schema_arns(DirectoryArn=dir_arn)['SchemaArns'][0]
     schema = schema.split('/')[-2:]
     schema = '/'.join(schema)
     return f"{project_arn}schema/published/{schema}"
 
 
 def cleanup_directory(dir_arn: str):
-    ad.disable_directory(DirectoryArn=dir_arn)
-    ad.delete_directory(DirectoryArn=dir_arn)
+    cd_client.disable_directory(DirectoryArn=dir_arn)
+    cd_client.delete_directory(DirectoryArn=dir_arn)
 
 
 def cleanup_schema(sch_arn: str) -> None:
-    ad.delete_schema(SchemaArn=sch_arn)
+    cd_client.delete_schema(SchemaArn=sch_arn)
 
 
 def publish_schema(name: str, version: str) -> str:
@@ -67,17 +67,17 @@ def publish_schema(name: str, version: str) -> str:
     """
     # don't create if already created
     try:
-        dev_schema_arn = ad.create_schema(Name=name)['SchemaArn']
-    except ad.exceptions.SchemaAlreadyExistsException:
+        dev_schema_arn = cd_client.create_schema(Name=name)['SchemaArn']
+    except cd_client.exceptions.SchemaAlreadyExistsException:
         dev_schema_arn = f"{project_arn}schema/development/{name}"
 
     # update the schema
     schema = get_directory_schema()
-    ad.put_schema_from_json(SchemaArn=dev_schema_arn, Document=schema)
+    cd_client.put_schema_from_json(SchemaArn=dev_schema_arn, Document=schema)
     try:
-        pub_schema_arn = ad.publish_schema(DevelopmentSchemaArn=dev_schema_arn,
-                                           Version=version)['PublishedSchemaArn']
-    except ad.exceptions.SchemaAlreadyPublishedException:
+        pub_schema_arn = cd_client.publish_schema(DevelopmentSchemaArn=dev_schema_arn,
+                                                  Version=version)['PublishedSchemaArn']
+    except cd_client.exceptions.SchemaAlreadyPublishedException:
         pub_schema_arn = f"{project_arn}schema/published/{name}/{version}"
     return pub_schema_arn
 
@@ -91,12 +91,12 @@ def create_directory(name: str, schema: str) -> 'CloudDirectory':
     :return:
     """
     try:
-        response = ad.create_directory(
+        response = cd_client.create_directory(
             Name=name,
             SchemaArn=schema
         )
         directory = CloudDirectory(response['DirectoryArn'])
-    except ad.exceptions.DirectoryAlreadyExistsException:
+    except cd_client.exceptions.DirectoryAlreadyExistsException:
         directory = CloudDirectory.from_name(name)
     else:
         # create structure
@@ -127,7 +127,7 @@ def _paging_loop(fn, key, upack_response, **kwarg):
 def list_directories(state: str = 'ENABLED') -> typing.Iterator:
     def unpack_response(i):
         return i
-    return _paging_loop(ad.list_directories, 'Directories', unpack_response, state=state)
+    return _paging_loop(cd_client.list_directories, 'Directories', unpack_response, state=state)
 
 
 class UpdateActions(Enum):
@@ -152,7 +152,7 @@ class CloudDirectory:
 
     def __init__(self, directory_arn: str):
         self._dir_arn = directory_arn
-        self._schema = ad.list_applied_schema_arns(DirectoryArn=directory_arn)['SchemaArns'][0]
+        self._schema = cd_client.list_applied_schema_arns(DirectoryArn=directory_arn)['SchemaArns'][0]
 
     @classmethod
     @functools.lru_cache()
@@ -168,19 +168,19 @@ class CloudDirectory:
         """
         a wrapper around CloudDirectory.Client.list_object_children with paging
         """
-        resp = ad.list_object_children(DirectoryArn=self._dir_arn,
-                                       ObjectReference={'Selector': object_ref},
-                                       ConsistencyLevel='EVENTUAL',
-                                       MaxResults=self._page_limit)
+        resp = cd_client.list_object_children(DirectoryArn=self._dir_arn,
+                                              ObjectReference={'Selector': object_ref},
+                                              ConsistencyLevel='EVENTUAL',
+                                              MaxResults=self._page_limit)
         while True:
             for name, ref in resp['Children'].items():
                 yield name, '$' + ref
             next_token = resp.get('NextToken')
             if next_token:
-                resp = ad.list_object_children(DirectoryArn=self._dir_arn,
-                                               ObjectReference={'Selector': object_ref},
-                                               NextToken=next_token,
-                                               MaxResults=self._page_limit)
+                resp = cd_client.list_object_children(DirectoryArn=self._dir_arn,
+                                                      ObjectReference={'Selector': object_ref},
+                                                      NextToken=next_token,
+                                                      MaxResults=self._page_limit)
             else:
                 break
 
@@ -194,7 +194,7 @@ class CloudDirectory:
             def unpack_response(i):
                 return '$' + i['ObjectIdentifier'], i['LinkName']
 
-            return _paging_loop(ad.list_object_parents,
+            return _paging_loop(cd_client.list_object_parents,
                                 'ParentLinks',
                                 unpack_response,
                                 DirectoryArn=self._dir_arn,
@@ -204,7 +204,7 @@ class CloudDirectory:
                                 MaxResults=self._page_limit
                                 )
         else:
-            return _paging_loop(ad.list_object_parents,
+            return _paging_loop(cd_client.list_object_parents,
                                 'Parents',
                                 self._make_ref,
                                 DirectoryArn=self._dir_arn,
@@ -218,7 +218,7 @@ class CloudDirectory:
         """
         a wrapper around CloudDirectory.Client.list_object_policies with paging
         """
-        return _paging_loop(ad.list_object_policies,
+        return _paging_loop(cd_client.list_object_policies,
                             'AttachedPolicyIds',
                             self._make_ref,
                             DirectoryArn=self._dir_arn,
@@ -230,7 +230,7 @@ class CloudDirectory:
         """
         a wrapper around CloudDirectory.Client.list_policy_attachments with paging
         """
-        return _paging_loop(ad.list_policy_attachments,
+        return _paging_loop(cd_client.list_policy_attachments,
                             'ObjectIdentifiers',
                             self._make_ref,
                             DirectoryArn=self._dir_arn,
@@ -267,14 +267,14 @@ class CloudDirectory:
         """
         a wrapper around CloudDirectory.Client.get_object_attributes
         """
-        return ad.get_object_attributes(DirectoryArn=self._dir_arn,
-                                        ObjectReference={'Selector': obj_ref},
-                                        SchemaFacet={
-                                            'SchemaArn': self._schema,
-                                            'FacetName': facet
-                                        },
-                                        AttributeNames=attributes
-                                        )
+        return cd_client.get_object_attributes(DirectoryArn=self._dir_arn,
+                                               ObjectReference={'Selector': obj_ref},
+                                               SchemaFacet={
+                                                   'SchemaArn': self._schema,
+                                                   'FacetName': facet
+                                               },
+                                               AttributeNames=attributes
+                                               )
 
     def _get_object_attribute_list(self, facet="User", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
         return [dict(Key=dict(SchemaArn=self._schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
@@ -329,7 +329,7 @@ class CloudDirectory:
                     }
                 }
             )
-        return ad.update_object_attributes(
+        return cd_client.update_object_attributes(
             DirectoryArn=self._dir_arn,
             ObjectReference={
                 'Selector': object_ref
@@ -342,12 +342,12 @@ class CloudDirectory:
         schema_facets = [dict(SchemaArn=self._schema, FacetName="Group")]
         object_attribute_list = self._get_object_attribute_list(facet="Group", name=name)
         try:
-            ad.create_object(DirectoryArn=self._dir_arn,
-                             SchemaFacets=schema_facets,
-                             ObjectAttributeList=object_attribute_list,
-                             ParentReference=dict(Selector=path),
-                             LinkName=name)
-        except ad.exceptions.LinkNameAlreadyInUseException:
+            cd_client.create_object(DirectoryArn=self._dir_arn,
+                                    SchemaFacets=schema_facets,
+                                    ObjectAttributeList=object_attribute_list,
+                                    ParentReference=dict(Selector=path),
+                                    LinkName=name)
+        except cd_client.exceptions.LinkNameAlreadyInUseException:
             pass
 
     def clear(self) -> None:
@@ -370,7 +370,7 @@ class CloudDirectory:
                           for obj_ref in self.list_policy_attachments(policy_ref)])
         self.batch_write([self.batch_detach_object(parent_ref, link_name)
                           for parent_ref, link_name in self.list_object_parents(policy_ref)])
-        ad.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': policy_ref})
+        cd_client.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': policy_ref})
 
     def delete_object(self, obj_ref: str) -> None:
         """
@@ -381,7 +381,7 @@ class CloudDirectory:
                           for policy_ref in self.list_object_policies(obj_ref)])
         self.batch_write([self.batch_detach_object(parent_ref, link_name)
                           for parent_ref, link_name in self.list_object_parents(obj_ref)])
-        ad.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': obj_ref})
+        cd_client.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': obj_ref})
 
     @staticmethod
     def batch_detach_policy(policy_ref: str, object_ref: str):
@@ -483,13 +483,13 @@ class CloudDirectory:
         """
         A wrapper around CloudDirectory.Client.batch_write
         """
-        return ad.batch_write(DirectoryArn=self._dir_arn, Operations=operations)
+        return cd_client.batch_write(DirectoryArn=self._dir_arn, Operations=operations)
 
     def batch_read(self, operations: typing.List[typing.Dict[str, typing.Any]]) -> typing.Dict[str, typing.Any]:
         """
         A wrapper around CloudDirectory.Client.batch_read
         """
-        return ad.batch_read(DirectoryArn=self._dir_arn, Operations=operations)
+        return cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations)
 
     @staticmethod
     def get_obj_type_path(obj_type: str) -> str:
@@ -505,14 +505,14 @@ class CloudDirectory:
         max_results = 3  # Max recommended by AWS Support
 
         # retrieve all of the policies attached to an object and its parents.
-        response = ad.lookup_policy(
+        response = cd_client.lookup_policy(
             DirectoryArn=self._dir_arn,
             ObjectReference={'Selector': object_id},
             MaxResults=max_results
         )
         policies_paths = response['PolicyToPathList']
         while response.get('NextToken'):
-            response = ad.lookup_policy(
+            response = cd_client.lookup_policy(
                 DirectoryArn=self._dir_arn,
                 ObjectReference={'Selector': object_id},
                 NextToken=response['NextToken'],
@@ -532,7 +532,7 @@ class CloudDirectory:
             'ObjectReference': {'Selector': f'${policy_id[0]}'},
             'SchemaFacet': {'SchemaArn': self._schema, 'FacetName': 'IAMPolicy'},
             'AttributeNames': ['Statement']}} for policy_id in policy_ids]
-        responses = ad.batch_read(
+        responses = cd_client.batch_read(
             DirectoryArn=self._dir_arn,
             Operations=operations
         )['Responses']
@@ -547,7 +547,7 @@ class CloudDirectory:
         """
         A wrapper around CloudDirectory.Client.get_object_information
         """
-        return ad.get_object_information(
+        return cd_client.get_object_information(
             DirectoryArn=self._dir_arn,
             ObjectReference={
                 'Selector': obj_ref
@@ -693,7 +693,7 @@ class User(CloudNode):
         if not local:
             try:
                 self._set_attributes(self._attributes)
-            except ad.exceptions.ResourceNotFoundException:
+            except cd_client.exceptions.ResourceNotFoundException:
                 self.provision_user()
                 self.add_roles(['default_user'])
                 self._set_attributes(self._attributes)
