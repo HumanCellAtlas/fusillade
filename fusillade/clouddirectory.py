@@ -152,8 +152,7 @@ class CloudDirectory:
 
     def __init__(self, directory_arn: str):
         self._dir_arn = directory_arn
-        self._schema = cd_client.list_applied_schema_arns(DirectoryArn=directory_arn)['SchemaArns'][0]
-        # TODO make property
+        self._schema = None
 
     @classmethod
     @functools.lru_cache()
@@ -164,6 +163,12 @@ class CloudDirectory:
                 dir_arn = i['DirectoryArn']
                 return cls(dir_arn)
         raise FusilladeException(f"{dir_name} does not exist")
+
+    @property
+    def schema(self):
+        if not self._schema:
+            self._schema = cd_client.list_applied_schema_arns(DirectoryArn=self._dir_arn)['SchemaArns'][0]
+        return self._schema
 
     def list_object_children(self, object_ref: str) -> typing.Iterator[typing.Tuple[str, str]]:
         """
@@ -271,14 +276,14 @@ class CloudDirectory:
         return cd_client.get_object_attributes(DirectoryArn=self._dir_arn,
                                                ObjectReference={'Selector': obj_ref},
                                                SchemaFacet={
-                                                   'SchemaArn': self._schema,
+                                                   'SchemaArn': self.schema,
                                                    'FacetName': facet
                                                },
                                                AttributeNames=attributes
                                                )
 
     def _get_object_attribute_list(self, facet="User", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
-        return [dict(Key=dict(SchemaArn=self._schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
+        return [dict(Key=dict(SchemaArn=self.schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
                 for k, v in kwargs.items()]
 
     def get_policy_attribute_list(self,
@@ -292,12 +297,12 @@ class CloudDirectory:
         """
         obj = self._get_object_attribute_list(facet=facet, **kwargs)
         obj.append(dict(Key=dict(
-            SchemaArn=self._schema,
+            SchemaArn=self.schema,
             FacetName=facet,
             Name='policy_type'),
             Value=dict(StringValue=policy_type)))
         obj.append(
-            dict(Key=dict(SchemaArn=self._schema,
+            dict(Key=dict(SchemaArn=self.schema,
                           FacetName=facet,
                           Name="policy_document"),
                  Value=dict(BinaryValue=json.dumps(policy_document).encode())))
@@ -318,7 +323,7 @@ class CloudDirectory:
             updates.append(
                 {
                     'ObjectAttributeKey': {
-                        'SchemaArn': self._schema,
+                        'SchemaArn': self.schema,
                         'FacetName': i.facet,
                         'Name': i.attribute
                     },
@@ -340,7 +345,7 @@ class CloudDirectory:
 
     def create_folder(self, path: str, name: str) -> None:
         """ A folder is just a Group"""
-        schema_facets = [dict(SchemaArn=self._schema, FacetName="Group")]
+        schema_facets = [dict(SchemaArn=self.schema, FacetName="Group")]
         object_attribute_list = self._get_object_attribute_list(facet="Group", name=name)
         try:
             cd_client.create_object(DirectoryArn=self._dir_arn,
@@ -406,7 +411,7 @@ class CloudDirectory:
         return {'CreateObject': {
             'SchemaFacet': [
                 {
-                    'SchemaArn': self._schema,
+                    'SchemaArn': self.schema,
                     'FacetName': facet_name
                 },
             ],
@@ -428,7 +433,7 @@ class CloudDirectory:
                     'Selector': obj_ref
                 },
                 'SchemaFacet': {
-                    'SchemaArn': self._schema,
+                    'SchemaArn': self.schema,
                     'FacetName': facet
                 },
                 'AttributeNames': attributes
@@ -531,7 +536,7 @@ class CloudDirectory:
         # retrieve the policies in a single request
         operations = [{'GetObjectAttributes': {
             'ObjectReference': {'Selector': f'${policy_id[0]}'},
-            'SchemaFacet': {'SchemaArn': self._schema, 'FacetName': 'IAMPolicy'},
+            'SchemaFacet': {'SchemaArn': self.schema, 'FacetName': 'IAMPolicy'},
             'AttributeNames': ['Statement']}} for policy_id in policy_ids]
         responses = cd_client.batch_read(
             DirectoryArn=self._dir_arn,
