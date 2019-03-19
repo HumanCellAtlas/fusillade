@@ -1,4 +1,4 @@
-import os, sys, hashlib, base64, json, functools
+import os, base64, json, functools
 from furl import furl
 import boto3
 from botocore.vendored import requests
@@ -12,11 +12,10 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), 'chalicelib')
 sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.clouddirectory import CloudDirectory, User, Role
-from fusillade.config import Config
+from fusillade import Config
 from fusillade.errors import FusilladeException
 
 iam = boto3.client("iam")
-secretsmanager = boto3.client("secretsmanager")
 app = Chalice(app_name='fusillade')
 app.debug = True
 

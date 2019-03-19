@@ -9,11 +9,12 @@ import functools
 import json
 import typing
 import boto3
-from fusillade.errors import FusilladeException
 from collections import namedtuple
 from enum import Enum, auto
 from urllib.parse import quote, unquote
-import os
+
+from fusillade.errors import FusilladeException
+from fusillade.config import Config
 
 project_arn = "arn:aws:clouddirectory:us-east-1:861229788715:"  # TODO move to config.py
 cd_client = boto3.client("clouddirectory")
@@ -108,7 +109,7 @@ def create_directory(name: str, schema: str) -> 'CloudDirectory':
         Role.create(directory, "admin", statement=get_default_admin_role())
 
         # create admins
-        for admin in os.environ['FUS_ADMIN_EMAILS'].split(','):
+        for admin in Config.get_admin_emails():
             user = User(directory, admin)
             user.add_roles(['admin'])
     return directory
