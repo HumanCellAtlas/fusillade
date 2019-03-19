@@ -153,6 +153,7 @@ class CloudDirectory:
     def __init__(self, directory_arn: str):
         self._dir_arn = directory_arn
         self._schema = cd_client.list_applied_schema_arns(DirectoryArn=directory_arn)['SchemaArns'][0]
+        # TODO make property
 
     @classmethod
     @functools.lru_cache()

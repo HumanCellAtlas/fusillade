@@ -8,22 +8,17 @@ import jwt, yaml
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 
-iam = boto3.client("iam")
-secretsmanager = boto3.client("secretsmanager")
-app = Chalice(app_name='fusillade')
-app.debug = True
-
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), 'chalicelib'))
 sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.clouddirectory import CloudDirectory, User, Role
+from fusillade.config import Config
 from fusillade.errors import FusilladeException
 
-with open(os.path.join(pkg_root, "index.html")) as fh:
-    swagger_ui_html = fh.read()
-
-with open(os.path.join(pkg_root, "swagger.yml")) as fh:
-    swagger_defn = yaml.load(fh.read())
+iam = boto3.client("iam")
+secretsmanager = boto3.client("secretsmanager")
+app = Chalice(app_name='fusillade')
+app.debug = True
 
 with open(os.path.join(pkg_root, "service_config.json")) as fh:
     service_config = yaml.load(fh.read())
@@ -31,6 +26,8 @@ with open(os.path.join(pkg_root, "service_config.json")) as fh:
 
 @app.route("/")
 def serve_swagger_ui():
+    with open(os.path.join(pkg_root, "index.html")) as fh:
+        swagger_ui_html = fh.read()
     return Response(status_code=200,
                     headers={"Content-Type": "text/html"},
                     body=swagger_ui_html)
@@ -38,11 +35,9 @@ def serve_swagger_ui():
 
 @app.route('/swagger.json')
 def serve_swagger_definition():
+    with open(os.path.join(pkg_root, "swagger.yml")) as fh:
+        swagger_defn = yaml.load(fh.read())
     return swagger_defn
-
-
-oauth2_config = json.loads(secretsmanager.get_secret_value(
-    SecretId=f"{os.environ['FUS_SECRETS_STORE']}/{os.environ['FUS_DEPLOYMENT_STAGE']}/oauth2_config")["SecretString"])
 
 
 @functools.lru_cache(maxsize=32)
@@ -73,26 +68,26 @@ def login():
 
 @app.route('/authorize')
 def authorize():
-    if app.current_request.query_params is None:
-        app.current_request.query_params = {}
+    query_params = app.current_request.query_params if app.current_request.query_params else {}
     openid_provider = os.environ["OPENID_PROVIDER"]
-    app.current_request.query_params["openid_provider"] = openid_provider
-    if "client_id" in app.current_request.query_params:
+    query_params["openid_provider"] = openid_provider
+    if "client_id" in query_params:
         # TODO: audit this
-        auth_params = dict(client_id=app.current_request.query_params["client_id"],
+        auth_params = dict(client_id=query_params["client_id"],
                            response_type="code",
-                           scope=app.current_request.query_params["scope"],
-                           redirect_uri=app.current_request.query_params["redirect_uri"],
-                           state=app.current_request.query_params["state"])
-        if "audience" in app.current_request.query_params:
-            auth_params["audience"] = app.current_request.query_params["audience"]
+                           scope=query_params["scope"],
+                           redirect_uri=query_params["redirect_uri"],
+                           state=query_params["state"])
+        if "audience" in query_params:
+            auth_params["audience"] = query_params["audience"]
     else:
-        state = base64.b64encode(json.dumps(app.current_request.query_params).encode())
+        state = base64.b64encode(json.dumps(query_params).encode())
         # TODO: set random state
-        # openid_provider = app.current_request.query_params["openid_provider"]
+        # openid_provider = query_params["openid_provider"]
+        oauth2_config = Config.get_oauth2_config()
         auth_params = dict(client_id=oauth2_config[openid_provider]["client_id"],
-                           response_type="code",
-                           scope="openid email",
+                           response_type=query_params.get("response_type","code"),
+                           scope=query_params.get("scope", "openid email"),
                            redirect_uri=oauth2_config[openid_provider]["redirect_uri"],
                            state=state)
     dest = furl(get_openid_config(openid_provider)["authorization_endpoint"]).add(query_params=auth_params).url
@@ -175,6 +170,7 @@ def cb():
         return Response(status_code=302, headers=dict(Location=dest), body="")
     else:
         # Simple flow
+        oauth2_config = Config.get_oauth2_config()
         res = requests.post(token_endpoint, dict(code=app.current_request.query_params["code"],
                                                  client_id=oauth2_config[openid_provider]["client_id"],
                                                  client_secret=oauth2_config[openid_provider]["client_secret"],
@@ -203,12 +199,12 @@ def cb():
             }
 
 
-directory_name = os.getenv("FUSILLADE_DIR", f"hca_fusillade_{os.environ['FUS_DEPLOYMENT_STAGE']}")
+directory_name = Config.get_directory_name()
 try:
     directory = CloudDirectory.from_name(directory_name)
 except FusilladeException:
     from fusillade.clouddirectory import publish_schema, create_directory
-    schema_name = f"hca_fusillade_base_{os.environ['FUS_DEPLOYMENT_STAGE']}"
+    schema_name = Config.get_schema_name()
     schema_arn = publish_schema(schema_name, version="0.1")
     directory = create_directory(directory_name, schema_arn)
 
