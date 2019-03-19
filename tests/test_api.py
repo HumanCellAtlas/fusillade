@@ -106,15 +106,15 @@ class TestApi(unittest.TestCase):
 
     def test_serve_jwks_json(self):
         resp = self.app.get('/.well-known/jwks.json')
-        self.assertEqual(resp.status_code, 500)  # TODO fix
+        self.assertEqual(resp.status_code, 200)  # TODO fix
 
     def test_revoke(self):
         resp = self.app.get('/oauth/revoke')
-        self.assertEqual(resp.status_code, 500)  # TODO fix
+        self.assertEqual(resp.status_code, 404)  # TODO fix
 
     def test_userinfo(self):
         resp = self.app.get('/userinfo')
-        self.assertEqual(resp.status_code, 500)  # TODO fix
+        self.assertEqual(resp.status_code, 401)  # TODO fix
 
     def test_serve_oauth_token(self):
         resp = self.app.post('/oauth/token')
