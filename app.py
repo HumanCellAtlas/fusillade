@@ -65,7 +65,7 @@ def login():
     return Response(status_code=301, headers=dict(Location="/authorize"), body="")
 
 
-@app.route('/authorize')
+@app.route('/authorize') #  Part of OIDC
 def authorize():
     query_params = app.current_request.query_params if app.current_request.query_params else {}
     openid_provider = os.environ["OPENID_PROVIDER"]
@@ -95,15 +95,15 @@ def authorize():
     return Response(status_code=302, headers=dict(Location=dest), body="")
 
 
-@app.route('/.well-known/openid-configuration')
+@app.route('/.well-known/openid-configuration')  # Part of OIDC
 def serve_openid_config():
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
     auth_host = app.current_request.headers['host']
     openid_config.update(authorization_endpoint=f"https://{auth_host}/authorize",
                          token_endpoint=f"https://{auth_host}/oauth/token",
                          jwks_uri=f"https://{auth_host}/.well-known/jwks.json",
-                         revocation_endpoint="https://{auth_host}/oauth/revoke",
-                         userinfo_endpoint="https://{auth_host}/userinfo")
+                         revocation_endpoint=f"https://{auth_host}/oauth/revoke",
+                         userinfo_endpoint=f"https://{auth_host}/userinfo")
     return openid_config
 
 
@@ -126,19 +126,19 @@ def proxy_response(dest_url, **extra_query_params):
                     body=body)
 
 
-@app.route('/.well-known/jwks.json')
+@app.route('/.well-known/jwks.json')  # Part of OIDC
 def serve_jwks_json():
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
     return proxy_response(openid_config["jwks_uri"])
 
 
-@app.route('/oauth/revoke')
+@app.route('/oauth/revoke')  # Part of OIDC
 def revoke():
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
     return proxy_response(openid_config["revocation_endpoint"])
 
 
-@app.route('/userinfo')
+@app.route('/userinfo')  # Part of OIDC
 def userinfo():
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
     return proxy_response(openid_config["userinfo_endpoint"])
@@ -146,7 +146,7 @@ def userinfo():
 
 @app.route('/oauth/token', methods=["POST"], content_types=["application/x-www-form-urlencoded",
                                                             "application/x-www-form-urlencoded;charset=UTF-8"])
-def serve_oauth_token():
+def serve_oauth_token():  # Part of OIDC
     # TODO: client id/secret mgmt
     openid_provider = os.environ["OPENID_PROVIDER"]
     openid_config = get_openid_config(openid_provider)

@@ -70,7 +70,7 @@ class TestApi(unittest.TestCase):
         cls.app = ChaliceTestHarness()
 
     def test_login(self):
-        resp = self.app.get('/login')
+        resp = self.app.get('/login?state=ABC')
         self.assertEqual(resp.status_code, 301)
 
     def test_authorize(self):
@@ -90,7 +90,6 @@ class TestApi(unittest.TestCase):
                               "redirect_uri": REDIRECT_URIS,
                               "duration": "temporary",
                               "scope": scopes})
-
         with self.subTest("with client_id"):
             resp = self.app.get(url.url)
             self.assertEqual(resp.status_code, 302)

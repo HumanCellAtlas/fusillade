@@ -5,13 +5,17 @@ info:
     Human Cell Atlas Data Coordination Platform Fusillade app demo
 
     Log in: [Auth0](/login?state=ABC&redirect_uri=https://auth.data.humancellatlas.org/echo)
+    https://openid.net/specs/openid-connect-core-1_0.html#toc
   version: "0.0.1"
 servers:
   - url: https://$API_DOMAIN_NAME
 paths:
   /login:
     get:
-      summary: Send the user agent to an identity provider selector and generate a user account.
+      summary: Send the user agent to an identity provider selector and generate a user account. must be OIDC complient
+      TODO: verify the semantic make sense in the context of an OIDC providers. Must also support the metadata URLS provided
+      by and OIDC provider. Add link to OIDC spec. This is redirect endpoint.
+
       parameters:
         - name: openid_provider
           in: query
@@ -22,10 +26,23 @@ paths:
           schema:
             type: string
       responses:
-        200:
+        301:
           description: OK
         default:
           description: Unexpected error
+
+  /authorize:
+    pass:
+  /well-known/openid-configuration:
+    pass:
+  /well-known/jwks.json:
+    pass:
+  /oauth/revoke:
+    pass:
+  /oath/userinfo:
+    pass:
+  /oauth/token:
+    pass:
   /policies/evaluate:
     post:
       summary: Given a set of principals, actions, and resources return a set of access control decisions.
@@ -90,7 +107,6 @@ paths:
           - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
-
   /users/{user_id}:
     get:
       summary: Retrieve information about a user's status
@@ -204,7 +220,7 @@ paths:
     get:
       summary: Retrieve roles a user is in.
       security:
-        - bearerAuth: []
+        - bearerAuth: [] TODO: mention how fusillade it's self a service of fusillade
       parameters:
         - $ref: '#/components/parameters/user_id'
       tags:
@@ -470,7 +486,32 @@ paths:
           description: Unexpected error
       tags:
         - role
+  /roles/{role_id}/policy:
+    put:
+      summary: Modify policy
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/role_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policy:
+                  type: string
+      responses:
+        200:
+          description: policy modified
+        401:
+          - $ref: '#/components/responses/401'
+        default:
+          description: Unexpected error
+      tags:
+        - role
   /status:
+    TODO: Should not be revealed in swagger. Check with Matt.
     get:
       summary: get the system's status
       response:
