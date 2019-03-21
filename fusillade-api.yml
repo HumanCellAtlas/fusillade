@@ -31,19 +31,23 @@ paths:
         default:
           description: Unexpected error
 
-  /authorize:
-    pass:
-  /well-known/openid-configuration:
-    pass:
-  /well-known/jwks.json:
-    pass:
-  /oauth/revoke:
-    pass:
-  /oath/userinfo:
-    pass:
-  /oauth/token:
-    pass:
-  /policies/evaluate:
+  /v1/oauth/authorize:
+    get:
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+       see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+  /v1/oauth/userinfo:
+    get:
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+        see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+  /v1/well-known/jwks.json:
+    get:
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+        see https://openid.net/specs/openid-connect-core-1_0.html#RotateSigKeys
+  /v1/oauth/token:
+    get:
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+        see https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint
+  /v1/policies/evaluate:
     post:
       summary: Given a set of principals, actions, and resources return a set of access control decisions.
       requestBody:
@@ -75,7 +79,7 @@ paths:
                   type: boolean
         default:
           description: Unexpected error
-  /users:
+  /v1/users:
     put:
       summary: Create a new user
       security:
@@ -107,7 +111,7 @@ paths:
           - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
-  /users/{user_id}:
+  /v1/users/{user_id}:
     get:
       summary: Retrieve information about a user's status
       security:
@@ -163,7 +167,7 @@ paths:
           - $ref: '#/components/responses/401'
         default:
           description: Unexpected error
-  /users/{user_id}/groups:
+  /v1/users/{user_id}/groups:
     get:
       summary: Retrieve groups a user is in.
       security:
@@ -216,7 +220,7 @@ paths:
           description: The user is already a part of the group
         default:
           description: Unexpected error
-  /users/{user_id}/roles:
+  /v1/users/{user_id}/roles:
     get:
       summary: Retrieve roles a user is in.
       security:
@@ -269,7 +273,7 @@ paths:
           description: The user is already apart of the role
         default:
           description: Unexpected error
-  /users/{user_id}/policy:
+  /v1/users/{user_id}/policy:
     put:
       summary: Modify policy
       security:
@@ -293,7 +297,7 @@ paths:
           description: Unexpected error
       tags:
         - user
-  /groups/{group_id}:
+  /v1/groups/{group_id}:
     get:
       summary: Get properties of a group
       security:
@@ -351,7 +355,7 @@ paths:
           description: Unexpected error
       tags:
         - group
-  /groups/{group_id}/roles:
+  /v1/groups/{group_id}/roles:
     get:
       summary: Retrieve roles a group is in.
       security:
@@ -404,7 +408,7 @@ paths:
           description: Unexpected error
       tags:
         - group
-  /groups/{group_id}/policy:
+  /v1/groups/{group_id}/policy:
     put:
       summary: Modify policy
       security:
@@ -428,7 +432,7 @@ paths:
           description: Unexpected error
       tags:
         - group
-  /roles/{role_id}:
+  /v1/roles/{role_id}:
     get:
       summary: Get properties of a role
       security:
@@ -486,7 +490,7 @@ paths:
           description: Unexpected error
       tags:
         - role
-  /roles/{role_id}/policy:
+  /v1/roles/{role_id}/policy:
     put:
       summary: Modify policy
       security:
@@ -510,7 +514,7 @@ paths:
           description: Unexpected error
       tags:
         - role
-  /status:
+  /v1/status:
     TODO: Should not be revealed in swagger. Check with Matt.
     get:
       summary: get the system's status
@@ -519,7 +523,7 @@ paths:
           description: system is passing
         500:
           description: system is failing
-  /version:
+  /v1/version:
     get:
       summary: get the current version of the system
       response:
