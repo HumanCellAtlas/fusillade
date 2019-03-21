@@ -547,9 +547,8 @@ class CloudDirectory:
         # parse the policies from the responses
         policies = []
         for response in responses:
-            policy = response['SuccessfulResponse']['GetObjectAttributes']['Attributes'][0]['Value']['StringValue']
-            if policy != '{}':
-                policies.append(policy)
+            policies.append(response['SuccessfulResponse']['GetObjectAttributes']['Attributes'][0]['Value']
+                            ['StringValue'])
         return policies
 
     def get_object_information(self, obj_ref: str) -> typing.Dict[str, typing.Any]:
