@@ -106,8 +106,9 @@ def serve_openid_config():
 
 
 def proxy_response(dest_url, **extra_query_params):
-    if app.current_request.query_params or extra_query_params:
-        dest_url = furl(dest_url).add(dict(app.current_request.query_params or {}, **extra_query_params)).url
+    query_params = app.current_request.query_params or {}
+    if query_params or extra_query_params:
+        dest_url = furl(dest_url).add(dict(query_params, **extra_query_params)).url
     proxy_res = requests.request(method=app.current_request.method,
                                  url=dest_url,
                                  headers=app.current_request.headers,
@@ -157,20 +158,21 @@ def echo():
 
 @app.route('/cb')
 def cb():
-    state = json.loads(base64.b64decode(app.current_request.query_params["state"]))
+    query_params = app.current_request.query_params
+    state = json.loads(base64.b64decode(query_params["state"]))
     openid_provider = os.environ["OPENID_PROVIDER"]
     openid_config = get_openid_config(openid_provider)
     token_endpoint = openid_config["token_endpoint"]
 
     if "redirect_uri" in state and "client_id" in state:
         # OIDC proxy flow
-        resp_params = dict(code=app.current_request.query_params["code"], state=state.get("state"))
+        resp_params = dict(code=query_params["code"], state=state.get("state"))
         dest = furl(state["redirect_uri"]).add(resp_params).url
         return Response(status_code=302, headers=dict(Location=dest), body="")
     else:
         # Simple flow
         oauth2_config = Config.get_oauth2_config()
-        res = requests.post(token_endpoint, dict(code=app.current_request.query_params["code"],
+        res = requests.post(token_endpoint, dict(code=query_params["code"],
                                                  client_id=oauth2_config[openid_provider]["client_id"],
                                                  client_secret=oauth2_config[openid_provider]["client_secret"],
                                                  redirect_uri=oauth2_config[openid_provider]["redirect_uri"],
@@ -191,7 +193,7 @@ def cb():
             # Simple flow - JSON
             return {
                 "headers": dict(app.current_request.headers),
-                "query": app.current_request.query_params,
+                "query": query_params,
                 "token_endpoint": token_endpoint,
                 "res": res.json(),
                 "tok": tok,
@@ -210,9 +212,10 @@ except FusilladeException:
 
 @app.route('/policies/evaluate', methods=["POST"])
 def evaluate_policy():
-    principal = app.current_request.json_body["principal"]
-    action = app.current_request.json_body["action"]
-    resource = app.current_request.json_body["resource"]
+    json_body = app.current_request.json_body
+    principal = json_body["principal"]
+    action = json_body["action"]
+    resource = json_body["resource"]
     user = User(directory, principal)
     user.lookup_policies()
     result = iam.simulate_custom_policy(PolicyInputList=user.lookup_policies(),
