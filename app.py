@@ -85,7 +85,7 @@ def authorize():
         # openid_provider = query_params["openid_provider"]
         oauth2_config = Config.get_oauth2_config()
         auth_params = dict(client_id=oauth2_config[openid_provider]["client_id"],
-                           response_type=query_params.get("response_type","code"),
+                           response_type=query_params.get("response_type", "code"),
                            scope=query_params.get("scope", "openid email"),
                            redirect_uri=oauth2_config[openid_provider]["redirect_uri"],
                            state=state)
@@ -205,6 +205,7 @@ try:
     directory = CloudDirectory.from_name(directory_name)
 except FusilladeException:
     from fusillade.clouddirectory import publish_schema, create_directory
+
     schema_name = Config.get_schema_name()
     schema_arn = publish_schema(schema_name, version="0.1")
     directory = create_directory(directory_name, schema_arn)
