@@ -30,7 +30,6 @@ paths:
           description: OK
         default:
           description: Unexpected error
-
   /v1/oauth/authorize:
     get:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
