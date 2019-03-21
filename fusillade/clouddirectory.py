@@ -18,7 +18,7 @@ from fusillade.config import Config
 
 project_arn = "arn:aws:clouddirectory:us-east-1:861229788715:"  # TODO move to config.py
 cd_client = boto3.client("clouddirectory")
-
+iam = boto3.client("iam")
 
 def get_directory_schema():
     with open('./fusillade/directory_schema.json') as fp:
@@ -42,6 +42,11 @@ def get_default_admin_role():
 
 def get_default_user_role():
     with open("./policies/default_user_role.json", 'r') as fp:
+        return json.dumps(json.load(fp))
+
+
+def get_default_role():
+    with open("./policies/default_role.json", 'r') as fp:
         return json.dumps(json.load(fp))
 
 
@@ -651,6 +656,7 @@ class CloudNode:
 
     @statement.setter
     def statement(self, statement: str):
+        self._verify_statement(statement)
         params = [
             UpdateObjectParams('IAMPolicy',
                                'Statement',
@@ -678,6 +684,15 @@ class CloudNode:
             attrs[attr['Key']['Name']] = attr['Value'].popitem()[1]   # noqa
         return attrs
 
+    @staticmethod
+    def _verify_statement(statement):
+        try:
+            iam.simulate_custom_policy(PolicyInputList=[statement],
+                                       ActionNames=["fake:action"],
+                                       ResourceArns=["arn:aws:iam::123456789012:user/Bob"])
+        except iam.exceptions.InvalidInputException as ex:
+            raise FusilladeException from ex
+
 
 class User(CloudNode):
     """
@@ -696,8 +711,6 @@ class User(CloudNode):
         self._status = None
         self._groups: typing.Optional[typing.List[str]] = None
         self._roles: typing.Optional[typing.List[str]] = None  # TODO make a property
-        self._policy = None
-        self._statement = None
         if not local:
             try:
                 self._set_attributes(self._attributes)
@@ -737,9 +750,10 @@ class User(CloudNode):
         self.cd.update_object_attribute(self.object_reference, update_params)
         self._status = None
 
-    def provision_user(self, statement: str = None) -> None:
+    def provision_user(self, statement: typing.Optional[str] = None) -> None:
         if not statement:
             statement = get_default_user_policy()
+        self._verify_statement(statement)
         self.cd.create_object(self._path_name,
                               statement,
                               'User',
@@ -796,7 +810,10 @@ class Group(CloudNode):
     def create(cls,
                cloud_directory: CloudDirectory,
                name: str,
-               statement: str = '') -> 'Group':
+               statement: typing.Optional[str] = None) -> 'Group':
+        if not statement:
+            statement = get_default_group_policy()
+        cls._verify_statement(statement)
         object_ref, policy_ref = cloud_directory.create_object(quote(name), statement, 'Group', name=name)
         new_node = cls(cloud_directory, name)
         new_node._statement = statement
@@ -857,7 +874,10 @@ class Role(CloudNode):
     def create(cls,
                cloud_directory: CloudDirectory,
                name: str,
-               statement: str = '') -> 'Role':
+               statement: typing.Optional[str] = None) -> 'Role':
+        if not statement:
+            statement = get_default_role()
+        cls._verify_statement(statement)
         object_ref, policy_ref = cloud_directory.create_object(quote(name), statement, 'Role', name=name)
         new_node = cls(cloud_directory, name)
         new_node._statement = statement
