@@ -11,7 +11,7 @@ class Config:
     @classmethod
     def get_admin_emails(cls):
         if not cls._admin_emails:
-            cls._admin_emails = [admin for admin in os.environ['FUS_ADMIN_EMAILS'].split(',')]
+            cls._admin_emails = [admin.strip() for admin in os.environ['FUS_ADMIN_EMAILS'].split(',')]
         return cls._admin_emails
 
     @classmethod
