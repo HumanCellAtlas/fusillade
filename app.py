@@ -229,7 +229,8 @@ def evaluate_policy():
                 'ContextKeyType': 'string'
             }
         ]
-    )
+    )['EvaluationResults'][0]['EvalDecision']
+    result = True if result == 'allowed' else False
     return dict(principal=principal, action=action, resource=resource, result=result)
 
 

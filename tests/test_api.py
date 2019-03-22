@@ -139,7 +139,7 @@ class TestApi(unittest.TestCase):
                 },
                 'response': {
                     'code': 200,
-                    'result': ['implicitDeny']
+                    'result': False
                 }
             },
             {
@@ -150,7 +150,7 @@ class TestApi(unittest.TestCase):
                 },
                 'response': {
                     'code': 200,
-                    'result': ['allowed']
+                    'result': True
                 }
             }
         ]
@@ -160,8 +160,7 @@ class TestApi(unittest.TestCase):
                 headers={'Content-Type': "application/json"}
                 resp = self.app.post('/policies/evaluate', headers=headers, data=data)
                 self.assertEqual(test['response']['code'], resp.status_code)  # TODO fix
-                result = [i['EvalDecision'] for i in json.loads(resp.body)['result']['EvaluationResults']]
-                self.assertListEqual(test['response']['result'], result)
+                self.assertEqual(test['response']['result'], json.loads(resp.body)['result'])
 
     def test_put_user(self):
         pass
