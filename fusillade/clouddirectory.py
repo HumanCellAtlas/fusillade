@@ -261,7 +261,7 @@ class CloudDirectory:
         operations.append(self.batch_create_object(parent_path, link_name, obj_type, object_attribute_list))
         object_ref = parent_path + link_name
 
-        object_attribute_list = self.get_policy_attribute_list(f'{obj_type}Policy', statement, Statement=statement)
+        object_attribute_list = self.get_policy_attribute_list(obj_type, statement)
         policy_link_name = f"{link_name}_policy"
         parent_path = self.get_obj_type_path('policy')
         operations.append(self.batch_create_object(parent_path,
@@ -294,24 +294,26 @@ class CloudDirectory:
 
     def get_policy_attribute_list(self,
                                   policy_type: str,
-                                  policy_document: str,
+                                  statement: str,
                                   facet: str = "IAMPolicy",
                                   **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
         """
-        policy_type and policy_document are required field for a policy object. See the section on Policies for more
+        policy_type and policy_document are required field for a policy object. However only policy_type is used by
+        fusillade. Statement is used to store policy information. See the section on Policies for more
         info https://docs.aws.amazon.com/clouddirectory/latest/developerguide/key_concepts_directory.html
         """
+        kwargs["Statement"] = statement
         obj = self._get_object_attribute_list(facet=facet, **kwargs)
         obj.append(dict(Key=dict(
             SchemaArn=self.schema,
             FacetName=facet,
             Name='policy_type'),
-            Value=dict(StringValue=policy_type)))
+            Value=dict(StringValue=f"{policy_type}_{facet}")))
         obj.append(
             dict(Key=dict(SchemaArn=self.schema,
                           FacetName=facet,
                           Name="policy_document"),
-                 Value=dict(BinaryValue=json.dumps(policy_document).encode())))
+                 Value=dict(BinaryValue='None'.encode())))
         return obj
 
     def update_object_attribute(self,
