@@ -5,23 +5,23 @@ info:
     Human Cell Atlas Data Coordination Platform Fusillade app demo
 
     Log in: [Auth0](/login?state=ABC&redirect_uri=https://auth.data.humancellatlas.org/echo)
-    https://openid.net/specs/openid-connect-core-1_0.html#toc
+    OIDC spec https://openid.net/specs/openid-connect-core-1_0.html#toc
   version: "0.0.1"
 servers:
   - url: https://$API_DOMAIN_NAME
 paths:
   /login:
     get:
-      summary: Send the user agent to an identity provider selector and generate a user account. must be OIDC complient
-      TODO: verify the semantic make sense in the context of an OIDC providers. Must also support the metadata URLS provided
-      by and OIDC provider. Add link to OIDC spec. This is redirect endpoint.
-
+      summary: Send the user agent to an identity provider selector and generate a user account. This is redirect endpoint.
       parameters:
-        - name: openid_provider
+        - name: redirect_uri
+          description: where to redirect to once login is complete
           in: query
+          required: true
           schema:
            type: object
-        - name: nav_src
+        - name: state
+          description: an opaque paramater that is returned back to the redirect_uri
           in: query
           schema:
             type: string
@@ -34,18 +34,143 @@ paths:
     get:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
        see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
-  /v1/oauth/userinfo:
-    get:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
-        see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
-  /v1/well-known/jwks.json:
-    get:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
-        see https://openid.net/specs/openid-connect-core-1_0.html#RotateSigKeys
+      parameters:
+        - name: redirect_uri
+          in: query
+          schema:
+            type: string
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: client_id
+          in: query
+          schema:
+            type: string
+        - name: scope
+          in: query
+          schema:
+            type: string
+        - in: query
+          name: respone_type
+          schema:
+            type: string
+      responses:
+        302:
+          description: redirecting to authentication server
+          headers:
+            Location:
+              schema:
+                type: string
+        default:
+          description: Unexpected error
   /v1/oauth/token:
     get:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint
+      parameters:
+        - in: query
+          name: redirect_uri
+          description: where to redirect to once login is complete
+          required: true
+          schema:
+            type: object
+        - in: query
+          name: state
+          description: an opaque paramater that is returned back to the redirect_uri
+          schema:
+            type: string
+        - in: query
+          name: code
+          description: the code used to retrive an access token from OIDC authentication flow.
+          schema:
+            type: string
+        - in: query
+          name: grant_type
+          description: the type of grant requested.
+          schema:
+            type: string
+        - in: query
+          name: client_id
+          schema:
+            type: string
+        - in: query
+          name: client_secret
+          schema:
+            type: string
+      responses:
+        302:
+          description: OK
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+            Pragma: no-cache
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          description: Unexpected error
+  /v1/oauth/refresh:
+    post:
+      description: This endpoint is part of OIDC and is used to redirect to an openid provider
+        see https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens
+      parameters:
+        - name: grant_type
+          description: the type of grant requested.
+          in: query
+          schema:
+            type: string
+        - name: refresh_token
+          description: the type of grant requested.
+          in: query
+          schema:
+            type: string
+        - name: client_id
+          in: query
+          schema:
+            type: string
+        - name: client_secret
+          in: query
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected error
+  /v1/oauth/userinfo:
+    get:
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+        see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      security:
+        - bearerAuth: []
+      response:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        401:
+          - $ref: '#/components/responses/401'
+    post:
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+        see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      security:
+        - bearerAuth: []
+      response:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        401:
+          - $ref: '#/components/responses/401'
   /v1/policies/evaluate:
     post:
       summary: Given a set of principals, actions, and resources return a set of access control decisions.
@@ -223,7 +348,7 @@ paths:
     get:
       summary: Retrieve roles a user is in.
       security:
-        - bearerAuth: [] TODO: mention how fusillade it's self a service of fusillade
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
       tags:
