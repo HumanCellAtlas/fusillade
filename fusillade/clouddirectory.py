@@ -19,6 +19,7 @@ from fusillade.config import Config
 project_arn = "arn:aws:clouddirectory:us-east-1:861229788715:"  # TODO move to config.py
 cd_client = aws_clients.clouddirectory
 
+
 def get_directory_schema():
     with open('./fusillade/directory_schema.json') as fp:
         return json.dumps(json.load(fp))
@@ -132,6 +133,7 @@ def _paging_loop(fn, key, upack_response, **kwarg):
 def list_directories(state: str = 'ENABLED') -> typing.Iterator:
     def unpack_response(i):
         return i
+
     return _paging_loop(cd_client.list_directories, 'Directories', unpack_response, state=state)
 
 
@@ -576,6 +578,7 @@ class CloudNode:
     """
     _attributes = ["name"]  # the different attributes of a node stored
     _link_formats = {"group": "G->{parent}->{child}", "role": "R->{parent}->{child}"}
+
     # The format string for the links that connect different nodes in cloud directory
 
     def __init__(self, cloud_directory: CloudDirectory, name: str, object_type: str):
@@ -649,14 +652,15 @@ class CloudNode:
 
     @property
     def statement(self):
-        if not self._statement:
         """
         Policy statements follow AWS IAM Policy Grammer. See for grammar details
         https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html
         """
+        if not self._statement:
             self._statement = self.cd.get_object_attributes(self.policy,
                                                             'IAMPolicy',
                                                             ['Statement'])['Attributes'][0]['Value'].popitem()[1]
+
         return self._statement
 
     @statement.setter
@@ -686,7 +690,7 @@ class CloudNode:
             return attrs
         resp = self.cd.get_object_attributes(self.object_reference, self._object_type, attributes)
         for attr in resp['Attributes']:
-            attrs[attr['Key']['Name']] = attr['Value'].popitem()[1]   # noqa
+            attrs[attr['Key']['Name']] = attr['Value'].popitem()[1]  # noqa
         return attrs
 
     @staticmethod
@@ -803,6 +807,7 @@ class Group(CloudNode):
     """
     Represents a group in CloudDirectory
     """
+
     def __init__(self, cloud_directory: CloudDirectory, name: str, local: bool = False):
         """
 
@@ -877,6 +882,7 @@ class Role(CloudNode):
     """
     Represents a role in CloudDirectory
     """
+
     def __init__(self, cloud_directory: CloudDirectory, name: str):
         super(Role, self).__init__(cloud_directory, name, 'Role')
 
