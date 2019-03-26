@@ -5,10 +5,10 @@ This modules is used to simplify access to AWS Cloud Directory. For more informa
 https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/clouddirectory.html
 
 """
+from dcplib.aws import clients as aws_clients
 import functools
 import json
 import typing
-import boto3
 from collections import namedtuple
 from enum import Enum, auto
 from urllib.parse import quote, unquote
@@ -17,8 +17,7 @@ from fusillade.errors import FusilladeException
 from fusillade.config import Config
 
 project_arn = "arn:aws:clouddirectory:us-east-1:861229788715:"  # TODO move to config.py
-cd_client = boto3.client("clouddirectory")
-iam = boto3.client("iam")
+cd_client = aws_clients.clouddirectory
 
 def get_directory_schema():
     with open('./fusillade/directory_schema.json') as fp:
@@ -651,6 +650,10 @@ class CloudNode:
     @property
     def statement(self):
         if not self._statement:
+        """
+        Policy statements follow AWS IAM Policy Grammer. See for grammar details
+        https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html
+        """
             self._statement = self.cd.get_object_attributes(self.policy,
                                                             'IAMPolicy',
                                                             ['Statement'])['Attributes'][0]['Value'].popitem()[1]
@@ -688,6 +691,11 @@ class CloudNode:
 
     @staticmethod
     def _verify_statement(statement):
+        """
+        Verifies the policy statement is syntactically correct based on AWS's IAM Policy Grammar.
+        A fake ActionNames and ResourceArns are used to facilitate the simulation of the policy.
+        """
+        iam = aws_clients.iam
         try:
             iam.simulate_custom_policy(PolicyInputList=[statement],
                                        ActionNames=["fake:action"],
