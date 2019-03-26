@@ -92,11 +92,13 @@ class TestUser(unittest.TestCase):
         user = User(self.directory, name)
         with self.subTest("The initial user policy is default_policy, when the user is first created"):
             self.assertEqual(user.statement, self.default_policy)
+            self.assertIn(self.default_policy, user.lookup_policies())
 
         statement = create_test_statement(f"UserPolicySomethingElse")
         user.statement = statement
         with self.subTest("The user policy changes when set_policy is used."):
             self.assertEqual(user.statement, statement)
+            self.assertIn(statement, user.lookup_policies())
 
         with self.subTest("Error raised when setting policy to an invalid statement"):
             with self.assertRaises(FusilladeException):
