@@ -11,7 +11,7 @@ from cryptography.hazmat.backends import default_backend
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), 'chalicelib'))
 sys.path.insert(0, pkg_root)  # noqa
 
-from fusillade.clouddirectory import CloudDirectory, User, Role
+from fusillade.clouddirectory import CloudDirectory, User, Role, Group
 from fusillade import Config
 from fusillade.errors import FusilladeException
 
@@ -242,20 +242,150 @@ def evaluate_policy():
 
 
 @app.route('/users', methods=["PUT"])
-def put_user():
-    return {}
+def put_new_user():
+    json_body = app.current_request.json_body
+    user = User(directory, json_body['username'], local=True)
+    user.provision_user(statement=json_body.get('policy'))
+    user.add_roles(json_body.get('roles', []))
+    user.add_groups(json_body.get('groups', []))
+    return Response(status_code=201, body='')
 
 
-@app.route('/users/{user_id}', methods=["GET"])
+@app.route('/users/<user_id>', methods=["GET"])
 def get_user(user_id):
-    return {}
+    user = User(directory, user_id, local=True)
+    return Response(status_code=200, body={'name': user.name, 'status': user.status, 'policy': user.statement})
+
+
+@app.route('/users/<user_id>', methods=["PUT"])
+def put_user(user_id):
+    user = User(directory, user_id, local=True)
+    new_status = app.current_request.query_params['status']
+    if new_status == 'enabled':
+        user.enable()
+        response = Response(status_code=200, body='')
+    elif new_status == 'disabled':
+        user.disable()
+        response = Response(status_code=200, body='')
+    else:
+        response = Response(status_code=500, body='')
+    return response
+
+
+@app.route('/users/<user_id>/policy', methods=["PUT"])
+def put_user_policy(user_id):
+    user = User(directory, user_id, local=True)
+    user.statement = app.current_request.json_body['policy']
+    return Response(status_code=200, body='')
+
+
+@app.route('/users/<user_id>/groups', methods=["GET"])
+def get_users_groups(user_id):
+    user = User(directory, user_id, local=True)
+    return Response(status_code=200, body={'groups': user.groups})
+
+
+@app.route('/users/<user_id>/groups', methods=["PUT"])
+def put_users_groups(user_id):
+    user = User(directory, user_id, local=True)
+    action = app.current_request.query_params['action']
+    if action == 'add':
+        user.add_groups(app.current_request.json_body['groups'])
+    elif action == 'remove':
+        user.remove_groups(app.current_request.json_body['groups'])
+    return Response(status_code=200, body='')
+
+
+@app.route('/users/<user_id>/roles', methods=["GET"])
+def get_users_roles(user_id):
+    user = User(directory, user_id, local=True)
+    return Response(status_code=200, body={'roles': user.roles})
+
+
+@app.route('/users/<user_id>/roles', methods=["PUT"])
+def put_users_roles(user_id):
+    user = User(directory, user_id, local=True)
+    action = app.current_request.query_params['action']
+    if action == 'add':
+        user.add_roles(app.current_request.json_body['roles'])
+    elif action == 'remove':
+        user.remove_roles(app.current_request.json_body['roles'])
+    return Response(status_code=200, body='')
 
 
 @app.route('/groups', methods=["PUT"])
-def put_group():
-    return {}
+def put_new_group():
+    json_body = app.current_request.json_body
+    group = Group.create(directory, json_body['name'], statement=json_body.get('policy'))
+    group.add_roles(json_body.get('roles', []))  # Determine what response to return if roles don't exist
+    return Response(status_code=201, body='')
 
 
-@app.route('/groups/{group_id}', methods=["GET"])
+@app.route('/groups', methods=["GET"])
+def get_groups():
+    pass
+
+
+@app.route('/groups/<group_id>', methods=["GET"])
 def get_group(group_id):
-    return {}
+    group = Group(directory, group_id, local=True)
+    return Response(status_code=200, body={'name': group.name, 'policy': group.statement})
+
+
+@app.route('/groups/<group_id>/policy', methods=["PUT"])
+def put_group_policy(group_id):
+    group = Group(directory, group_id, local=True)
+    group.statement = app.current_request.json_body['policy']
+    return Response(status_code=200, body='')
+
+
+@app.route('/groups/<group_id>/roles', methods=["GET"])
+def get_groups_roles(group_id):
+    group = Group(directory, group_id, local=True)
+    return Response(status_code=200, body={'roles': group.roles})
+
+
+@app.route('/groups/<group_id>/roles', methods=["PUT"])
+def put_groups_roles(group_id):
+    group = Group(directory, group_id, local=True)
+    action = app.current_request.query_params['action']
+    if action == 'add':
+        group.add_roles(app.current_request.json_body['roles'])
+    elif action == 'remove':
+        group.remove_roles(app.current_request.json_body['roles'])
+    return Response(status_code=200, body='')
+
+
+@app.route('/roles', methods=["PUT"])
+def put_new_role():
+    json_body = app.current_request.json_body
+    Role.create(directory, json_body['name'], statement=json_body.get('policy'))
+    return Response(status_code=201, body='')
+
+
+@app.route('/roles', methods=["GET"])
+def get_roles():
+    pass
+
+
+@app.route('/roles/<role_id>', methods=["GET"])
+def get_role(role_id):
+    role = Role(directory, role_id)
+    return Response(status_code=200, body={'name': role.name, 'policy': role.statement})
+
+
+@app.route('/roles/<role_id>/policy', methods=["PUT"])
+def put_role_policy(role_id):
+    role = Role(directory, role_id)
+    role.statement = app.current_request.json_body['policy']
+    return Response(status_code=200, body='')
+
+
+@app.route('/status', methods=["GET"])
+def status():
+    return Response(status_code=200, body='')
+
+
+@app.route('/version', methods=["GET"])
+def version():
+    return Response(status_code=200, body='')
