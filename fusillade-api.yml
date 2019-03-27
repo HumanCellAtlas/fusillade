@@ -210,14 +210,16 @@ paths:
       summary: Create a new user
       security:
         - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/user_id'
       requestBody:
         content:
           application/json:
             schema:
+              required:
+                - username
               type: object
               properties:
+                username:
+                  type: string
                 groups:
                   type: array
                   items:
@@ -310,7 +312,7 @@ paths:
               schema:
                 type: object
                 properties:
-                  group:
+                  groups:
                     type: array
                     items:
                       type: string
@@ -423,20 +425,23 @@ paths:
           description: Unexpected error
       tags:
         - user
-  /v1/groups/{group_id}:
+  /v1/groups/:
     get:
-      summary: Get properties of a group
+      summary: List groups
       security:
         - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/group_id'
       responses:
         200:
-          description: Information about the role is returned
+          description: A list of groups
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Group'
+                type: object
+                properties:
+                  groups:
+                    type: array
+                    items:
+                      type: string
         404:
           $ref: '#/components/responses/404'
         default:
@@ -447,21 +452,47 @@ paths:
       summary: Create a new group
       security:
         - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/group_id'
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              required:
+                - name
               properties:
+                name:
+                  type: string
                 policy:
                   type: string
+                roles:
+                  type: array
+                  items:
+                    type: string
       responses:
         201:
           description: Group was created
         401:
           $ref: '#/components/responses/401'
+        default:
+          description: Unexpected error
+      tags:
+        - group
+  /v1/groups/{group_id}:
+    get:
+      summary: Get properties of a group
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      responses:
+        200:
+          description: Information about the group is returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        404:
+          $ref: '#/components/responses/404'
         default:
           description: Unexpected error
       tags:
@@ -534,6 +565,31 @@ paths:
           description: Unexpected error
       tags:
         - group
+  /v1/groups/{group_id}/users:
+    get:
+      summary: Retrieve user in a group.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      type: string
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error
+      tags:
+        - group
   /v1/groups/{group_id}/policy:
     put:
       summary: Modify policy
@@ -558,6 +614,55 @@ paths:
           description: Unexpected error
       tags:
         - group
+  /v1/roles:
+    get:
+      summary: List roles
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: a lost of roles is returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      type: string
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error
+      tags:
+        - role
+    put:
+      summary: Create a new role
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - policy
+              properties:
+                name:
+                  type: string
+                policy:
+                  type: string
+      responses:
+        201:
+          description: Role was created
+        401:
+          $ref: '#/components/responses/401'
+        default:
+          description: Unexpected error
+      tags:
+        - role
   /v1/roles/{role_id}:
     get:
       summary: Get properties of a role
@@ -574,44 +679,6 @@ paths:
                 $ref: '#/components/schemas/Role'
         404:
           $ref: '#/components/responses/404'
-        default:
-          description: Unexpected error
-      tags:
-        - role
-    put:
-      summary: Create a new role
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/role_id'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                policy:
-                  type: string
-      tags:
-        - role
-      responses:
-        201:
-          description: Role was created
-        401:
-          $ref: '#/components/responses/401'
-        default:
-          description: Unexpected error
-    delete:
-      summary: Remove role from the system.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/role_id'
-      responses:
-        200:
-          description: Role was deleted
-        401:
-          $ref: '#/components/responses/401'
         default:
           description: Unexpected error
       tags:
@@ -693,6 +760,8 @@ components:
         name:
           type: string
         status:
+          type: string
+        policy:
           type: string
     Group:
       type: object

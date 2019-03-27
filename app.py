@@ -65,7 +65,7 @@ def login():
     return Response(status_code=301, headers=dict(Location="/authorize"), body="")
 
 
-@app.route('/authorize') #  Part of OIDC
+@app.route('/authorize')  # Part of OIDC
 def authorize():
     query_params = app.current_request.query_params if app.current_request.query_params else {}
     openid_provider = os.environ["OPENID_PROVIDER"]
