@@ -33,7 +33,7 @@ paths:
   /v1/oauth/authorize:
     get:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
-       see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+        see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
       parameters:
         - name: redirect_uri
           in: query
@@ -51,8 +51,8 @@ paths:
           in: query
           schema:
             type: string
-        - in: query
-          name: respone_type
+        - name: respone_type
+          in: query
           schema:
             type: string
       responses:
@@ -105,7 +105,7 @@ paths:
             Cache-Control:
               schema:
                 type: string
-            Pragma: no-cache
+            Pragma:
               schema:
                 type: string
           content:
@@ -148,7 +148,7 @@ paths:
         see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
       security:
         - bearerAuth: []
-      response:
+      responses:
         200:
           description: OK
           content:
@@ -156,13 +156,13 @@ paths:
               schema:
                 type: object
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
     post:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
       security:
         - bearerAuth: []
-      response:
+      responses:
         200:
           description: OK
           content:
@@ -170,7 +170,7 @@ paths:
               schema:
                 type: object
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
   /v1/policies/evaluate:
     post:
       summary: Given a set of principals, actions, and resources return a set of access control decisions.
@@ -199,8 +199,10 @@ paths:
           content:
             application/json:
               schema:
-                decision:
-                  type: boolean
+                type: object
+                properties:
+                  decision:
+                    type: boolean
         default:
           description: Unexpected error
   /v1/users:
@@ -232,7 +234,7 @@ paths:
         201:
           description: User was created
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         default:
           description: Unexpected error
   /v1/users/{user_id}:
@@ -252,7 +254,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
         404:
-          - $ref: '#/components/responses/404'
+          $ref: '#/components/responses/404'
         default:
           description: Unexpected error
     put:
@@ -273,7 +275,7 @@ paths:
         200:
           description: Status set
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         default:
           description: Unexpected error
     delete:
@@ -288,7 +290,7 @@ paths:
         200:
           description: User was deleted
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         default:
           description: Unexpected error
   /v1/users/{user_id}/groups:
@@ -308,12 +310,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  - group:
-                      type: array
-                      items:
-                        type: string
+                  group:
+                    type: array
+                    items:
+                      type: string
         404:
-          - $ref: '#/components/responses/404'
+          $ref: '#/components/responses/404'
         default:
           description: Unexpected error
     put:
@@ -339,7 +341,7 @@ paths:
         200:
           description: Action successful
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         304:
           description: The user is already a part of the group
         default:
@@ -361,12 +363,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  - role:
-                      type: array
-                      items:
-                        type: string
+                  role:
+                    type: array
+                    items:
+                      type: string
         404:
-          - $ref: '#/components/responses/404'
+          $ref: '#/components/responses/404'
         default:
           description: Unexpected error
     put:
@@ -392,7 +394,7 @@ paths:
         200:
           description: Action successful
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         304:
           description: The user is already apart of the role
         default:
@@ -416,7 +418,7 @@ paths:
         200:
           description: policy modified
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         default:
           description: Unexpected error
       tags:
@@ -436,7 +438,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Group'
         404:
-          - $ref: '#/components/responses/404'
+          $ref: '#/components/responses/404'
         default:
           description: Unexpected error
       tags:
@@ -459,7 +461,7 @@ paths:
         201:
           description: Group was created
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         default:
           description: Unexpected error
       tags:
@@ -474,7 +476,7 @@ paths:
         200:
           description: Group was deleted
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         default:
           description: Unexpected error
       tags:
@@ -494,12 +496,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  - role:
-                      type: array
-                      items:
-                        type: string
+                  role:
+                    type: array
+                    items:
+                      type: string
         404:
-          - $ref: '#/components/responses/404'
+          $ref: '#/components/responses/404'
         default:
           description: Unexpected error
       tags:
@@ -525,7 +527,7 @@ paths:
         200:
           description: Action successful
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         304:
           description: The group is already apart of the role
         default:
@@ -551,7 +553,7 @@ paths:
         200:
           description: policy modified
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         default:
           description: Unexpected error
       tags:
@@ -571,7 +573,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Role'
         404:
-          - $ref: '#/components/responses/404'
+          $ref: '#/components/responses/404'
         default:
           description: Unexpected error
       tags:
@@ -596,7 +598,7 @@ paths:
         201:
           description: Role was created
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         default:
           description: Unexpected error
     delete:
@@ -609,7 +611,7 @@ paths:
         200:
           description: Role was deleted
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         default:
           description: Unexpected error
       tags:
@@ -633,16 +635,15 @@ paths:
         200:
           description: policy modified
         401:
-          - $ref: '#/components/responses/401'
+          $ref: '#/components/responses/401'
         default:
           description: Unexpected error
       tags:
         - role
   /v1/status:
-    TODO: Should not be revealed in swagger. Check with Matt.
     get:
-      summary: get the system's status
-      response:
+      summary: get the system's status TODO Should not be revealed in swagger. Check with Matt.
+      responses:
         200:
           description: system is passing
         500:
@@ -650,7 +651,7 @@ paths:
   /v1/version:
     get:
       summary: get the current version of the system
-      response:
+      responses:
         200:
           description: OK
         default:
