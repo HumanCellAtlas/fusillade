@@ -5,6 +5,7 @@ This modules is used to simplify access to AWS Cloud Directory. For more informa
 https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/clouddirectory.html
 
 """
+import os
 from dcplib.aws import clients as aws_clients
 import functools
 import json
@@ -21,32 +22,32 @@ cd_client = aws_clients.clouddirectory
 
 
 def get_directory_schema():
-    with open('./fusillade/directory_schema.json') as fp:
+    with open(os.path.join(os.path.dirname(__file__), 'directory_schema.json'), 'r') as fp:
         return json.dumps(json.load(fp))
 
 
 def get_default_user_policy():
-    with open("./policies/default_user_policy.json", 'r') as fp:
+    with open(os.path.join(os.path.dirname(__file__), '..', 'policies', 'default_user_policy.json'), 'r') as fp:
         return json.dumps(json.load(fp))
 
 
 def get_default_group_policy():
-    with open("./policies/default_group_policy.json", 'r') as fp:
+    with open(os.path.join(os.path.dirname(__file__), '..', 'policies', 'default_group_policy.json'), 'r') as fp:
         return json.dumps(json.load(fp))
 
 
 def get_default_admin_role():
-    with open("./policies/default_admin_role.json", 'r') as fp:
+    with open(os.path.join(os.path.dirname(__file__), '..', 'policies', 'default_admin_role.json'), 'r') as fp:
         return json.dumps(json.load(fp))
 
 
 def get_default_user_role():
-    with open("./policies/default_user_role.json", 'r') as fp:
+    with open(os.path.join(os.path.dirname(__file__), '..', 'policies', "default_user_role.json"), 'r') as fp:
         return json.dumps(json.load(fp))
 
 
 def get_default_role():
-    with open("./policies/default_role.json", 'r') as fp:
+    with open(os.path.join(os.path.dirname(__file__), '..', 'policies', "default_role.json"), 'r') as fp:
         return json.dumps(json.load(fp))
 
 
