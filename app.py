@@ -84,7 +84,6 @@ def authorize():
     else:
         state = base64.b64encode(json.dumps(query_params).encode()).decode()
         # TODO: set random state
-        # openid_provider = query_params["openid_provider"]
         oauth2_config = Config.get_oauth2_config()
         auth_params = dict(client_id=oauth2_config[openid_provider]["client_id"],
                            response_type="code",
