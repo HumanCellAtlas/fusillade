@@ -76,7 +76,7 @@ class TestApi(unittest.TestCase):
         self.assertEqual(resp.headers['Location'], '/authorize')
 
     def test_authorize(self):
-        scopes = "openid email offline_access"  # Is offline_access needed for CLI
+        scopes = "openid email profile"  # Is offline_access needed for CLI
         CLIENT_ID = "qtMgNk9fqVeclLtZl6WkbdJ59dP3WeAt"
         REDIRECT_URI = "http://localhost:8080"
 
