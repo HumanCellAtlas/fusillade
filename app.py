@@ -204,26 +204,9 @@ def cb():
             }
 
 @app.route('/policies/evaluate', methods=["POST"])
-def evaluate_policy():
+def evaluate_policy_api():
     json_body = app.current_request.json_body
-    principal = json_body["principal"]
-    action = json_body["action"]
-    resource = json_body["resource"]
-    user = User(directory, principal)
-    result = iam.simulate_custom_policy(
-        PolicyInputList=user.lookup_policies(),
-        ActionNames=[action],
-        ResourceArns=[resource],
-        ContextEntries=[
-            {
-                'ContextKeyName': 'fus:user_email',
-                'ContextKeyValues': [principal],
-                'ContextKeyType': 'string'
-            }
-        ]
-    )['EvaluationResults'][0]['EvalDecision']
-    result = True if result == 'allowed' else False
-    return dict(principal=principal, action=action, resource=resource, result=result)
+    return evaluate_policy(json_body["principal"], json_body["action"], json_body["resource"])
 
 
 @app.route('/users', methods=["PUT"])
