@@ -29,5 +29,5 @@ try:
 except FusilladeException:
     from .clouddirectory import publish_schema, create_directory
     schema_name = Config.get_schema_name()
-    schema_arn = publish_schema(schema_name, version="0.1")
+    schema_arn = publish_schema(schema_name, version="0.1")  # TODO make version an environment variable
     directory = create_directory(directory_name, schema_arn)
