@@ -1,6 +1,7 @@
 from .clouddirectory import User, Group, Role, CloudDirectory
 from .config import Config
 from .errors import FusilladeException
+from .evaluate import evaluate_policy
 '''
 system config:
 - directory schema
