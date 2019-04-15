@@ -24,6 +24,13 @@ class TestUser(unittest.TestCase):
     def tearDown(self):
         self.directory.clear()
 
+    def test_user_statement(self):
+        name = "user_statement@test.com"
+        user = User(self.directory, name, local=True)
+        user.provision_user(self.default_policy)
+        test_user = User(self.directory, name)
+        self.assertEqual(test_user.statement, self.default_policy)
+
     def test_get_attributes(self):
         name = "test_get_attributes@test.com"
         user = User(self.directory, name)
