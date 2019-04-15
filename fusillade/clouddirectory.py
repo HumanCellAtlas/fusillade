@@ -678,16 +678,16 @@ class CloudNode:
         self._set_statement(statement)
 
     def _set_statement(self, statement: str):
-        params = [
-            UpdateObjectParams('IAMPolicy',
-                               'Statement',
-                               ValueTypes.StringValue,
-                               statement,
-                               UpdateActions.CREATE_OR_UPDATE)
-        ]
         if not self.policy:
             self.create_policy(statement)
         else:
+            params = [
+                UpdateObjectParams('IAMPolicy',
+                                   'Statement',
+                                   ValueTypes.StringValue,
+                                   statement,
+                                   UpdateActions.CREATE_OR_UPDATE)
+            ]
             self.cd.update_object_attribute(self.policy, params)
         self._statement = None
 
