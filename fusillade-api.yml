@@ -13,13 +13,16 @@ paths:
   /login:
     get:
       summary: Send the user agent to an identity provider selector and generate a user account. This is redirect endpoint.
+      operationId: fusillade.api.login.get
+      tags:
+        - oauth
       parameters:
         - name: redirect_uri
           description: where to redirect to once login is complete
           in: query
           required: true
           schema:
-           type: object
+            type: string
         - name: state
           description: an opaque paramater that is returned back to the redirect_uri
           in: query
@@ -30,10 +33,40 @@ paths:
           description: OK
         default:
           description: Unexpected error
-  /v1/oauth/authorize:
+  /.well-known/openid-configuration:
+    get:
+      summary: This endpoint is part of OIDC
+      tags:
+        - oauth
+      operationId: fusillade.api.oauth.serve_openid_config
+      responses:
+        200:
+          description: Returns the supported openid endpoints
+  /.well-known/jwks.json:
+    get:
+      summary: This endpoint is part of OIDC
+      tags:
+        - oauth
+      operationId: fusillade.api.oauth.serve_jwks_json
+      responses:
+        200:
+          description: Returns the well know jwks
+  /cb:
+    get:
+      summary: An internal endpoint that should not be used.
+      tags:
+        - oauth
+      operationId: fusillade.api.oauth.cb
+      responses:
+        200:
+          description: return a authorization token
+  /oauth/authorize:
     get:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+      operationId: fusillade.api.oauth.authorize
+      tags:
+        - oauth
       parameters:
         - name: redirect_uri
           in: query
@@ -64,10 +97,11 @@ paths:
                 type: string
         default:
           description: Unexpected error
-  /v1/oauth/token:
-    get:
+  /oauth/token:
+    post:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint
+      operationId: fusillade.api.oauth.serve_oauth_token
       parameters:
         - in: query
           name: redirect_uri
@@ -98,6 +132,8 @@ paths:
           name: client_secret
           schema:
             type: string
+      tags:
+        - oauth
       responses:
         302:
           description: OK
@@ -114,10 +150,13 @@ paths:
                 type: object
         default:
           description: Unexpected error
-  /v1/oauth/refresh:
+  /oauth/refresh:
     post:
       description: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens
+      operationId: fusillade.api.oauth.refresh
+      security:
+        - BearerAuth: []
       parameters:
         - name: grant_type
           description: the type of grant requested.
@@ -137,17 +176,22 @@ paths:
           in: query
           schema:
             type: string
+      tags:
+        - oauth
       responses:
         200:
           description: OK
         default:
           description: Unexpected error
-  /v1/oauth/userinfo:
+  /oauth/userinfo:
     get:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      operationId: fusillade.api.oauth.get_userinfo
       security:
-        - bearerAuth: []
+        - BearerAuth: []
+      tags:
+        - oauth
       responses:
         200:
           description: OK
@@ -160,8 +204,11 @@ paths:
     post:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      operationId: fusillade.api.oauth.post_userinfo
       security:
-        - bearerAuth: []
+        - BearerAuth: []
+      tags:
+        - oauth
       responses:
         200:
           description: OK
@@ -174,6 +221,9 @@ paths:
   /v1/policies/evaluate:
     post:
       summary: Given a set of principals, actions, and resources return a set of access control decisions.
+      operationId: fusillade.api.evaluate.evaluate_policy
+      security:
+        - BearerAuth: []
       requestBody:
         content:
           application/json:
@@ -208,8 +258,9 @@ paths:
   /v1/users:
     put:
       summary: Create a new user
+      operationId: fusillade.api.users.put_new_user
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       requestBody:
         content:
           application/json:
@@ -242,8 +293,9 @@ paths:
   /v1/users/{user_id}:
     get:
       summary: Retrieve information about a user's status
+      operationId: fusillade.api.users.get_user
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
       tags:
@@ -261,8 +313,9 @@ paths:
           description: Unexpected error
     put:
       summary: Modify the users status
+      operationId: fusillade.api.users.put_user
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - in: query
@@ -280,26 +333,12 @@ paths:
           $ref: '#/components/responses/401'
         default:
           description: Unexpected error
-    delete:
-      summary: Remove user from the system.
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/user_id'
-      tags:
-        - user
-      responses:
-        200:
-          description: User was deleted
-        401:
-          $ref: '#/components/responses/401'
-        default:
-          description: Unexpected error
   /v1/users/{user_id}/groups:
     get:
       summary: Retrieve groups a user is in.
+      operationId: fusillade.api.users.get_users_groups
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
       tags:
@@ -322,8 +361,9 @@ paths:
           description: Unexpected error
     put:
       summary: Add or remove groups from user
+      operationId: fusillade.api.users.put_users_groups
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - $ref: '#/components/parameters/action'
@@ -351,8 +391,9 @@ paths:
   /v1/users/{user_id}/roles:
     get:
       summary: Retrieve roles a user is in.
+      operationId: fusillade.api.users.get_users_roles
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
       tags:
@@ -375,8 +416,9 @@ paths:
           description: Unexpected error
     put:
       summary: Add or remove roles from user
+      operationId: fusillade.api.users.put_users_roles
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - $ref: '#/components/parameters/action'
@@ -404,8 +446,9 @@ paths:
   /v1/users/{user_id}/policy:
     put:
       summary: Modify policy
+      operationId: fusillade.api.users.put_user_policy
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
       requestBody:
@@ -428,8 +471,9 @@ paths:
   /v1/groups/:
     get:
       summary: List groups
+      operationId: fusillade.api.groups.get_groups
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       responses:
         200:
           description: A list of groups
@@ -450,8 +494,9 @@ paths:
         - group
     put:
       summary: Create a new group
+      operationId: fusillade.api.groups.put_new_group
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       requestBody:
         content:
           application/json:
@@ -480,8 +525,9 @@ paths:
   /v1/groups/{group_id}:
     get:
       summary: Get properties of a group
+      operationId: fusillade.api.groups.get_group
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
       responses:
@@ -499,8 +545,9 @@ paths:
         - group
     delete:
       summary: Remove Group from the system.
+      operationId: fusillade.api.groups.delete_group
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
       responses:
@@ -515,8 +562,9 @@ paths:
   /v1/groups/{group_id}/roles:
     get:
       summary: Retrieve roles a group is in.
+      operationId: fusillade.api.groups.get_groups_roles
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
       responses:
@@ -539,8 +587,9 @@ paths:
         - group
     put:
       summary: Add or remove role from group.
+      operationId: fusillade.api.groups.put_groups_roles
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
         - $ref: '#/components/parameters/action'
@@ -568,8 +617,9 @@ paths:
   /v1/groups/{group_id}/users:
     get:
       summary: Retrieve user in a group.
+      operationId: fusillade.api.groups.get_group_users
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
       responses:
@@ -593,8 +643,9 @@ paths:
   /v1/groups/{group_id}/policy:
     put:
       summary: Modify policy
+      operationId: fusillade.api.groups.put_group_policy
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
       requestBody:
@@ -617,8 +668,9 @@ paths:
   /v1/roles:
     get:
       summary: List roles
+      operationId: fusillade.api.roles.get_roles
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       responses:
         200:
           description: a lost of roles is returned
@@ -639,8 +691,9 @@ paths:
         - role
     put:
       summary: Create a new role
+      operationId: fusillade.api.roles.put_new_role
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       requestBody:
         content:
           application/json:
@@ -666,8 +719,9 @@ paths:
   /v1/roles/{role_id}:
     get:
       summary: Get properties of a role
+      operationId: fusillade.api.roles.get_role
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/role_id'
       responses:
@@ -686,8 +740,9 @@ paths:
   /v1/roles/{role_id}/policy:
     put:
       summary: Modify policy
+      operationId: fusillade.api.roles.put_role_policy
       security:
-        - bearerAuth: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/role_id'
       requestBody:
@@ -707,22 +762,6 @@ paths:
           description: Unexpected error
       tags:
         - role
-  /v1/status:
-    get:
-      summary: get the system's status TODO Should not be revealed in swagger. Check with Matt.
-      responses:
-        200:
-          description: system is passing
-        500:
-          description: system is failing
-  /v1/version:
-    get:
-      summary: get the current version of the system
-      responses:
-        200:
-          description: OK
-        default:
-          description: Unexpected error
 components:
   parameters:
     user_id:
@@ -796,3 +835,4 @@ components:
         type: http
         scheme: bearer
         bearerFormat: JWT
+        x-bearerInfoFunc: fusillade.utils.security.verify_jwt

@@ -1,6 +1,9 @@
-from .clouddirectory import User, Group, Role, CloudDirectory
+#!/usr/bin/env python
+from .errors import FusilladeException, FusilladeBindingException
 from .config import Config
-from .errors import FusilladeException
+from .clouddirectory import User, Group, Role, CloudDirectory
+
+
 '''
 system config:
 - directory schema
@@ -23,11 +26,17 @@ members  members->policy[resource_id(parent?)]
 
 '''
 
-directory_name = Config.get_directory_name()
-try:
-    directory = CloudDirectory.from_name(directory_name)
-except FusilladeException:
-    from .clouddirectory import publish_schema, create_directory
-    schema_name = Config.get_schema_name()
-    schema_arn = publish_schema(schema_name, version="0.1")  # TODO make version an environment variable
-    directory = create_directory(directory_name, schema_arn)
+
+def create_directory():
+    directory_name = Config.get_directory_name()
+    try:
+        directory = CloudDirectory.from_name(directory_name)
+    except FusilladeException:
+        from .clouddirectory import publish_schema, create_directory
+        schema_name = Config.get_schema_name()
+        schema_arn = publish_schema(schema_name, version="0.1")  # TODO make version an environment variable
+        directory = create_directory(directory_name, schema_arn)
+    return directory
+
+
+directory = create_directory()
