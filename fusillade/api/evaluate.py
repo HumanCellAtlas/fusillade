@@ -6,7 +6,6 @@ from fusillade import User, directory
 iam = aws_clients.iam
 
 
-
 def evaluate_policy():
     json_body = request.json
     principal = json_body["principal"]

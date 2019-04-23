@@ -2,7 +2,6 @@ from flask import request, make_response, jsonify
 from fusillade import User, directory
 
 
-
 def put_new_user():
     json_body = request.json
     user = User(directory, json_body['username'], local=True)
@@ -12,11 +11,9 @@ def put_new_user():
     return make_response('', 201)
 
 
-
 def get_user(user_id):
     user = User(directory, user_id, local=True)
     return make_response(jsonify(name=user.name, status=user.status, policy=user.statement), 200)
-
 
 
 def put_user(user_id):
@@ -33,18 +30,15 @@ def put_user(user_id):
     return resp
 
 
-
 def put_user_policy(user_id):
     user = User(directory, user_id, local=True)
     user.statement = request.json['policy']
     return make_response('', 200)
 
 
-
 def get_users_groups(user_id):
     user = User(directory, user_id, local=True)
     return make_response(jsonify(groups=user.groups), 200)
-
 
 
 def put_users_groups(user_id):
@@ -57,11 +51,9 @@ def put_users_groups(user_id):
     return make_response('', 200)
 
 
-
 def get_users_roles(user_id):
     user = User(directory, user_id, local=True)
     return make_response(jsonify(roles=user.roles), 200)
-
 
 
 def put_users_roles(user_id):
