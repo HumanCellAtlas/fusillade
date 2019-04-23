@@ -14,11 +14,6 @@ from connexion.resolver import RestyResolver
 from fusillade import FusilladeBindingException, Config
 
 
-class FusilladeApp(FlaskApp):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-
 class FusilladeParameterValidator(ParameterValidator):
     """
     The ParameterValidator provided by Connexion immediately returns a value if the validation fails.  Therefore, our
@@ -56,7 +51,7 @@ class FusilladeRequestBodyValidator(RequestBodyValidator):
     messsages are not returned using our standard error formats.
 
     The solution is to trap the validation results, and if it fails, exit the validation flow.  We catch the exception
-    at the top level where the various validators are called, and return a value according to our specs.
+    at the top level where the various validators are called.
     """
 
     def validate_schema(self, *args, **kwargs):
@@ -99,7 +94,7 @@ class ChaliceWithConnexion(chalice.Chalice):
             self.route(route, methods=list(set(methods) - {"OPTIONS"}), cors=True)(self.dispatch)
 
     def create_connexion_app(self):
-        app = FusilladeApp('fusillade')
+        app = FlaskApp('fusillade')
         # The Flask/Connection app's logger has its own multi-line formatter and configuration. Rather than suppressing
         # it we let it do its thing, give it a special name and only enable it if Fusillade_DEBUG > 1. Most of the Fusillade web
         # app's logging is done through the FusilladeChaliceApp.app logger not the Flask app's logger.
@@ -123,6 +118,13 @@ class ChaliceWithConnexion(chalice.Chalice):
         return app
 
     def dispatch(self, *args, **kwargs):
+        """
+        This is the main entry point into the connexion application.
+
+        :param args:
+        :param kwargs:
+        :return:
+        """
         cr = self.current_request
         context = cr.context
         uri_params = cr.uri_params or {}
