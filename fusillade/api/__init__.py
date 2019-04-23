@@ -186,12 +186,12 @@ class ChaliceWithLoggingConfig(chalice.Chalice):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         logging.basicConfig()
-        if Config.debug_level == 0:
+        if Config.debug_level() == 0:
             self.debug = False
-        elif Config.debug_level == 1:
+        elif Config.debug_level() == 1:
             self.debug = True
             logging.root.setLevel(logging.INFO)
-        elif Config.debug_level > 1:
+        elif Config.debug_level() > 1:
             self.debug = True
             logging.root.setLevel(logging.DEBUG)
             for logger_name in self.silence_debug_loggers:
