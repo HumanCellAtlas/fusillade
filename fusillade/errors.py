@@ -1,11 +1,8 @@
-import logging
 import traceback
 import requests
 
 import werkzeug.exceptions as werkzeug_exception
 from connexion.exceptions import ProblemException
-
-logger = logging.getLogger(__name__)
 
 
 class FusilladeException(Exception):
