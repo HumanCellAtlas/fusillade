@@ -49,3 +49,7 @@ class Config:
         if not cls._openid_provider:
             cls._openid_provider = os.environ['OPENID_PROVIDER']
         return cls._openid_provider
+
+    @classmethod
+    def debug_level(cls):
+        return int(os.environ.get("DEBUG", "0"))

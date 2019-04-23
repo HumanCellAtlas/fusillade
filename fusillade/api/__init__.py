@@ -11,7 +11,7 @@ from connexion import FlaskApp
 from connexion.decorators.validation import ParameterValidator, RequestBodyValidator
 from connexion.resolver import RestyResolver
 
-from fusillade import FusilladeBindingException
+from fusillade import FusilladeBindingException, Config
 
 
 class FusilladeApp(FlaskApp):
@@ -103,12 +103,11 @@ class ChaliceWithConnexion(chalice.Chalice):
         # The Flask/Connection app's logger has its own multi-line formatter and configuration. Rather than suppressing
         # it we let it do its thing, give it a special name and only enable it if Fusillade_DEBUG > 1. Most of the Fusillade web
         # app's logging is done through the FusilladeChaliceApp.app logger not the Flask app's logger.
-        # app.app.logger_name = 'fus.api'
-        # debug = Config.debug_level() > 0
-        # app.app.debug = debug
-        # app.app.logger.info('Flask debug is %s.', 'enabled' if debug else 'disabled')
-        # TODO add debug level to Config
-
+        app.app.logger_name = 'fus.api'
+        debug = Config.debug_level() > 0
+        app.app.debug = debug
+        app.app.logger.info('Flask debug is %s.', 'enabled' if debug else 'disabled')
+        
         validator_map = {
             'body': FusilladeRequestBodyValidator,
             'parameter': FusilladeParameterValidator,
@@ -187,12 +186,12 @@ class ChaliceWithLoggingConfig(chalice.Chalice):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         logging.basicConfig()
-        if int(os.environ.get("DEBUG", "0")) == 0:
+        if Config.debug_level == 0:
             self.debug = False
-        elif int(os.environ.get("DEBUG", "0")) == 1:
+        elif Config.debug_level == 1:
             self.debug = True
             logging.root.setLevel(logging.INFO)
-        elif int(os.environ.get("DEBUG", "0")) > 1:
+        elif Config.debug_level > 1:
             self.debug = True
             logging.root.setLevel(logging.DEBUG)
             for logger_name in self.silence_debug_loggers:
