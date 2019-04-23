@@ -6,7 +6,7 @@ before-test:
 	cat fusillade-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/swagger.yml
 
 lint:
-	flake8 app.py fusillade/*.py
+	flake8 app.py fusillade
 
 test: before-test lint $(tests)
 	coverage combine

@@ -35,7 +35,7 @@ def get_openid_config(openid_provider=None):
     :return: the openid configuration
     """
     if not openid_provider:
-        openid_provider=Config.get_openid_provider()
+        openid_provider = Config.get_openid_provider()
     elif openid_provider.endswith(gserviceaccount_domain):
         openid_provider = 'accounts.google.com'
     elif openid_provider.startswith("https://"):

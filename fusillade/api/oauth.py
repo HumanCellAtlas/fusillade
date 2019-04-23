@@ -61,7 +61,6 @@ def proxy_response(dest_url, method='GET', headers=None, body='', query_params=N
     return proxy_resp
 
 
-
 def serve_openid_config():
     '''
      Part of OIDC
@@ -77,14 +76,12 @@ def serve_openid_config():
     return ConnexionResponse(body=openid_config, status_code=requests.codes.ok)
 
 
-
 def serve_jwks_json():
     '''
      Part of OIDC
     '''
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
     return proxy_response(openid_config["jwks_uri"])
-
 
 
 def serve_oauth_token():
@@ -97,14 +94,12 @@ def serve_oauth_token():
     return proxy_response(openid_config["token_endpoint"])
 
 
-
 def revoke():
     '''
      Part of OIDC
     '''
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
     return proxy_response(openid_config["revocation_endpoint"])
-
 
 
 def userinfo():
@@ -115,13 +110,11 @@ def userinfo():
     return proxy_response(openid_config["userinfo_endpoint"])
 
 
-
 def get_userinfo():
     '''
      Part of OIDC
     '''
     return userinfo()
-
 
 
 def post_userinfo():
@@ -131,13 +124,11 @@ def post_userinfo():
     return userinfo()
 
 
-
 def refresh():
     '''
      Part of OIDC
     '''
     pass
-
 
 
 def cb():

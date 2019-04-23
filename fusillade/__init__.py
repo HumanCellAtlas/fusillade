@@ -27,7 +27,7 @@ members  members->policy[resource_id(parent?)]
 '''
 
 
-def create_directory():
+def get_directory():
     directory_name = Config.get_directory_name()
     try:
         directory = CloudDirectory.from_name(directory_name)
@@ -39,4 +39,4 @@ def create_directory():
     return directory
 
 
-directory = create_directory()
+directory = get_directory()

@@ -77,6 +77,7 @@ class ChaliceWithConnexion(chalice.Chalice):
     """
     Subclasses Chalice to host a Connexion app, route and proxy requests to it.
     """
+
     def __init__(self, swagger_spec_path, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.swagger_spec_path = swagger_spec_path
@@ -96,13 +97,14 @@ class ChaliceWithConnexion(chalice.Chalice):
     def create_connexion_app(self):
         app = FlaskApp('fusillade')
         # The Flask/Connection app's logger has its own multi-line formatter and configuration. Rather than suppressing
-        # it we let it do its thing, give it a special name and only enable it if Fusillade_DEBUG > 1. Most of the Fusillade web
-        # app's logging is done through the FusilladeChaliceApp.app logger not the Flask app's logger.
+        # it we let it do its thing, give it a special name and only enable it if Fusillade_DEBUG > 1.
+        # Most of the Fusillade web app's logging is done through the FusilladeChaliceApp.app logger not the Flask
+        # app's logger.
         app.app.logger_name = 'fus.api'
         debug = Config.debug_level() > 0
         app.app.debug = debug
         app.app.logger.info('Flask debug is %s.', 'enabled' if debug else 'disabled')
-        
+
         validator_map = {
             'body': FusilladeRequestBodyValidator,
             'parameter': FusilladeParameterValidator,
@@ -150,12 +152,12 @@ class ChaliceWithConnexion(chalice.Chalice):
             str(query_params) if query_params is not None else '',
         )
         with self.connexion_request_context(path=path,
-                                                 base_url=base_url,
-                                                 query_string=cr.query_params,
-                                                 method=method,
-                                                 headers=list(cr.headers.items()),
-                                                 data=req_body,
-                                                 environ_base=cr.stage_vars):
+                                            base_url=base_url,
+                                            query_string=cr.query_params,
+                                            method=method,
+                                            headers=list(cr.headers.items()),
+                                            data=req_body,
+                                            environ_base=cr.stage_vars):
             try:
                 flask_res = self.connexion_full_dispatch_request()
                 status_code = flask_res._status_code
@@ -171,7 +173,7 @@ class ChaliceWithConnexion(chalice.Chalice):
                 )
         res_headers = dict(flask_res.headers)
         res_headers.update(
-            {"X-AWS-REQUEST-ID":self.lambda_context.aws_request_id,
+            {"X-AWS-REQUEST-ID": self.lambda_context.aws_request_id,
              "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload"})
         res_headers.pop("Content-Length", None)
         return chalice.Response(status_code=status_code,
