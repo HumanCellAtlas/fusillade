@@ -33,5 +33,6 @@ response = client.list_published_schema_arns(
 )['SchemaArns']
 print('Schemas:',response)
 
+pass
 
 
