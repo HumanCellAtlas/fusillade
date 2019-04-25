@@ -32,7 +32,3 @@ response = client.list_published_schema_arns(
     MaxResults = 20
 )['SchemaArns']
 print('Schemas:',response)
-
-pass
-
-
