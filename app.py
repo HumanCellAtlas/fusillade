@@ -18,7 +18,7 @@ with open(os.path.join(pkg_root, "index.html")) as fh:
 with open(os.path.join(pkg_root, "service_config.json")) as fh:
     service_config = yaml.load(fh.read())
 
-swagger_spec_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), f'fusillade-api.yml')
+swagger_spec_path = os.path.join(pkg_root, "fusillade-api.yml")
 app = FusilladeServer(app_name='fusillade', swagger_spec_path=swagger_spec_path)
 Config.app = app
 
@@ -54,7 +54,7 @@ def health_check(*args, **kwargs):
 
 @app.route('/swagger.json')
 def serve_swagger_definition():
-    with open(os.path.join(pkg_root, "swagger.yml")) as fh:
+    with open(swagger_spec_path) as fh:
         swagger_defn = yaml.load(fh.read())
     return swagger_defn
 

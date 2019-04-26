@@ -3,7 +3,7 @@ SHELL=/bin/bash
 tests:=$(wildcard tests/test_*.py)
 
 before-test:
-	cat fusillade-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/swagger.yml
+	cat fusillade-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/fusillade-api.yml
 
 lint:
 	flake8 app.py fusillade
@@ -39,7 +39,7 @@ deploy-infra:
 package:
 	git clean -df chalicelib vendor
 	shopt -s nullglob; for wheel in vendor.in/*/*.whl; do unzip -q -o -d vendor $$wheel; done
-	cat fusillade-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/openapi.yml
+	cat fusillade-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/fusillade-api.yml
 	cp -R ./fusillade ./policies chalicelib
 
 deploy: package
