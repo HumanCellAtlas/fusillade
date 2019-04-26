@@ -12,8 +12,6 @@ sys.path.insert(0, pkg_root)  # noqa
 from fusillade import Config
 from fusillade.api import FusilladeServer
 
-with open(os.path.join(pkg_root, "index.html")) as fh:
-    swagger_ui_html = fh.read()
 
 with open(os.path.join(pkg_root, "service_config.json")) as fh:
     service_config = yaml.load(fh.read())
@@ -25,6 +23,8 @@ Config.app = app
 
 @app.route("/")
 def serve_swagger_ui():
+    with open(os.path.join(pkg_root, "index.html")) as fh:
+        swagger_ui_html = fh.read()
     return chalice_response(status_code=requests.codes.ok,
                             headers={"Content-Type": "text/html"},
                             body=swagger_ui_html)
