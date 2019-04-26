@@ -88,9 +88,10 @@ class ChaliceWithConnexion(chalice.Chalice):
         routes = collections.defaultdict(list)
         for rule in self.connexion_app.app.url_map.iter_rules():
             route = re.sub(r"<(.+?)(:.+?)?>", r"{\1}", rule.rule)
+            stripped_route = route.rstrip("/")
             if route.endswith("/"):
-                self.trailing_slash_routes.append(route.rstrip("/"))
-            routes[route.rstrip("/")] += rule.methods
+                self.trailing_slash_routes.append(stripped_route)
+            routes[stripped_route] += rule.methods
         for route, methods in routes.items():
             self.route(route, methods=list(set(methods) - {"OPTIONS"}), cors=True)(self.dispatch)
 
