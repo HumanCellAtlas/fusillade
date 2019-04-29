@@ -12,7 +12,8 @@ servers:
 paths:
   /login:
     get:
-      summary: Send the user agent to an identity provider selector and generate a user account. This is redirect endpoint.
+      summary: Send the user agent to an identity provider selector and generate a user account. This is redirect
+       endpoint.
       operationId: fusillade.api.login.get
       tags:
         - oauth
@@ -35,8 +36,8 @@ paths:
           description: Unexpected error
   /.well-known/openid-configuration:
     get:
-      summary: This endpoint is part of OIDC see documentation: https://openid.net/specs/openid-connect-discovery-1_0
-      .html#ProviderConfig
+      summary: This endpoint is part of OIDC see documentation
+       https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
       tags:
         - oauth
       operationId: fusillade.api.oauth.serve_openid_config
@@ -63,8 +64,8 @@ paths:
           description: return a authorization token
   /oauth/authorize:
     get:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider:
-        see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+       see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
       operationId: fusillade.api.oauth.authorize
       tags:
         - oauth
@@ -100,7 +101,7 @@ paths:
           description: Unexpected error
   /oauth/token:
     post:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider:
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint
       operationId: fusillade.api.oauth.serve_oauth_token
       parameters:
@@ -153,7 +154,7 @@ paths:
           description: Unexpected error
   /oauth/refresh:
     post:
-      description: This endpoint is part of OIDC and is used to redirect to an openid provider:
+      description: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens
       operationId: fusillade.api.oauth.refresh
       security:
@@ -186,7 +187,7 @@ paths:
           description: Unexpected error
   /oauth/userinfo:
     get:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider:
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
       operationId: fusillade.api.oauth.get_userinfo
       security:
@@ -203,7 +204,7 @@ paths:
         401:
           $ref: '#/components/responses/401'
     post:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider:
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
       operationId: fusillade.api.oauth.post_userinfo
       security:
