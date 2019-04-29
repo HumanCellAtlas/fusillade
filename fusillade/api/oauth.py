@@ -62,9 +62,9 @@ def proxy_response(dest_url, method='GET', headers=None, body='', query_params=N
 
 
 def serve_openid_config():
-    '''
-     Part of OIDC
-    '''
+    """
+    Part of OIDC
+    """
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
     auth_host = request.headers['host']
     # TODO figure out of auth_host should be os.environ["API_DOMAIN_NAME"]
@@ -77,17 +77,17 @@ def serve_openid_config():
 
 
 def serve_jwks_json():
-    '''
-     Part of OIDC
-    '''
+    """
+    Part of OIDC
+    """
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
     return proxy_response(openid_config["jwks_uri"])
 
 
 def serve_oauth_token():
-    '''
-     Part of OIDC
-    '''
+    """
+    Part of OIDC
+    """
     # TODO: client id/secret mgmt
     openid_provider = os.environ["OPENID_PROVIDER"]
     openid_config = get_openid_config(openid_provider)
@@ -95,46 +95,46 @@ def serve_oauth_token():
 
 
 def revoke():
-    '''
-     Part of OIDC
-    '''
+    """
+    Part of OIDC
+    """
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
     return proxy_response(openid_config["revocation_endpoint"])
 
 
 def userinfo():
-    '''
-     Part of OIDC
-    '''
+    """
+    Part of OIDC
+    """
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
     return proxy_response(openid_config["userinfo_endpoint"])
 
 
 def get_userinfo():
-    '''
-     Part of OIDC
-    '''
+    """
+    Part of OIDC
+    """
     return userinfo()
 
 
 def post_userinfo():
-    '''
-     Part of OIDC
-    '''
+    """
+    Part of OIDC
+    """
     return userinfo()
 
 
 def refresh():
-    '''
-     Part of OIDC
-    '''
+    """
+    Part of OIDC
+    """
     pass
 
 
 def cb():
-    '''
-     Part of OIDC
-    '''
+    """
+    Part of OIDC
+    """
     query_params = request.args
     state = json.loads(base64.b64decode(query_params["state"]))
     openid_provider = os.environ["OPENID_PROVIDER"]
