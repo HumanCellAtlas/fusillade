@@ -22,9 +22,10 @@ from fusillade.errors import FusilladeException, FusilladeHTTPException
 
 logger = logging.getLogger(__name__)
 
-project_arn = "arn:aws:clouddirectory:us-east-1:861229788715:"  # TODO move to config.py
+
 cd_client = aws_clients.clouddirectory
 iam = aws_clients.iam
+project_arn = f"arn:aws:clouddirectory:{os.getenv('AWS_DEFAULT_REGION')}:{cd_client.get_caller_identity().get('Account')}:"  # TODO move to config.py
 
 proj_path = os.path.dirname(__file__)
 
