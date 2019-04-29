@@ -66,8 +66,7 @@ def serve_openid_config():
     Part of OIDC
     """
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
-    auth_host = request.headers['host']
-    # TODO figure out of auth_host should be os.environ["API_DOMAIN_NAME"]
+    auth_host = os.environ["API_DOMAIN_NAME"]
     openid_config.update(authorization_endpoint=f"https://{auth_host}/authorize",
                          token_endpoint=f"https://{auth_host}/oauth/token",
                          jwks_uri=f"https://{auth_host}/.well-known/jwks.json",

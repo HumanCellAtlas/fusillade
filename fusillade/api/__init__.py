@@ -140,7 +140,6 @@ class ChaliceWithConnexion(chalice.Chalice):
             else:
                 return chalice.Response(status_code=requests.codes.found, headers={"Location": path + "/"}, body="")
         req_body = cr.raw_body if cr._body is not None else None
-        base_url = "https://{}".format(cr.headers["host"]) if cr.headers.get("host") else os.environ["API_DOMAIN_NAME"]
         # TODO figure out of host should be os.environ["API_DOMAIN_NAME"]
 
         self.log.info(
@@ -153,7 +152,7 @@ class ChaliceWithConnexion(chalice.Chalice):
             str(query_params) if query_params is not None else '',
         )
         with self.connexion_request_context(path=path,
-                                            base_url=base_url,
+                                            base_url=os.environ["API_DOMAIN_NAME"],
                                             query_string=cr.query_params,
                                             method=method,
                                             headers=list(cr.headers.items()),
