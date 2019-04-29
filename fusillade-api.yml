@@ -35,7 +35,8 @@ paths:
           description: Unexpected error
   /.well-known/openid-configuration:
     get:
-      summary: This endpoint is part of OIDC
+      summary: This endpoint is part of OIDC see documentation: https://openid.net/specs/openid-connect-discovery-1_0
+      .html#ProviderConfig
       tags:
         - oauth
       operationId: fusillade.api.oauth.serve_openid_config
@@ -50,7 +51,7 @@ paths:
       operationId: fusillade.api.oauth.serve_jwks_json
       responses:
         200:
-          description: Returns the well know jwks
+          description: Returns the well known jwks
   /cb:
     get:
       summary: An internal endpoint that should not be used.
@@ -62,7 +63,7 @@ paths:
           description: return a authorization token
   /oauth/authorize:
     get:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider:
         see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
       operationId: fusillade.api.oauth.authorize
       tags:
@@ -99,7 +100,7 @@ paths:
           description: Unexpected error
   /oauth/token:
     post:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider:
         see https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint
       operationId: fusillade.api.oauth.serve_oauth_token
       parameters:
@@ -152,7 +153,7 @@ paths:
           description: Unexpected error
   /oauth/refresh:
     post:
-      description: This endpoint is part of OIDC and is used to redirect to an openid provider
+      description: This endpoint is part of OIDC and is used to redirect to an openid provider:
         see https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens
       operationId: fusillade.api.oauth.refresh
       security:
@@ -185,7 +186,7 @@ paths:
           description: Unexpected error
   /oauth/userinfo:
     get:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider:
         see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
       operationId: fusillade.api.oauth.get_userinfo
       security:
@@ -202,7 +203,7 @@ paths:
         401:
           $ref: '#/components/responses/401'
     post:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+      summary: This endpoint is part of OIDC and is used to redirect to an openid provider:
         see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
       operationId: fusillade.api.oauth.post_userinfo
       security:
@@ -335,7 +336,7 @@ paths:
           description: Unexpected error
   /v1/users/{user_id}/groups:
     get:
-      summary: Retrieve groups a user is in.
+      summary: Retrieve group(s) a user is in.
       operationId: fusillade.api.users.get_users_groups
       security:
         - BearerAuth: []
@@ -360,7 +361,7 @@ paths:
         default:
           description: Unexpected error
     put:
-      summary: Add or remove groups from user
+      summary: Add or remove a user from group(s)
       operationId: fusillade.api.users.put_users_groups
       security:
         - BearerAuth: []
@@ -415,7 +416,7 @@ paths:
         default:
           description: Unexpected error
     put:
-      summary: Add or remove roles from user
+      summary: Add or remove user from role(s)
       operationId: fusillade.api.users.put_users_roles
       security:
         - BearerAuth: []
@@ -561,7 +562,7 @@ paths:
         - group
   /v1/groups/{group_id}/roles:
     get:
-      summary: Retrieve roles a group is in.
+      summary: Retrieve role(s) a group is in.
       operationId: fusillade.api.groups.get_groups_roles
       security:
         - BearerAuth: []
@@ -586,7 +587,7 @@ paths:
       tags:
         - group
     put:
-      summary: Add or remove role from group.
+      summary: Add or remove a group from role(s).
       operationId: fusillade.api.groups.put_groups_roles
       security:
         - BearerAuth: []
