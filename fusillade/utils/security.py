@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.6
 """
-Used by connexions to verify the JWT in Authorization header of the request.
+Used by connexion to verify the JWT in Authorization header of the request.
 """
 import json
 import os, functools, base64, typing
@@ -72,7 +72,7 @@ def get_public_keys(openid_provider):
 def verify_jwt(token: str) -> typing.Optional[typing.Mapping]:
     """
     Verify the JWT from the request. This is function is referenced in fusillade-api.yml
-    securitySchemes.BearerAuth.x-bearerInfoFunc. It's used by connexions to authorize api endpoints that use BearAuth
+    securitySchemes.BearerAuth.x-bearerInfoFunc. It's used by connexion to authorize api endpoints that use BearAuth
     securitySchema.
 
     :param token: the Authorization header in the request.
