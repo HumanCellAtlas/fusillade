@@ -21,7 +21,7 @@ app = FusilladeServer(app_name='fusillade', swagger_spec_path=swagger_spec_path)
 Config.app = app
 
 
-@app.route("/")
+@app.route("/")  # TODO use connexion swagger ui and remove
 def serve_swagger_ui():
     with open(os.path.join(pkg_root, "index.html")) as fh:
         swagger_ui_html = fh.read()
@@ -30,7 +30,7 @@ def serve_swagger_ui():
                             body=swagger_ui_html)
 
 
-@app.route("/version")
+@app.route("/version")  # version of the service
 def version():
     data = {
         'version_info': {

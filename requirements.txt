@@ -7,5 +7,6 @@ flask >= 1.0.2
 connexion >= 2.2.0
 werkzeug >= 0.14
 requests >= 2.21.0
+connexion[swagger-ui]
 dcplib
 pyyaml
