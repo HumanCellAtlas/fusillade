@@ -4,6 +4,7 @@ import requests
 from connexion.lifecycle import ConnexionResponse
 from flask import request
 
+
 def version():
     data = {
         'version_info': {
@@ -20,8 +21,8 @@ def version():
 def health_check(*args, **kwargs):
     health_status = 'OK'
     return ConnexionResponse(status_code=200,
-                            headers={"Content-Type": "application/json"},
-                            body=json.dumps(health_status, indent=4, sort_keys=True, default=str))
+                             headers={"Content-Type": "application/json"},
+                             body=json.dumps(health_status, indent=4, sort_keys=True, default=str))
 
 
 def echo():
