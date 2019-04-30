@@ -2,8 +2,7 @@ SHELL=/bin/bash
 
 tests:=$(wildcard tests/test_*.py)
 
-before-test:
-	cat fusillade-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/fusillade-api.yml
+before-test: package
 
 lint:
 	flake8 app.py fusillade
