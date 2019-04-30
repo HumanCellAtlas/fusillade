@@ -1,5 +1,4 @@
 import collections
-import functools
 import logging
 import os
 import re
@@ -8,69 +7,9 @@ import chalice
 import requests
 
 from connexion import FlaskApp
-from connexion.decorators.validation import ParameterValidator, RequestBodyValidator
 from connexion.resolver import RestyResolver
 
-from fusillade import FusilladeBindingException, Config
-
-
-class FusilladeParameterValidator(ParameterValidator):
-    """
-    The ParameterValidator provided by Connexion immediately returns a value if the validation fails.  Therefore, our
-    code is never invoked, and the common_error_handler in the connexion.App object is never called.  This means error
-    messsages are not returned using our standard error formats.
-
-    The solution is to trap the validation results, and if it fails, exit the validation flow.  We catch the exception
-    at the top level where the various validators are called, and return a value according to our specs.
-    """
-
-    @staticmethod
-    def validate_parameter(*args, **kwargs):
-        result = ParameterValidator.validate_parameter(*args, **kwargs)
-        if result is not None:
-            raise FusilladeBindingException(result)
-        return result
-
-    def __call__(self, function):
-        origwrapper = super().__call__(function)
-
-        @functools.wraps(origwrapper)
-        def wrapper(request):
-            try:
-                return origwrapper(request)
-            except FusilladeBindingException as ex:
-                return ex.to_problem()
-
-        return wrapper
-
-
-class FusilladeRequestBodyValidator(RequestBodyValidator):
-    """
-    The RequestBodyValidator provided by Connexion immediately returns a value if the validation fails.  Therefore, our
-    code is never invoked, and the common_error_handler in the connexion.App object is never called.  This means error
-    messsages are not returned using our standard error formats.
-
-    The solution is to trap the validation results, and if it fails, exit the validation flow.  We catch the exception
-    at the top level where the various validators are called.
-    """
-
-    def validate_schema(self, *args, **kwargs):
-        result = super().validate_schema(*args, **kwargs)
-        if result is not None:
-            raise FusilladeBindingException(result.body['detail'])
-        return result
-
-    def __call__(self, function):
-        origwrapper = super().__call__(function)
-
-        @functools.wraps(origwrapper)
-        def wrapper(request):
-            try:
-                return origwrapper(request)
-            except FusilladeBindingException as ex:
-                return ex.to_problem()
-
-        return wrapper
+from fusillade import Config
 
 
 class ChaliceWithConnexion(chalice.Chalice):
@@ -106,14 +45,8 @@ class ChaliceWithConnexion(chalice.Chalice):
         app.app.debug = debug
         app.app.logger.info('Flask debug is %s.', 'enabled' if debug else 'disabled')
 
-        validator_map = {
-            'body': FusilladeRequestBodyValidator,
-            'parameter': FusilladeParameterValidator,
-        }
-
         resolver = RestyResolver("fusillade.api", collection_endpoint_name="list")
         app.add_api(self.swagger_spec_path,
-                    validator_map=validator_map,
                     resolver=resolver,
                     validate_responses=True,
                     arguments=os.environ,
