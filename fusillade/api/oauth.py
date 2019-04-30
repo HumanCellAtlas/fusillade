@@ -16,6 +16,12 @@ from fusillade.errors import FusilladeHTTPException
 from fusillade.utils.security import get_openid_config, get_public_keys
 
 
+def login():
+    return ConnexionResponse(
+        status_code=requests.codes.moved,
+        headers=dict(Location=proxied_endpoints['authorization_endpoint']))
+
+
 def authorize():
     query_params = request.args.copy() if request.args else {}
     openid_provider = os.environ["OPENID_PROVIDER"]
@@ -62,6 +68,13 @@ def proxy_response(dest_url, method='GET', headers=None, body='', query_params=N
     return proxy_resp
 
 
+proxied_endpoints = dict(authorization_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/authorize",
+                         token_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/token",
+                         jwks_uri=f"https://{os.environ['API_DOMAIN_NAME']}/.well-known/jwks.json",
+                         revocation_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/revoke",
+                         userinfo_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/userinfo")
+
+
 def serve_openid_config():
     """
     Part of OIDC
@@ -73,11 +86,7 @@ def serve_openid_config():
             status=400,
             title="Bad Request",
             detail=f"host: {auth_host}, is not supported. host must be {os.environ['API_DOMAIN_NAME']}.")
-    openid_config.update(authorization_endpoint=f"https://{auth_host}/oauth/authorize",
-                         token_endpoint=f"https://{auth_host}/oauth/token",
-                         jwks_uri=f"https://{auth_host}/.well-known/jwks.json",
-                         revocation_endpoint=f"https://{auth_host}/oauth/revoke",
-                         userinfo_endpoint=f"https://{auth_host}/oauth/userinfo")
+    openid_config.update(**proxied_endpoints)
     return ConnexionResponse(body=openid_config, status_code=requests.codes.ok)
 
 

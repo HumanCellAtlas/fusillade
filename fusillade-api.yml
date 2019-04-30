@@ -15,7 +15,7 @@ paths:
     get:
       summary: Send the user agent to an identity provider selector and generate a user account. This is redirect
        endpoint.
-      operationId: fusillade.api.login.get
+      operationId: fusillade.api.oauth.login
       tags:
         - oauth
       parameters:
