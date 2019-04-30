@@ -19,7 +19,7 @@ from fusillade.utils.security import get_openid_config, get_public_keys
 def login():
     return ConnexionResponse(
         status_code=requests.codes.moved,
-        headers=dict(Location=proxied_endpoints['authorization_endpoint']))
+        headers=dict(Location='/oauth/authorize'))
 
 
 def authorize():
