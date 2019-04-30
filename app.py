@@ -11,12 +11,11 @@ sys.path.insert(0, pkg_root)  # noqa
 from fusillade import Config
 from fusillade.api import FusilladeServer
 
-
 with open(os.path.join(pkg_root, "service_config.json")) as fh:
     service_config = yaml.load(fh.read())
 
 swagger_spec_path = os.path.join(pkg_root, "fusillade-api.yml")
-swagger_internal_spec_path  = os.path.join(pkg_root, "fusillade-internal-api.yml")
+swagger_internal_spec_path = os.path.join(pkg_root, "fusillade-internal-api.yml")
 app = FusilladeServer(app_name='fusillade', swagger_spec_path=swagger_spec_path,
                       swagger_internal_spec_path=swagger_internal_spec_path)
 Config.app = app
@@ -36,6 +35,3 @@ def serve_swagger_definition():
     with open(swagger_spec_path) as fh:
         swagger_defn = yaml.load(fh.read())
     return swagger_defn
-
-
-
