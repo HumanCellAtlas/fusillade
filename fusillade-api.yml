@@ -60,15 +60,6 @@ paths:
       responses:
         200:
           description: Returns the well known jwks
-  /cb:
-    get:
-      summary: An internal endpoint that should not be used.
-      tags:
-        - oauth
-      operationId: fusillade.api.oauth.cb
-      responses:
-        200:
-          description: return a authorization token
   /oauth/authorize:
     get:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
@@ -227,6 +218,13 @@ paths:
                 type: object
         401:
           $ref: '#/components/responses/401'
+  /echo:
+    get:
+      summary: echos the response
+      operationId: fusillade.api.internal.echo
+      responses:
+        200:
+          description: echo
   /v1/policies/evaluate:
     post:
       summary: Given a set of principals, actions, and resources return a set of access control decisions.

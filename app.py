@@ -17,7 +17,9 @@ with open(os.path.join(pkg_root, "service_config.json")) as fh:
     service_config = yaml.load(fh.read())
 
 swagger_spec_path = os.path.join(pkg_root, "fusillade-api.yml")
-app = FusilladeServer(app_name='fusillade', swagger_spec_path=swagger_spec_path)
+swagger_internal_spec_path  = os.path.join(pkg_root, "fusillade-internal-api.yml")
+app = FusilladeServer(app_name='fusillade', swagger_spec_path=swagger_spec_path,
+                      swagger_internal_spec_path=swagger_internal_spec_path)
 Config.app = app
 
 
@@ -30,28 +32,6 @@ def serve_swagger_ui():
                             body=swagger_ui_html)
 
 
-@app.route("/version")  # version of the service
-def version():
-    data = {
-        'version_info': {
-            'version': 0.0
-        }
-    }
-    return chalice_response(
-        status_code=requests.codes.ok,
-        headers={'Content-Type': "application/json"},
-        body=data
-    )
-
-
-@app.route("/internal/status")
-def health_check(*args, **kwargs):
-    health_status = 'OK'
-    return chalice_response(status_code=200,
-                            headers={"Content-Type": "application/json"},
-                            body=json.dumps(health_status, indent=4, sort_keys=True, default=str))
-
-
 @app.route('/swagger.json')
 def serve_swagger_definition():
     with open(swagger_spec_path) as fh:
@@ -59,6 +39,4 @@ def serve_swagger_definition():
     return swagger_defn
 
 
-@app.route('/echo')
-def echo():
-    return str(app.current_request.__dict__)
+

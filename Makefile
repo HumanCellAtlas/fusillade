@@ -40,6 +40,7 @@ package:
 	git clean -df chalicelib vendor
 	shopt -s nullglob; for wheel in vendor.in/*/*.whl; do unzip -q -o -d vendor $$wheel; done
 	cat fusillade-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/fusillade-api.yml
+	cat fusillade-internal-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/fusillade-internal-api.yml
 	cp -R ./fusillade ./policies chalicelib
 
 deploy: package

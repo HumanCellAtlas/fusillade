@@ -17,9 +17,10 @@ class ChaliceWithConnexion(chalice.Chalice):
     Subclasses Chalice to host a Connexion app, route and proxy requests to it.
     """
 
-    def __init__(self, swagger_spec_path, *args, **kwargs):
+    def __init__(self, swagger_spec_path, swagger_internal_spec_path, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.swagger_spec_path = swagger_spec_path
+        self.swagger_internal_spec_path = swagger_internal_spec_path
         self.connexion_app = self.create_connexion_app()
         self.connexion_full_dispatch_request = self.connexion_app.app.full_dispatch_request
         self.connexion_request_context = self.connexion_app.app.test_request_context
@@ -51,6 +52,7 @@ class ChaliceWithConnexion(chalice.Chalice):
                     validate_responses=True,
                     arguments=os.environ,
                     options={"swagger_path": self.swagger_spec_path})
+        app.add_api(self.swagger_internal_spec_path, validate_responses=True)
         return app
 
     def dispatch(self, *args, **kwargs):

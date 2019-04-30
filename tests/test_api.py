@@ -250,9 +250,13 @@ class TestApi(unittest.TestCase):
                 resp.raise_for_status()
 
     def test_echo(self):
-        resp = self.app.get('/echo')
+        body='Hello World!'
+        resp = self.app.get('/echo', data=body)
         resp.raise_for_status()
 
+    def test_version(self):
+        resp = self.app.get('/internal/version')
+        resp.raise_for_status()
 
 
 if __name__ == '__main__':
