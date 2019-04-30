@@ -73,11 +73,11 @@ def serve_openid_config():
             status=400,
             title="Bad Request",
             detail=f"host: {auth_host}, is not supported. host must be {os.environ['API_DOMAIN_NAME']}.")
-    openid_config.update(authorization_endpoint=f"https://{auth_host}/authorize",
+    openid_config.update(authorization_endpoint=f"https://{auth_host}/oauth/authorize",
                          token_endpoint=f"https://{auth_host}/oauth/token",
                          jwks_uri=f"https://{auth_host}/.well-known/jwks.json",
                          revocation_endpoint=f"https://{auth_host}/oauth/revoke",
-                         userinfo_endpoint=f"https://{auth_host}/userinfo")
+                         userinfo_endpoint=f"https://{auth_host}/oauth/userinfo")
     return ConnexionResponse(body=openid_config, status_code=requests.codes.ok)
 
 
