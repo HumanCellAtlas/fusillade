@@ -40,6 +40,13 @@ paths:
        https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
       tags:
         - oauth
+      parameters:
+        - in: header
+          name: host
+          schema:
+            type: string
+          required: true
+          description: Must be $API_DOMAIN_NAME
       operationId: fusillade.api.oauth.serve_openid_config
       responses:
         200:

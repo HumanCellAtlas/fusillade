@@ -133,7 +133,7 @@ class TestAuthentication(unittest.TestCase):
         expected_supported_scopes = ['openid', 'profile', 'email']
 
         with self.subTest("openid configuration returned when host is provided in header."):
-            host = 'localhost:8000'
+            host = os.environ['API_DOMAIN_NAME']
             resp = self.app.get('/.well-known/openid-configuration', headers={'host': host})
             resp.raise_for_status()
             body = json.loads(resp.body)
@@ -146,9 +146,14 @@ class TestAuthentication(unittest.TestCase):
             for key in expected_response_types_supported:
                 self.assertIn(key, body['response_types_supported'])
 
-        with self.subTest("openid configuration returned with API_DOMAIN_NAME when no host is provided in header."):
+        with self.subTest("an error is returned when no host is provided in the header"):
             resp = self.app.get('/.well-known/openid-configuration')
-            self.assertEqual(200, resp.status_code)
+            self.assertEqual(400, resp.status_code)
+
+        with self.subTest("Error return when invalid host is provided in header."):
+            host = 'localhost:8080'
+            resp = self.app.get('/.well-known/openid-configuration', headers={'host': host})
+            self.assertEqual(400, resp.status_code)
 
     def test_serve_jwks_json(self):
         resp = self.app.get('/.well-known/jwks.json')

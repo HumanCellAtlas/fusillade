@@ -12,6 +12,7 @@ from connexion.lifecycle import ConnexionResponse
 from furl import furl
 
 from fusillade import Config
+from fusillade.errors import FusilladeHTTPException
 from fusillade.utils.security import get_openid_config, get_public_keys
 
 
@@ -66,7 +67,12 @@ def serve_openid_config():
     Part of OIDC
     """
     openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
-    auth_host = os.environ["API_DOMAIN_NAME"]
+    auth_host = request.headers['host']
+    if auth_host != os.environ["API_DOMAIN_NAME"]:
+        raise FusilladeHTTPException(
+            status=400,
+            title="Bad Request",
+            detail=f"host: {auth_host}, is not supported. host must be {os.environ['API_DOMAIN_NAME']}.")
     openid_config.update(authorization_endpoint=f"https://{auth_host}/authorize",
                          token_endpoint=f"https://{auth_host}/oauth/token",
                          jwks_uri=f"https://{auth_host}/.well-known/jwks.json",
