@@ -4,7 +4,6 @@ import sys
 import yaml
 from botocore.vendored import requests
 from chalice import Response as chalice_response
-from flask import json
 
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), 'chalicelib'))
 sys.path.insert(0, pkg_root)  # noqa

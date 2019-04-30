@@ -80,7 +80,7 @@ class TestAuthentication(unittest.TestCase):
         url.add(query_params=query_params)
         resp = self.app.get(url.url)
         self.assertEqual(301, resp.status_code)
-        self.assertEqual(resp.headers['Location'], '/authorize')
+        self.assertEqual(resp.headers['Location'], '/oauth/authorize')
 
     def test_authorize(self):
         scopes = "openid email profile"  # Is offline_access needed for CLI
@@ -182,7 +182,7 @@ class TestAuthentication(unittest.TestCase):
             self.assertEqual(400, resp.status_code)  # TODO fix
 
     def test_cb(self):
-        resp = self.app.get('/cb')
+        resp = self.app.get('/internal/cb')
         self.assertEqual(400, resp.status_code)  # TODO fix
 
 

@@ -50,8 +50,7 @@ class ChaliceWithConnexion(chalice.Chalice):
         app.add_api(self.swagger_spec_path,
                     resolver=resolver,
                     validate_responses=True,
-                    arguments=os.environ,
-                    options={"swagger_path": self.swagger_spec_path})
+                    arguments=os.environ)
         app.add_api(self.swagger_internal_spec_path, validate_responses=True)
         return app
 
