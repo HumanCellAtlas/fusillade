@@ -1,6 +1,6 @@
 import requests
-from flask import make_response
+from connexion.lifecycle import ConnexionResponse
 
 
 def get():
-    return make_response("", requests.codes.moved, dict(Location="/oauth/authorize"))
+    return ConnexionResponse(status_code=requests.codes.moved, headers=dict(Location="/oauth/authorize"))

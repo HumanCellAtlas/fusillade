@@ -5,6 +5,7 @@ info:
     Human Cell Atlas Data Coordination Platform Fusillade app demo
 
     Log in: [Auth0](/login?state=ABC&redirect_uri=https://auth.data.humancellatlas.org/echo)
+
     OIDC spec https://openid.net/specs/openid-connect-core-1_0.html#toc
   version: "0.0.1"
 servers:
