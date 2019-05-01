@@ -229,7 +229,7 @@ paths:
   /v1/policies/evaluate:
     post:
       summary: Given a set of principals, actions, and resources return a set of access control decisions.
-      operationId: fusillade.api.evaluate.evaluate_policy
+      operationId: fusillade.api.evaluate.evaluate_policy_api
       security:
         - BearerAuth: []
       requestBody:

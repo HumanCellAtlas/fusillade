@@ -300,7 +300,7 @@ class CloudDirectory:
         """
         Create an object and store in cloud directory.
         """
-        object_attribute_list = self._get_object_attribute_list(facet=facet_type, obj_type=obj_type, **kwargs)
+        object_attribute_list = self.get_object_attribute_list(facet=facet_type, obj_type=obj_type, **kwargs)
         parent_path = self.get_obj_type_path(obj_type)
         cd_client.create_object(DirectoryArn=self._dir_arn,
                                 SchemaFacets=[
@@ -328,7 +328,7 @@ class CloudDirectory:
                                                AttributeNames=attributes
                                                )
 
-    def _get_object_attribute_list(self, facet="User", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
+    def get_object_attribute_list(self, facet="UserFacet", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
         return [dict(Key=dict(SchemaArn=self.schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
                 for k, v in kwargs.items()]
 
@@ -343,7 +343,7 @@ class CloudDirectory:
         info https://docs.aws.amazon.com/clouddirectory/latest/developerguide/key_concepts_directory.html
         """
         kwargs["Statement"] = statement
-        obj = self._get_object_attribute_list(facet=facet, **kwargs)
+        obj = self.get_object_attribute_list(facet=facet, **kwargs)
         obj.append(dict(Key=dict(
             SchemaArn=self.schema,
             FacetName=facet,
@@ -391,7 +391,7 @@ class CloudDirectory:
     def create_folder(self, path: str, name: str) -> None:
         """ A folder is just a Group"""
         schema_facets = [dict(SchemaArn=self.schema, FacetName="BasicFacet")]
-        object_attribute_list = self._get_object_attribute_list(facet="BasicFacet", name=name, obj_type="folder")
+        object_attribute_list = self.get_object_attribute_list(facet="BasicFacet", name=name, obj_type="folder")
         try:
             cd_client.create_object(DirectoryArn=self._dir_arn,
                                     SchemaFacets=schema_facets,

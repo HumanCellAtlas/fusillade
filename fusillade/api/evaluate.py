@@ -6,7 +6,24 @@ from fusillade import User, directory
 iam = aws_clients.iam
 
 
-def evaluate_policy():
+def evalaute_policy(principal, action, resource) -> bool:
+    user = User(directory, principal)
+    result = iam.simulate_custom_policy(
+        PolicyInputList=user.lookup_policies(),
+        ActionNames=[action],
+        ResourceArns=[resource],
+        ContextEntries=[
+            {
+                'ContextKeyName': 'fus:user_email',
+                'ContextKeyValues': [principal],
+                'ContextKeyType': 'string'
+            }
+        ]
+    )['EvaluationResults'][0]['EvalDecision']
+    return True if result == 'allowed' else False
+
+
+def evaluate_policy_api():
     json_body = request.json
     principal = json_body["principal"]
     action = json_body["action"]
