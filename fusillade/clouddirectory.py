@@ -486,11 +486,11 @@ class CloudDirectory:
         }
 
     def clear(self) -> None:
-        for _, obj_ref in self.list_object_children('/Users/'):
+        for _, obj_ref in self.list_object_children('/user/'):
             self.delete_object(obj_ref)
-        for _, obj_ref in self.list_object_children('/Groups/'):
+        for _, obj_ref in self.list_object_children('/group/'):
             self.delete_object(obj_ref)
-        for name, obj_ref in self.list_object_children('/Roles/'):
+        for name, obj_ref in self.list_object_children('/role/'):
             if name not in ["admin", "default_user"]:
                 self.delete_object(obj_ref)
 
