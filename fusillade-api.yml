@@ -247,10 +247,14 @@ paths:
                   type: string
                 action:
                   description: The action the principal is attempting to perform
-                  type: string
+                  type: array
+                  items:
+                    type: string
                 resource:
                   description: The resource the principal will perform the action against
-                  type: string
+                  type: array
+                  items:
+                    type: string
       responses:
         200:
           description: The result of the policy evaluation
