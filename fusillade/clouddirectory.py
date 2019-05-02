@@ -667,20 +667,15 @@ class CloudDirectory:
         max_results = 3  # Max recommended by AWS Support
 
         # retrieve all of the policies attached to an object and its parents.
-        response = cd_client.lookup_policy(
-            DirectoryArn=self._dir_arn,
-            ObjectReference={'Selector': object_id},
-            MaxResults=max_results
-        )
-        policies_paths: list = response['PolicyToPathList']
-        while response.get('NextToken'):
-            response = cd_client.lookup_policy(
+        policies_paths = [
+            path
+            for response in cd_client.get_paginator('lookup_policy').paginate(
                 DirectoryArn=self._dir_arn,
                 ObjectReference={'Selector': object_id},
-                NextToken=response['NextToken'],
-                MaxResults=max_results
+                PaginationConfig={'PageSize': 3}
             )
-            policies_paths.extend(response['PolicyToPathList'])
+            for path in response['PolicyToPathList']
+        ]
 
         # Parse the policyIds from the policies path. Only keep the unique ids
         policy_ids = set(
