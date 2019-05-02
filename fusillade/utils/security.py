@@ -3,7 +3,7 @@
 Used by connexion to verify the JWT in Authorization header of the request.
 """
 import json
-import os, functools, base64, typing
+import functools, base64, typing
 
 import requests
 import jwt
@@ -12,12 +12,10 @@ import logging
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 
-from flask import request
 from furl import furl
 
 from fusillade import Config
-from fusillade.errors import FusilladeForbiddenException, FusilladeHTTPException
-from fusillade.utils.iam_evaluate import evaluate_policy
+from fusillade.errors import FusilladeHTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -101,22 +99,3 @@ def verify_jwt(token: str) -> typing.Optional[typing.Mapping]:
         logger.info("""{"valid": false, "token": %s}""", json.dumps(unverified_token), exc_info=True)
         raise FusilladeHTTPException(401, 'Unauthorized', 'Authorization token is invalid') from ex
     return verified_tok
-
-
-def assert_authorized(user: str, actions: typing.List[str], resources: typing.List[str]) -> bool:
-    if evaluate_policy(user, actions, resources):
-        return
-    logger.info(f"User not authorized. {user}, {actions}, {resources}")
-    raise FusilladeForbiddenException()
-
-
-def authorization_required(actions, resources):
-    def real_decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            assert_authorized(kwargs['user'], actions, resources)
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return real_decorator

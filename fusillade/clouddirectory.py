@@ -18,7 +18,6 @@ from urllib.parse import quote
 
 from fusillade.errors import FusilladeException
 from fusillade.config import Config
-from fusillade.utils.retry import retry
 
 project_arn = "arn:aws:clouddirectory:us-east-1:861229788715:"  # TODO move to config.py
 cd_client = aws_clients.clouddirectory
@@ -844,7 +843,6 @@ class CloudNode:
             operations.append(batch_detach_typed_link(typed_link_specifier))
         self.cd.batch_write(operations)
 
-    @retry(limit=3, retryable=lambda e: isinstance(e, cd_client.exceptions.ResourceNotFoundException))
     def lookup_policies(self) -> typing.List[str]:
         return self.cd.lookup_policy(self.object_ref)
 
