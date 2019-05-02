@@ -6,10 +6,14 @@ from fusillade import User, directory
 iam = aws_clients.iam
 
 
-def evaluate_policy(principal: str, actions: typing.List[str], resources: typing.List[str]) -> bool:
-    user = User(directory, principal)
+def evaluate_policy(
+        principal: str,
+        actions: typing.List[str],
+        resources: typing.List[str],
+        policies: typing.List[str]
+) -> bool:
     result = iam.simulate_custom_policy(
-        PolicyInputList=user.lookup_policies(),
+        PolicyInputList=policies,
         ActionNames=actions,
         ResourceArns=resources,
         ContextEntries=[
