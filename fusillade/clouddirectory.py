@@ -796,7 +796,7 @@ class CloudNode:
         batch_attach_typed_link = self.cd.batch_attach_typed_link
         operations = []
         for link in links:
-            parent_ref = parent_path + link  # TODO use f-string
+            parent_ref = f"{parent_path}{self.hash_name(link)}"
             operations.append(
                 batch_attach_object(
                     parent_ref,
@@ -830,7 +830,7 @@ class CloudNode:
         make_typed_link_specifier = self.cd.make_typed_link_specifier
         operations = []
         for link in links:
-            parent_ref = parent_path + link
+            parent_ref = f"{parent_path}{self.hash_name(link)}"
             operations.append(
                 batch_detach_object(
                     parent_ref,
