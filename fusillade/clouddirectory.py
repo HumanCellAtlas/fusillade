@@ -868,7 +868,7 @@ class CloudNode:
                 self._policy = policies[0]
         return self._policy
 
-    def create_policy(self, statement: str, ) -> str:
+    def create_policy(self, statement: str) -> str:
         """
         Create a policy object and attach it to the CloudNode
         :param statement: Json string that follow AWS IAM Policy Grammar.
@@ -877,7 +877,7 @@ class CloudNode:
         """
         operations = list()
         object_attribute_list = self.cd.get_policy_attribute_list(self._facet, statement)
-        policy_link_name = f"{self._path_name}_{self._object_type}_IAMPolicy"
+        policy_link_name = self.get_policy_name('IAMPolicy')
         parent_path = self.cd.get_obj_type_path('policy')
         operations.append(self.cd.batch_create_object(parent_path,
                                                       policy_link_name,
@@ -888,6 +888,9 @@ class CloudNode:
         operations.append(self.cd.batch_attach_policy(policy_ref, self.object_ref))
         self.cd.batch_write(operations)
         return policy_ref
+
+    def get_policy_name(self, policy_type):
+        return self.hash_name(f"{self._path_name}{self._object_type}{policy_type}")
 
     @property
     def statement(self):
