@@ -96,7 +96,7 @@ class TestAuthentication(unittest.TestCase):
             query_params["openid_provider"] = "humancellatlas.auth0.com"
             self.assertDictEqual(json.loads(base64.b64decode(redirect_url.args["state"])), query_params)
             redirect_uri = furl(redirect_url.args["redirect_uri"])
-            self.assertTrue(redirect_uri.path.endswith('/cb'))
+            self.assertTrue(redirect_uri.pathstr.endswith('/cb'))
             self.assertEqual(redirect_url.args["scope"], scopes)
             self.assertEqual(redirect_url.host, 'humancellatlas.auth0.com')
             self.assertEqual(redirect_url.path, '/authorize')
