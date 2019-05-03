@@ -489,7 +489,7 @@ class CloudDirectory:
         for _, obj_ref in self.list_object_children('/group/'):
             self.delete_object(obj_ref)
         for name, obj_ref in self.list_object_children('/role/'):
-            if name not in ["admin", "default_user"]:
+            if name not in [CloudNode.hash_name("admin"), CloudNode.hash_name("default_user")]:
                 self.delete_object(obj_ref)
 
     def delete_policy(self, policy_ref: str) -> None:
@@ -757,7 +757,7 @@ class CloudNode:
 
     @staticmethod
     def hash_name(name):
-        return hashlib.sha256(bytes(name, "utf-8")).hexdigest()
+        return hashlib.sha1(bytes(name, "utf-8")).hexdigest()
 
     @staticmethod
     def _get_link_name(parent_path: str, child_path: str):
