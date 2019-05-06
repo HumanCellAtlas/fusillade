@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import typing
 
 import jwt
 from dcplib.aws import clients
@@ -8,11 +9,17 @@ from tests import schema_name, random_hex_string
 from fusillade.config import Config
 from fusillade.clouddirectory import publish_schema, create_directory, CloudDirectory
 
-
-sm = clients.secretsmanager
-service_accounts = json.loads(
-    sm.get_secret_value(SecretId=f"{os.environ['FUS_SECRETS_STORE']}/test_service_accounts")["SecretString"]
-)
+try:
+    with open(f"{os.environ['FUS_HOME']}/test_accounts_{os.environ['FUS_DEPLOYMENT_STAGE']}.json", 'r') as fh:
+        service_accounts = json.load(fh)
+except FileNotFoundError:
+    sm = clients.secretsmanager
+    service_accounts = json.loads(
+        sm.get_secret_value(SecretId=f"{os.environ['FUS_SECRETS_STORE']}/{os.environ['FUS_DEPLOYMENT_STAGE']}"
+        f"/test_service_accounts")["SecretString"]
+    )
+    with open(f"{os.environ['FUS_HOME']}/test_accounts_{os.environ['FUS_DEPLOYMENT_STAGE']}.json", 'w') as fh:
+        json.dump(service_accounts,fh)
 
 
 def create_test_statement(name: str):
@@ -34,7 +41,7 @@ def create_test_statement(name: str):
     return json.dumps(statement)
 
 
-def new_test_directory(directory_name=None) -> CloudDirectory:
+def new_test_directory(directory_name=None) -> typing.Tuple[CloudDirectory, str]:
     directory_name = directory_name if directory_name else "test_dir_" + random_hex_string()
     schema_arn = publish_schema(schema_name, 'T' + random_hex_string())
     directory = create_directory(directory_name, schema_arn, [service_accounts['admin']['client_email']])

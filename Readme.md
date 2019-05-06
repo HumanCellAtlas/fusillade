@@ -68,6 +68,12 @@ authenticate users. This file is uploaded to AWS secrets manager using `make set
 - **Optionally** modify the [default policies and roles](../blob/master/policies) to suite your needs prior to 
   deployment. 
 
+## Set secrets
+Fusillade uses AWS Secret Store for its secrets. Use ./scripts/set_secrets to set the following secrets:
+
+* **test_service_accounts** - contains google service accounts to test users access and admin access.
+* **oauth2_config** - contains the fields needed to proxy an OIDC provider
+
 # Using Fusillade as a Service
 
 When Fusillade is first deployed two roles are created. The first role is `admin` and is assigned
@@ -84,7 +90,6 @@ New admins can be assigned using the fusillade API and assigning the role of adm
 # Using Fusillade as a proxy
 
 # Bundling native cloud credentials
-
 
 # Creating Custom Policy
 
