@@ -22,9 +22,9 @@ old_directory_name = os.getenv("FUSILLADE_DIR", None)
 os.environ["FUSILLADE_DIR"] = directory_name
 
 
-from tests.common import get_auth_header, service_accounts
+from tests.common import get_auth_header, service_accounts, create_test_statement
 import fusillade
-from fusillade import directory, User
+from fusillade import directory, User, Group, Role
 from fusillade.clouddirectory import cleanup_directory
 
 from tests.infra.server import ChaliceTestHarness
@@ -167,58 +167,263 @@ class TestApi(unittest.TestCase):
     def setUpClass(cls):
         cls.app = ChaliceTestHarness()
 
+    def tearDown(self) -> None:
+        directory.clear()
+
     def test_evaluate_policy(self):
-        for i in range(1):
-            email = f"test{i}@email.com"
-            tests = [
-                {
-                    'json_request_body': {
-                        "action": ["dss:CreateSubscription"],
-                        "resource": [f"arn:hca:dss:*:*:subscriptions/{email}/*"],
-                        "principal": "test@email.com"
-                    },
-                    'response': {
-                        'code': 200,
-                        'result': False
-                    }
+        email = "test_evaluate_api@email.com"
+        tests = [
+            {
+                'json_request_body': {
+                    "action": ["dss:CreateSubscription"],
+                    "resource": [f"arn:hca:dss:*:*:subscriptions/{email}/*"],
+                    "principal": "test@email.com"
                 },
-                {
-                    'json_request_body': {
-                        "action": ["fus:GetUser"],
-                        "resource": [f"arn:hca:fus:*:*:user/{email}/policy"],
-                        "principal": email
-                    },
-                    'response': {
-                        'code': 200,
-                        'result': True
-                    }
+                'response': {
+                    'code': 200,
+                    'result': False
                 }
-            ]
-            for test in tests:
-                with self.subTest(test['json_request_body']):
-                    data=json.dumps(test['json_request_body'])
-                    headers={'Content-Type': "application/json"}
-                    headers.update(get_auth_header(service_accounts['admin']))
-                    resp = self.app.post('/v1/policies/evaluate', headers=headers, data=data)
-                    self.assertEqual(test['response']['code'], resp.status_code)  # TODO fix
-                    self.assertEqual(test['response']['result'], json.loads(resp.body)['result'])
+            },
+            {
+                'json_request_body': {
+                    "action": ["fus:GetUser"],
+                    "resource": [f"arn:hca:fus:*:*:user/{email}/policy"],
+                    "principal": email
+                },
+                'response': {
+                    'code': 200,
+                    'result': True
+                }
+            }
+        ]
+        for test in tests:
+            with self.subTest(test['json_request_body']):
+                data=json.dumps(test['json_request_body'])
+                headers={'Content-Type': "application/json"}
+                headers.update(get_auth_header(service_accounts['admin']))
+                resp = self.app.post('/v1/policies/evaluate', headers=headers, data=data)
+                self.assertEqual(test['response']['code'], resp.status_code)
+                self.assertEqual(test['response']['result'], json.loads(resp.body)['result'])
 
-    @unittest.skip("incomplete")
-    def test_put_user(self):
-        pass
+    def test_put_new_user(self):
+        tests = [
+            {
+                'json_request_body': {
+                    "user_id": "test_put_user0@email.com"
 
-    @unittest.skip("incomplete")
+                },
+                'response': {
+                    'code': 201
+                }
+            },
+            {
+                'json_request_body': {
+                    "user_id": "test_put_user1@email.com",
+                    "groups": [Group.create(directory,"group_01").name]
+                },
+                'response': {
+                    'code': 201,
+                    'result': True
+                }
+            },
+            {
+                'json_request_body': {
+                    "user_id": "test_put_user2@email.com",
+                    "roles": [Role.create(directory,"role_02").name]
+                },
+                'response': {
+                    'code': 201,
+                    'result': True
+                }
+            },
+            {
+                'json_request_body': {
+                    "user_id": "test_put_user3@email.com",
+                    "policy": create_test_statement("policy_03")
+                },
+                'response': {
+                    'code': 201,
+                    'result': True
+                }
+            },
+            {
+                'json_request_body': {
+                    "user_id": "test_put_user4@email.com",
+                    "groups": [Group.create(directory, "group_04").name],
+                    "roles": [Role.create(directory, "role_04").name],
+                    "policy": create_test_statement("policy_04")
+                },
+                'response': {
+                    'code': 201,
+                    'result': True
+                }
+            },
+            {
+                'json_request_body': {
+                    "groups": [Group.create(directory, "group_05").name],
+                    "roles": [Role.create(directory, "role_05").name],
+                    "policy": create_test_statement("policy_05")
+                },
+                'response': {
+                    'code': 400,
+                    'result': True
+                }
+            }
+        ]
+        for test in tests:
+            with self.subTest(test['json_request_body']):
+                data=json.dumps(test['json_request_body'])
+                headers={'Content-Type': "application/json"}
+                headers.update(get_auth_header(service_accounts['admin']))
+                resp = self.app.put('/v1/users', headers=headers, data=data)
+                self.assertEqual(test['response']['code'], resp.status_code)
+
     def test_get_user(self):
-        pass
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(service_accounts['admin']))
+        name = "test_user_api@email.com"
+        User.provision_user(directory,name)
+        resp = self.app.get(f'/v1/users/{name}/',headers=headers)
+        self.assertEqual(name,json.loads(resp.body)['name'])
+        resp.raise_for_status()
 
-    @unittest.skip("incomplete")
-    def test_put_group(self):
-        pass
+    def test_put_user(self):
+        tests = [
+            {
+                'name': "test_put_user0@email.com",
+                'status': 'enabled',
+                'response': {
+                    'code': 200
+                }
+            },
+            {
+                'name': "test_put_user1@email.com",
+                'status': 'disabled',
+                'response': {
+                    'code': 200
+                }
+            }
+        ]
+        for test in tests:
+            with self.subTest():
+                headers = {'Content-Type': "application/json"}
+                headers.update(get_auth_header(service_accounts['admin']))
+                url = furl(f'/v1/users/{test["name"]}')
+                query_params = {
+                    'user_id': test['name'],
+                    'status': test['status']
+                }
+                url.add(query_params=query_params)
+                user = User.provision_user(directory, test['name'])
+                if test['status'] == 'disabled':
+                    user.enable()
+                resp = self.app.put(url.url, headers=headers)
+                self.assertEqual(test['response']['code'], resp.status_code)
+                resp.raise_for_status()
 
-    @unittest.skip("incomplete")
-    def test_get_group(self):
-        pass
+    def test_put_users_groups(self):
+        tests = [
+            {
+                'name': "test_put_user_group0@email.com",
+                'action': 'add',
+                'json_request_body': {
+                    "groups": [Group.create(directory, "group_0").name]
+                },
+                'response': {
+                    'code': 200
+                }
+            },
+            {
+                'name': "test_put_user_group1@email.com",
+                'action': 'remove',
+                'json_request_body': {
+                    "groups": [Group.create(directory, "group_1").name]
+                },
+                'response': {
+                    'code': 200
+                }
+            }
+        ]
+        for test in tests:
+            with self.subTest(test['json_request_body']):
+                data = json.dumps(test['json_request_body'])
+                headers = {'Content-Type': "application/json"}
+                headers.update(get_auth_header(service_accounts['admin']))
+                url = furl(f'/v1/users/{test["name"]}/groups/')
+                query_params = {
+                    'user_id': test['name'],
+                    'action': test['action']
+                }
+                url.add(query_params=query_params)
+                user = User.provision_user(directory, test['name'])
+                if test['action']=='remove':
+                    user.add_groups(test['json_request_body']['groups'])
+                resp = self.app.put(url.url, headers=headers, data=data)
+                self.assertEqual(test['response']['code'], resp.status_code)
+                resp.raise_for_status()
 
+    def test_get_users_groups(self):
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(service_accounts['admin']))
+        name = "test_user_group_api@email.com"
+        User.provision_user(directory, name)
+        resp = self.app.get(f'/v1/users/{name}/groups', headers=headers)
+        self.assertEqual(0, len(json.loads(resp.body)['groups']))
+        resp.raise_for_status()
+
+    def test_put_users_roles(self):
+        tests = [
+            {
+                'name': "test_put_user_role0@email.com",
+                'action': 'add',
+                'json_request_body': {
+                    "roles": [Role.create(directory, "role_0").name]
+                },
+                'response': {
+                    'code': 200
+                }
+            },
+            {
+                'name': "test_put_user_role1@email.com",
+                'action': 'remove',
+                'json_request_body': {
+                    "roles": [Role.create(directory, "role_1").name]
+                },
+                'response': {
+                    'code': 200
+                }
+            }
+        ]
+        for test in tests:
+            with self.subTest(test['json_request_body']):
+                data = json.dumps(test['json_request_body'])
+                headers = {'Content-Type': "application/json"}
+                headers.update(get_auth_header(service_accounts['admin']))
+                url = furl(f'/v1/users/{test["name"]}/roles/')
+                query_params = {
+                    'user_id': test['name'],
+                    'action': test['action']
+                }
+                url.add(query_params=query_params)
+                user = User.provision_user(directory, test['name'])
+                if test['action']=='remove':
+                    user.add_roles(test['json_request_body']['roles'])
+                resp = self.app.put(url.url, headers=headers, data=data)
+                self.assertEqual(test['response']['code'], resp.status_code)
+                resp.raise_for_status()
+
+    def test_get_users_roles(self):
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(service_accounts['admin']))
+        name = "test_user_role_api@email.com"
+        user = User.provision_user(directory, name)
+        resp = self.app.get(f'/v1/users/{name}/roles', headers=headers)
+        user_role_names = [Role(directory, None, role).name for role in user.roles]
+        self.assertEqual(1, len(json.loads(resp.body)['roles']))
+        self.assertEqual(user_role_names,['default_user'])
+        resp.raise_for_status()
+
+ 
     def test_serve_swagger_ui(self):
         routes = ['/swagger.json', '/']
         for route in routes:
@@ -238,3 +443,57 @@ class TestApi(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+""",
+            {
+                'json_request_body': {
+                    "username": "test_put_user1@email.com",
+                    "groups": [Group.create(directory, "group_01").name]
+                },
+                'response': {
+                    'code': 201,
+                    'result': True
+                }
+            },
+            {
+                'json_request_body': {
+                    "username": "test_put_user2@email.com",
+                    "roles": [Role.create(directory, "role_02").name]
+                },
+                'response': {
+                    'code': 201,
+                    'result': True
+                }
+            },
+            {
+                'json_request_body': {
+                    "username": "test_put_user3@email.com",
+                    "policy": create_test_statement("policy_03")
+                },
+                'response': {
+                    'code': 201,
+                    'result': True
+                }
+            },
+            {
+                'json_request_body': {
+                    "username": "test_put_user4@email.com",
+                    "groups": [Group.create(directory, "group_04").name],
+                    "roles": [Role.create(directory, "role_04").name],
+                    "policy": create_test_statement("policy_04")
+                },
+                'response': {
+                    'code': 201,
+                    'result': True
+                }
+            },
+            {
+                'json_request_body': {
+                    "groups": [Group.create(directory, "group_05").name],
+                    "roles": [Role.create(directory, "role_05").name],
+                    "policy": create_test_statement("policy_05")
+                },
+                'response': {
+                    'code': 400,
+                    'result': True
+                }
+            }"""

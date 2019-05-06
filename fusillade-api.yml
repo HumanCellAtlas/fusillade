@@ -278,10 +278,11 @@ paths:
           application/json:
             schema:
               required:
-                - username
+                - user_id
               type: object
               properties:
-                username:
+                user_id
+                :
                   type: string
                 groups:
                   type: array
@@ -330,12 +331,7 @@ paths:
         - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
-        - in: query
-          name: status
-          required: true
-          schema:
-            type: string
-            enum: ['enabled', 'disabled']
+        - $ref: '#/components/parameters/status'
       tags:
         - user
       responses:
@@ -780,7 +776,7 @@ components:
       name: user_id
       in: path
       required: true
-      description: User ID (email)
+      description: User name (email)
       schema:
         type: string
     role_id:
@@ -804,6 +800,13 @@ components:
       schema:
         type: string
         enum: [add, remove]
+    status:
+      name: status
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: ['enabled', 'disabled']
   schemas:
     User:
       type: object
@@ -814,6 +817,7 @@ components:
           type: string
         policy:
           type: string
+          nullable: true
     Group:
       type: object
       properties:
