@@ -278,10 +278,10 @@ paths:
           application/json:
             schema:
               required:
-                - username
+                - user_id
               type: object
               properties:
-                username:
+                user_id:
                   $ref: '#/components/schemas/custom_identifier'
                 groups:
                   type: array
@@ -330,12 +330,7 @@ paths:
         - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
-        - in: query
-          name: status
-          required: true
-          schema:
-            type: string
-            enum: ['enabled', 'disabled']
+        - $ref: '#/components/parameters/status'
       tags:
         - user
       responses:
@@ -784,7 +779,7 @@ components:
       name: user_id
       in: path
       required: true
-      description: User ID (email)
+      description: User name (email)
       schema:
         $ref: '#/components/schemas/custom_identifier'
     role_id:
@@ -808,6 +803,13 @@ components:
       schema:
         type: string
         enum: [add, remove]
+    status:
+      name: status
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: ['enabled', 'disabled']
   schemas:
     custom_identifier:
       description: used to identify users, groups, and roles.
@@ -824,6 +826,7 @@ components:
           type: string
         policy:
           type: string
+          nullable: true
     Group:
       type: object
       properties:
