@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from fusillade.clouddirectory import cleanup_directory, cleanup_schema, cd_client
 """
 This script is used to clean up test directories and schemas from aws clouddirectory
@@ -16,14 +17,18 @@ if __name__ == "__main__":
             state='ENABLED'
         )['Directories']
     ]
-    print('DIRECTORIES:', directories)
+    print('DIRECTORIES:')
+    for i in directories:
+        print('\t', i)
 
     for response in cd_client.get_paginator('list_published_schema_arns').paginate(MaxResults=30):
         for schema in response['SchemaArns']:
             if "authz/T" in schema:
                 cleanup_schema(schema)
 
-    response = cd_client.list_published_schema_arns(
+    schemas = cd_client.list_published_schema_arns(
         MaxResults=30
     )['SchemaArns']
-    print('Schemas:', response)
+    print('Schemas:')
+    for i in schemas:
+        print('\t', i)
