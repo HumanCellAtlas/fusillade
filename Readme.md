@@ -71,8 +71,10 @@ authenticate users. This file is uploaded to AWS secrets manager using `make set
 ## Set secrets
 Fusillade uses AWS Secret Store for its secrets. Use ./scripts/set_secrets to set the following secrets:
 
-* **test_service_accounts** - contains google service accounts to test users access and admin access.
-* **oauth2_config** - contains the fields needed to proxy an OIDC provider
+* **test_service_accounts** - contains google service accounts to test users access and admin access. See 
+*./test_accounts_example.json* for the expected format.
+* **oauth2_config** - contains the fields needed to proxy an OIDC provider. See *./oauth2_config.example.json* for 
+expected format
 
 # Using Fusillade as a Service
 
