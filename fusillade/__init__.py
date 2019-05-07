@@ -18,10 +18,10 @@ def get_directory():
         _directory = CloudDirectory.from_name(directory_name)
     except FusilladeException:
         from .clouddirectory import publish_schema, create_directory
-        schema_name = Config.get_schema_name()
-        schema_arn = publish_schema(schema_name, version="0.2")  # TODO make version an environment variable
+        # schema_name = Config.get_schema_name()
+        # schema_arn = publish_schema(schema_name, version="0.2")  # TODO make version an environment variable
         admins = Config.get_admin_emails()
-        _directory = create_directory(directory_name, schema_arn, admins)
+        _directory = create_directory(directory_name, "arn:aws:clouddirectory:::schema/managed/quick_start/1.0/001", admins)
     return _directory
 
 

@@ -295,19 +295,17 @@ class CloudDirectory:
     def _make_ref(i):
         return '$' + i
 
-    def create_object(self, link_name: str, facet_type: str, obj_type: str, **kwargs) -> str:
+    def create_object(self, parent_path, link_name: str, facet_type: str, node_type: str, **kwargs) -> str:
         """
         Create an object and store in cloud directory.
         """
-        object_attribute_list = self.get_object_attribute_list(facet=facet_type, obj_type=obj_type, **kwargs)
-        parent_path = self.get_obj_type_path(obj_type)
+        schema_facets = [
+            dict(SchemaArn=self.schema, FacetName="DynamicObjectFacet"),
+            dict(SchemaArn=f"{self._dir_arn}/schema/CloudDirectory/1.0", FacetName=node_type)
+        ]
+        object_attribute_list = self.get_object_attribute_list(facet="DynamicObjectFacet", **kwargs)
         cd_client.create_object(DirectoryArn=self._dir_arn,
-                                SchemaFacets=[
-                                    {
-                                        'SchemaArn': self.schema,
-                                        'FacetName': facet_type
-                                    },
-                                ],
+                                SchemaFacets=schema_facets,
                                 ObjectAttributeList=object_attribute_list,
                                 ParentReference=dict(Selector=parent_path),
                                 LinkName=link_name)
@@ -327,32 +325,31 @@ class CloudDirectory:
                                                AttributeNames=attributes
                                                )
 
-    def get_object_attribute_list(self, facet="UserFacet", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
+    def get_object_attribute_list(self, facet="DynamicObjectFacet", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
         return [dict(Key=dict(SchemaArn=self.schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
                 for k, v in kwargs.items()]
 
     def get_policy_attribute_list(self,
                                   policy_type: str,
-                                  statement: str,
-                                  facet: str = "IAMPolicy",
+                                  policy_document: str,
+                                  facet: str = "DynamicObjectFacet",
                                   **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
         """
         policy_type and policy_document are required field for a policy object. However only policy_type is used by
         fusillade. Statement is used to store policy information. See the section on Policies for more
         info https://docs.aws.amazon.com/clouddirectory/latest/developerguide/key_concepts_directory.html
         """
-        kwargs["Statement"] = statement
         obj = self.get_object_attribute_list(facet=facet, **kwargs)
         obj.append(dict(Key=dict(
-            SchemaArn=self.schema,
-            FacetName=facet,
+            SchemaArn=f"{self._dir_arn}/schema/CloudDirectory/1.0",
+            FacetName='POLICY',
             Name='policy_type'),
             Value=dict(StringValue=f"{policy_type}_{facet}")))
         obj.append(
-            dict(Key=dict(SchemaArn=self.schema,
-                          FacetName=facet,
+            dict(Key=dict(SchemaArn=f"{self._dir_arn}/schema/CloudDirectory/1.0",
+                          FacetName='POLICY',
                           Name="policy_document"),
-                 Value=dict(BinaryValue='None'.encode())))
+                 Value=dict(BinaryValue=policy_document.encode())))
         return obj
 
     def update_object_attribute(self,
@@ -389,8 +386,11 @@ class CloudDirectory:
 
     def create_folder(self, path: str, name: str) -> None:
         """ A folder is just a Group"""
-        schema_facets = [dict(SchemaArn=self.schema, FacetName="BasicFacet")]
-        object_attribute_list = self.get_object_attribute_list(facet="BasicFacet", name=name, obj_type="folder")
+        schema_facets = [
+            dict(SchemaArn=self.schema, FacetName="DynamicObjectFacet"),
+            dict(SchemaArn=f"{self._dir_arn}/schema/CloudDirectory/1.0", FacetName="NODE")
+        ]
+        object_attribute_list = self.get_object_attribute_list(facet="DynamicObjectFacet")
         try:
             cd_client.create_object(DirectoryArn=self._dir_arn,
                                     SchemaFacets=schema_facets,
@@ -530,7 +530,7 @@ class CloudDirectory:
 
     def batch_create_object(self, parent: str,
                             name: str,
-                            facet_name: str,
+                            node_type: str,
                             object_attribute_list: typing.List[str]) -> typing.Dict[str, typing.Any]:
         """
         A helper function to format a batch create_object operation
@@ -539,7 +539,11 @@ class CloudDirectory:
             'SchemaFacet': [
                 {
                     'SchemaArn': self.schema,
-                    'FacetName': facet_name
+                    'FacetName': 'DynamicObjectFacet'
+                },
+                {
+                    'SchemaArn': f"{self._dir_arn}/schema/CloudDirectory/1.0",
+                    'FacetName': node_type,
                 },
             ],
             'ObjectAttributeList': object_attribute_list,
@@ -692,7 +696,7 @@ class CloudDirectory:
                     'ObjectReference': {'Selector': f'${policy_id[0]}'},
                     'SchemaFacet': {
                         'SchemaArn': self.schema,
-                        'FacetName': 'IAMPolicy'
+                        'FacetName': 'DynamicObjectFacet'
                     },
                     'AttributeNames': ['Statement']
                 }
@@ -731,7 +735,7 @@ class CloudNode:
                  object_type: str,
                  name: str = None,
                  object_ref: str = None,
-                 facet="BasicFacet"):
+                 facet="DynamicObjectFacet"):
         """
 
         :param cloud_directory:
@@ -772,7 +776,7 @@ class CloudNode:
         """
         filter_attribute_ranges = [
             {
-                'AttributeName': 'parent_type',
+                'AttributeName': 'DynamicTypedLinkFacet',
                 'Range': {
                     'StartMode': 'INCLUSIVE',
                     'StartValue': {'StringValue': object_type},
@@ -783,7 +787,7 @@ class CloudNode:
         ]
         return [
             type_link['SourceObjectReference']['Selector']
-            for type_link in self.cd.list_incoming_typed_links(self.object_ref, filter_attribute_ranges, 'association')
+            for type_link in self.cd.list_incoming_typed_links(self.object_ref, filter_attribute_ranges, 'DynamicTypedLinkFacet')
         ]
 
     def _add_links(self, links: typing.List[str], link_type: str):
@@ -806,14 +810,13 @@ class CloudNode:
                 )
             )
             attributes = {
-                'parent_type': link_type,
-                'child_type': self._object_type,
+                'DynamicTypedLinkAttribute': link_type
             }
             operations.append(
                 batch_attach_typed_link(
                     parent_ref,
                     self.object_ref,
-                    'association',
+                    'DynamicTypedLinkFacet',
                     attributes
                 )
             )
@@ -841,7 +844,7 @@ class CloudNode:
             typed_link_specifier = make_typed_link_specifier(
                 parent_ref,
                 self.object_ref,
-                'association',
+                'DynamicTypedLinkFacet',
                 {'parent_type': link_type, 'child_type': self._object_type}
             )
             operations.append(batch_detach_typed_link(typed_link_specifier))
@@ -877,12 +880,12 @@ class CloudNode:
         :return:
         """
         operations = list()
-        object_attribute_list = self.cd.get_policy_attribute_list(self._facet, statement)
-        policy_link_name = self.get_policy_name('IAMPolicy')
-        parent_path = self.cd.get_obj_type_path('policy')
+        object_attribute_list = self.cd.get_policy_attribute_list("IAM", statement)
+        policy_link_name = self.get_policy_name('DynamicObjectFacet')
+        parent_path = "/policy/"
         operations.append(self.cd.batch_create_object(parent_path,
                                                       policy_link_name,
-                                                      'IAMPolicy',
+                                                      'POLICY',
                                                       object_attribute_list))
         policy_ref = parent_path + policy_link_name
 
@@ -901,7 +904,7 @@ class CloudNode:
         """
         if not self._statement and self.policy:
             self._statement = self.cd.get_object_attributes(self.policy,
-                                                            'IAMPolicy',
+                                                            'DynamicObjectFacet',
                                                             ['Statement'])['Attributes'][0]['Value'].popitem()[1]
 
         return self._statement
@@ -916,7 +919,7 @@ class CloudNode:
             self.create_policy(statement)
         else:
             params = [
-                UpdateObjectParams('IAMPolicy',
+                UpdateObjectParams('DynamicObjectFacet',
                                    'Statement',
                                    ValueTypes.StringValue,
                                    statement,
@@ -975,7 +978,7 @@ class User(CloudNode):
                                    'user',
                                    name=name,
                                    object_ref=object_ref,
-                                   facet='UserFacet')
+                                   facet='DynamicObjectFacet')
         self._status = None
         self._groups: typing.Optional[typing.List[str]] = None
         self._roles: typing.Optional[typing.List[str]] = None
@@ -1038,12 +1041,15 @@ class User(CloudNode):
         """
         user = cls(cloud_directory, name)
         try:
-            user.cd.create_object(user._path_name,
-                                  user._facet,
-                                  name=user.name,
-                                  status='Enabled',
-                                  obj_type='user'
-                                  )
+            user.cd.create_object(
+                "/user/",
+                user._path_name,
+                user._facet,
+                "LEAF_NODE",
+                name=user.name,
+                status='Enabled',
+                obj_type='user'
+            )
         except cd_client.exceptions.LinkNameAlreadyInUseException:
             raise FusilladeException("User already exists.")
 
@@ -1113,7 +1119,8 @@ class Group(CloudNode):
         if not statement:
             statement = get_json_file(default_group_policy_path)
         cls._verify_statement(statement)
-        cloud_directory.create_object(cls.hash_name(name), 'BasicFacet', name=name, obj_type="group")
+        cloud_directory.create_object("/group/", cls.hash_name(name), 'DynamicObjectFacet', "NODE", name=name, \
+                                                                                                  obj_type="group")
         new_node = cls(cloud_directory, name)
         new_node._set_statement(statement)
         return new_node
@@ -1176,7 +1183,8 @@ class Role(CloudNode):
         if not statement:
             statement = get_json_file(default_role_path)
         cls._verify_statement(statement)
-        cloud_directory.create_object(cls.hash_name(name), 'BasicFacet', name=name, obj_type='role')
+        cloud_directory.create_object("/role/", cls.hash_name(name), 'DynamicObjectFacet', 'NODE', name=name,
+                                      obj_type='role')
         new_node = cls(cloud_directory, name)
         new_node._set_statement(statement)
         return new_node

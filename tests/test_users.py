@@ -13,14 +13,14 @@ from tests.common import new_test_directory, create_test_statement
 class TestUser(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.directory, cls.schema_arn = new_test_directory()
+        cls.directory = new_test_directory()
         cls.default_policy = get_json_file(default_user_policy_path)
         cls.default_user_role_policy = get_json_file(default_user_role_path)
 
     @classmethod
     def tearDownClass(cls):
         cleanup_directory(cls.directory._dir_arn)
-        cleanup_schema(cls.schema_arn)
+        # cleanup_schema(cls.schema_arn)
 
     def tearDown(self):
         self.directory.clear()
