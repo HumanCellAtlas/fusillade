@@ -46,6 +46,38 @@ class TestRoleApi(unittest.TestCase):
     def setUpClass(cls):
         cls.app = ChaliceTestHarness()
 
+    def test_positive(self):
+        """
+        Test Create Retrieve and Update
+
+        1. Create a role
+        2. retrieve that role
+        3. modify that role
+        """
+        role_id = 'test_role'
+        policy = create_test_statement(role_id)
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(service_accounts['admin']))
+
+        url = furl('/v1/roles')
+        data = json.dumps({
+            'name': role_id,
+            'policy': policy
+        })
+        resp = self.app.put(url.url, data=data, headers=headers)
+        self.assertEqual(201, resp.status_code)
+
+        url = furl(f'/v1/roles/{role_id}')
+        resp = self.app.get(url.url, headers=headers)
+        self.assertEqual(200, resp.status_code)
+
+        url = furl(f'/v1/roles/{role_id}/policy')
+        data = json.dumps({
+            'policy': create_test_statement('ABCD')
+        })
+        resp = self.app.put(url.url, data=data, headers=headers)
+        self.assertEqual(200, resp.status_code)
+
     def test_put_role(self):
         url = furl('/v1/roles')
         data = json.dumps({
@@ -87,7 +119,60 @@ class TestRoleApi(unittest.TestCase):
                 'headers': get_auth_header(service_accounts['admin']),
                 'expected_resp': 400
             },
-
+            {
+                'name': '201 returned when creating a role with special characters.',
+                'data': json.dumps({
+                    'name': 'test$%^&*())!@#role',
+                    'policy': create_test_statement("test_role")
+                }),
+                'headers': get_auth_header(service_accounts['admin']),
+                'expected_resp': 201
+            },
+            {
+                'name': '201 returned when creating a role with a name == 128 characters.',
+                'data': json.dumps({
+                    'name': 'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789'
+                            'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789',
+                    'policy': create_test_statement("test_role")
+                }),
+                'headers': get_auth_header(service_accounts['admin']),
+                'expected_resp': 201
+            },
+            {
+                'name': '400 returned when creating a role with a name over 128 characters.',
+                'data': json.dumps({
+                    'name': 'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789'
+                            'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF01234567890',
+                    'policy': create_test_statement("test_role")
+                }),
+                'headers': get_auth_header(service_accounts['admin']),
+                'expected_resp': 400
+            },
+            {
+                'name': '400 returned when creating a role with no name.',
+                'data': json.dumps({
+                    'name': '',
+                    'policy': create_test_statement("test_role")
+                }),
+                'headers': get_auth_header(service_accounts['admin']),
+                'expected_resp': 400
+            },
+            {
+                'name': '400 returned when creating a role with no name.',
+                'data': json.dumps({
+                    'policy': create_test_statement("test_role")
+                }),
+                'headers': get_auth_header(service_accounts['admin']),
+                'expected_resp': 400
+            },
+            {
+                'name': '400 returned when creating a role with no name.',
+                'data': json.dumps({
+                    'name': 'abcd',
+                }),
+                'headers': get_auth_header(service_accounts['admin']),
+                'expected_resp': 400
+            }
         ]
         for test in tests:
             with self.subTest(test['name']):
