@@ -6,7 +6,7 @@ from fusillade import Role, directory
 def put_new_role():
     json_body = request.json
     Role.create(directory, json_body['name'], statement=json_body.get('policy'))
-    return make_response('', 201)
+    return make_response(f"Role {json_body['name']} created.", 201)
 
 
 def get_roles():
