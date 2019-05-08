@@ -97,5 +97,13 @@ class TestRoleApi(unittest.TestCase):
                 self.assertEqual(test['expected_resp'], resp.status_code)
 
 
+    def test_get_role(self):
+        pass
+
+    def test_put_roleid(self):
+        pass
+
+    def test_get_roleid(self):
+        pass
 if __name__ == '__main__':
     unittest.main()
