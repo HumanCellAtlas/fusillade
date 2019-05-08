@@ -15,7 +15,7 @@ import typing
 from collections import namedtuple
 from enum import Enum, auto
 
-from fusillade.errors import FusilladeException
+from fusillade.errors import FusilladeException, FusilladeHTTPException
 
 project_arn = "arn:aws:clouddirectory:us-east-1:861229788715:"  # TODO move to config.py
 cd_client = aws_clients.clouddirectory
@@ -953,8 +953,8 @@ class CloudNode:
             iam.simulate_custom_policy(PolicyInputList=[statement],
                                        ActionNames=["fake:action"],
                                        ResourceArns=["arn:aws:iam::123456789012:user/Bob"])
-        except iam.exceptions.InvalidInputException as ex:
-            raise FusilladeException from ex
+        except iam.exceptions.InvalidInputException:
+            raise FusilladeHTTPException(status=400, title="Bad Request", detail="Invalid policy format.")
 
 
 class User(CloudNode):
@@ -1176,7 +1176,10 @@ class Role(CloudNode):
         if not statement:
             statement = get_json_file(default_role_path)
         cls._verify_statement(statement)
-        cloud_directory.create_object(cls.hash_name(name), 'BasicFacet', name=name, obj_type='role')
+        try:
+            cloud_directory.create_object(cls.hash_name(name), 'BasicFacet', name=name, obj_type='role')
+        except cd_client.exceptions.LinkNameAlreadyInUseException:
+            raise FusilladeHTTPException(status=409, title="Conflict", detail="The object already exists")
         new_node = cls(cloud_directory, name)
         new_node._set_statement(statement)
         return new_node

@@ -61,16 +61,31 @@ class TestRoleApi(unittest.TestCase):
                 'expected_resp': 401
             },
             {
-                'name': '401 return when unauthorized user.',
+                'name': '403 return when unauthorized user.',
                 'data': data,
                 'headers': get_auth_header(service_accounts['user']),
-                'expected_resp': 401
+                'expected_resp': 403
             },
             {
                 'name': '201 returned when user is authorized.',
                 'data': data,
                 'headers': get_auth_header(service_accounts['admin']),
                 'expected_resp': 201
+            },
+            {
+                'name': '409 returned when role already exists.',
+                'data': data,
+                'headers': get_auth_header(service_accounts['admin']),
+                'expected_resp': 409
+            },
+            {
+                'name': '400 returned when an invalid policy is used',
+                'data': json.dumps({
+                    'name': 'test_role2',
+                    'policy': 'garbage statement'
+                }),
+                'headers': get_auth_header(service_accounts['admin']),
+                'expected_resp': 400
             },
 
         ]

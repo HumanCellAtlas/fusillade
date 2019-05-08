@@ -724,6 +724,10 @@ paths:
           description: Role was created
         401:
           $ref: '#/components/responses/401'
+        403:
+          $ref: '#/component/responses/403'
+        409:
+          $ref: '#/component/responses/409'
         default:
           description: Unexpected error
       tags:
@@ -838,8 +842,11 @@ components:
           type: string
   responses:
     401:
-      description: The user is not authorized because the object has already been created and the user does not
-        have permission to modify, or user does not have permission to create objects.
+      description: The users credentials failed to authenticate.
+    403:
+      description: The user is not authorized because they do not have adequate permission to perform the action.
+    409:
+      description: The object already exists.
     404:
       description: Resource not found.
   securitySchemes:
