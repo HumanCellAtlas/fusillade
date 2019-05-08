@@ -717,6 +717,8 @@ paths:
               properties:
                 name:
                   type: string
+                  minLength: 1
+                  maxLength: 128
                 policy:
                   type: string
       responses:
@@ -725,9 +727,9 @@ paths:
         401:
           $ref: '#/components/responses/401'
         403:
-          $ref: '#/component/responses/403'
+          $ref: '#/components/responses/403'
         409:
-          $ref: '#/component/responses/409'
+          $ref: '#/components/responses/409'
         default:
           description: Unexpected error
       tags:
@@ -787,6 +789,8 @@ components:
       description: User ID (email)
       schema:
         type: string
+        minLength: 1
+        maxLength: 128
     role_id:
       name: role_id
       in: path
@@ -794,6 +798,8 @@ components:
       required: true
       schema:
         type: string
+        minLength: 1
+        maxLength: 128
     group_id:
       name: group_id
       in: path
@@ -801,6 +807,8 @@ components:
       required: true
       schema:
         type: string
+        minLength: 1
+        maxLength: 128
     action:
       name: action
       in: query
