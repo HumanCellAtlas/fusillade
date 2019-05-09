@@ -149,7 +149,12 @@ class CloudDirectory:
     def __init__(self, directory_arn: str):
         self._dir_arn = directory_arn
         self._schema: str = None
+        # This is the custom schema applied to the cloud directory. It is defined by the user in directory_schema.json.
         self._dynamic_schema = "arn:aws:clouddirectory:::schema/managed/quick_start/1.0"
+        # This is the dynamic schema provided by AWS
+        self._node_schema = f"{self._dir_arn}/schema/CloudDirectory/1.0"
+        # This is the base schema that is always present in AWS Cloud Directory. It defines the basic Node types, NODE,
+        # POLICY, LEAF_NODE, and INDEX.
 
     @classmethod
     @functools.lru_cache()
@@ -323,14 +328,17 @@ class CloudDirectory:
         object_ref = parent_path + link_name
         return object_ref
 
-    def get_object_attributes(self, obj_ref: str, facet: str, attributes: typing.List[str]) -> typing.Dict[str, str]:
+    def get_object_attributes(self, obj_ref: str, facet: str, attributes: typing.List[str],
+                              schema=None) -> typing.Dict[str, str]:
         """
         a wrapper around CloudDirectory.Client.get_object_attributes
         """
+        if not schema:
+            schema = self._dynamic_schema,
         return cd_client.get_object_attributes(DirectoryArn=self._dir_arn,
                                                ObjectReference={'Selector': obj_ref},
                                                SchemaFacet={
-                                                   'SchemaArn': self._dynamic_schema,
+                                                   'SchemaArn': schema,
                                                    'FacetName': facet
                                                },
                                                AttributeNames=attributes
@@ -346,26 +354,32 @@ class CloudDirectory:
                                   facet: str = "DynamicObjectFacet",
                                   **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
         """
-        policy_type and policy_document are required field for a policy object. However only policy_type is used by
-        fusillade. Statement is used to store policy information. See the section on Policies for more
+        policy_type and policy_document are required field for a policy object. See the section on Policies for more
         info https://docs.aws.amazon.com/clouddirectory/latest/developerguide/key_concepts_directory.html
         """
         obj = self.get_object_attribute_list(facet=facet, **kwargs)
-        obj.append(dict(Key=dict(
-            SchemaArn=f"{self._dir_arn}/schema/CloudDirectory/1.0",
-            FacetName='POLICY',
-            Name='policy_type'),
-            Value=dict(StringValue=f"{policy_type}_{facet}")))
-        obj.append(
-            dict(Key=dict(SchemaArn=f"{self._dir_arn}/schema/CloudDirectory/1.0",
-                          FacetName='POLICY',
-                          Name="policy_document"),
-                 Value=dict(BinaryValue=policy_document.encode())))
+        obj.extend([
+            dict(
+                Key=dict(
+                    SchemaArn=self._node_schema,
+                    FacetName="POLICY",
+                    Name='policy_type'),
+                Value=dict(
+                    StringValue=policy_type)),
+            dict(
+                Key=dict(
+                    SchemaArn=self._node_schema,
+                    FacetName="POLICY",
+                    Name="policy_document"),
+                Value=dict(
+                    BinaryValue=policy_document.encode()))
+        ])
         return obj
 
     def update_object_attribute(self,
                                 object_ref: str,
-                                update_params: typing.List[UpdateObjectParams]) -> typing.Dict[str, typing.Any]:
+                                update_params: typing.List[UpdateObjectParams],
+                                schema=None) -> typing.Dict[str, typing.Any]:
         """
         a wrapper around CloudDirectory.Client.update_object_attributes
 
@@ -373,10 +387,12 @@ class CloudDirectory:
         :param update_params: a list of attributes to modify.
         :return:
         """
+        if not schema:
+            schema = self._dynamic_schema
         updates = [
             {
                 'ObjectAttributeKey': {
-                    'SchemaArn': self._dynamic_schema,
+                    'SchemaArn': schema,
                     'FacetName': i.facet,
                     'Name': i.attribute
                 },
@@ -723,8 +739,8 @@ class CloudDirectory:
                 'GetObjectAttributes': {
                     'ObjectReference': {'Selector': f'${policy_id[0]}'},
                     'SchemaFacet': {
-                        'SchemaArn': self._dynamic_schema,
-                        'FacetName': 'DynamicObjectFacet'
+                        'SchemaArn': self._node_schema,
+                        'FacetName': 'POLICY'
                     },
                     'AttributeNames': ['policy_document']
                 }
@@ -734,7 +750,8 @@ class CloudDirectory:
 
         # parse the policies from the responses
         policies = [
-            response['SuccessfulResponse']['GetObjectAttributes']['Attributes'][0]['Value']['StringValue']
+            response['SuccessfulResponse']['GetObjectAttributes']['Attributes'][0]['Value']['BinaryValue'].decode(
+                'utf-8')
             for response in cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations)['Responses']
         ]
         return policies
@@ -912,13 +929,26 @@ class CloudNode:
         :return:
         """
         operations = list()
-        object_attribute_list = self.cd.get_policy_attribute_list("IAM", statement)
-        policy_link_name = self.get_policy_name('DynamicObjectFacet')
-        parent_path = "/policy/"
-        operations.append(self.cd.batch_create_object(parent_path,
-                                                      policy_link_name,
-                                                      'POLICY',
-                                                      object_attribute_list))
+        object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement)
+        policy_link_name = self.get_policy_name('IAMPolicy')
+        parent_path = self.cd.get_obj_type_path('policy')
+        operations.append(
+            {
+                'CreateObject': {
+                    'SchemaFacet': [
+                        {
+                            'SchemaArn': self.cd._node_schema,
+                            'FacetName': 'POLICY'
+                        },
+                    ],
+                    'ObjectAttributeList': object_attribute_list,
+                    'ParentReference': {
+                        'Selector': parent_path
+                    },
+                    'LinkName': policy_link_name,
+                }
+            }
+        )
         policy_ref = parent_path + policy_link_name
 
         operations.append(self.cd.batch_attach_policy(policy_ref, self.object_ref))
@@ -936,8 +966,10 @@ class CloudNode:
         """
         if not self._statement and self.policy:
             self._statement = self.cd.get_object_attributes(self.policy,
-                                                            'DynamicObjectFacet',
-                                                            ['policy_document'])['Attributes'][0]['Value'].popitem()[1]
+                                                            'POLICY',
+                                                            ['policy_document'],
+                                                            self.cd._node_schema
+                                                            )['Attributes'][0]['Value'].popitem()[1].decode("utf-8")
 
         return self._statement
 
@@ -947,17 +979,21 @@ class CloudNode:
         self._set_statement(statement)
 
     def _set_statement(self, statement: str):
-        if not self.policy:
-            self.create_policy(statement)
-        else:
-            params = [
-                UpdateObjectParams('DynamicObjectFacet',
-                                   'policy_document',
-                                   ValueTypes.StringValue,
-                                   statement,
-                                   UpdateActions.CREATE_OR_UPDATE)
-            ]
-            self.cd.update_object_attribute(self.policy, params)
+        try:
+            if not self.policy:
+                self.create_policy(statement)
+            else:
+                params = [
+                    UpdateObjectParams(
+                        'POLICY',
+                        'policy_document',
+                        ValueTypes.BinaryValue,
+                        statement,
+                        UpdateActions.CREATE_OR_UPDATE)
+                ]
+                self.cd.update_object_attribute(self.policy, params, self.cd._node_schema)
+        except cd_client.exceptions.LimitExceededException as ex:
+            raise FusilladeException(ex)
         self._statement = None
 
     def _get_attributes(self, attributes: typing.List[str]):
