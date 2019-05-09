@@ -24,7 +24,7 @@ os.environ["FUSILLADE_DIR"] = directory_name
 from tests.common import get_auth_header, service_accounts, create_test_statement
 import fusillade
 from fusillade import directory, User
-from fusillade.clouddirectory import cleanup_directory
+from fusillade.clouddirectory import cleanup_directory, Role
 
 from tests.infra.server import ChaliceTestHarness
 # ChaliceTestHarness must be imported after FUSILLADE_DIR has be set
@@ -181,14 +181,60 @@ class TestRoleApi(unittest.TestCase):
                 resp = self.app.put(url.url, data=test['data'], headers=headers)
                 self.assertEqual(test['expected_resp'], resp.status_code)
 
+    def test_get_roleid(self):
+        roleid = 'test_role'
+        tests = [
+            {
+                'name': '401 return when no auth headers.',
+                'headers': {},
+                'roleid': roleid,
+                'expected_resp': 401
+            },
+            {
+                'name': '403 return when unauthorized user.',
+                'headers': get_auth_header(service_accounts['user']),
+                'roleid': roleid,
+                'expected_resp': 403
+            },
+            {
+                'name': '200 returned when user is authorized.',
+                'headers': get_auth_header(service_accounts['admin']),
+                'roleid': roleid,
+                'expected_resp': 200
+            },
+            {
+                'name': '200 returned when user is authorized.',
+                'headers': get_auth_header(service_accounts['admin']),
+                'roleid': roleid,
+                'expected_resp': 200
+            },
+            {
+                'name': 'error returned when role does not exist.',
+                'headers': get_auth_header(service_accounts['admin']),
+                'roleid': 'ghost_role',
+                'expected_resp': 404
+            }
+        ]
 
-    def test_get_role(self):
-        pass
+        policy = create_test_statement("test_role")
+        Role.create(directory, 'test_role', policy)
+        for test in tests:
+            with self.subTest(test['name']):
+                url = furl('/v1/roles/{}'.format(test['roleid']))
+                headers = {'Content-Type': "application/json"}
+                headers.update(test['headers'])
+                resp = self.app.get(url.url, headers=headers)
+                self.assertEqual(test['expected_resp'], resp.status_code)
+                if test['expected_resp'] == 200:
+                    expected_body = {
+                        'name': test['roleid'],
+                        'policy': policy
+                    }
+                    self.assertEqual(expected_body, json.loads(resp.body))
+
 
     def test_put_roleid(self):
         pass
 
-    def test_get_roleid(self):
-        pass
 if __name__ == '__main__':
     unittest.main()

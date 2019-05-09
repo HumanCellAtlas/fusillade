@@ -860,7 +860,10 @@ class CloudNode:
     @property
     def policy(self):
         if not self._policy:
-            policies = [i for i in self.cd.list_object_policies(self.object_ref)]
+            try:
+                policies = [i for i in self.cd.list_object_policies(self.object_ref)]
+            except cd_client.exceptions.ResourceNotFoundException:
+                raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
             if not policies:
                 return None
             elif len(policies) > 1:
@@ -929,7 +932,10 @@ class CloudNode:
         """
         retrieve attributes for this from CloudDirectory and sets local private variables.
         """
-        resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        try:
+            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
         for attr in resp['Attributes']:
             self.__setattr__('_' + attr['Key']['Name'], attr['Value'].popitem()[1])
 
@@ -937,7 +943,10 @@ class CloudNode:
         attrs = dict()
         if not attributes:
             return attrs
-        resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        try:
+            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
         for attr in resp['Attributes']:
             attrs[attr['Key']['Name']] = attr['Value'].popitem()[1]  # noqa
         return attrs

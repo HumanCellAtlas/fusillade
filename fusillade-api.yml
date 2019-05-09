@@ -822,6 +822,8 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 128
         status:
           type: string
         policy:
@@ -831,6 +833,8 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 128
         policy:
           type: string
         roles:
@@ -846,6 +850,8 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 128
         policy:
           type: string
   responses:
