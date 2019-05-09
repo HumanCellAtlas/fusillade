@@ -149,7 +149,7 @@ class TestRoleApi(unittest.TestCase):
                 'expected_resp': 400
             },
             {
-                'name': '400 returned when creating a role with no name.',
+                'name': '400 returned when creating a role with name lenght 0.',
                 'data': json.dumps({
                     'name': '',
                     'policy': create_test_statement("test_role")
@@ -166,7 +166,7 @@ class TestRoleApi(unittest.TestCase):
                 'expected_resp': 400
             },
             {
-                'name': '400 returned when creating a role with no name.',
+                'name': '400 returned when creating a role with no policy.',
                 'data': json.dumps({
                     'name': 'abcd',
                 }),
