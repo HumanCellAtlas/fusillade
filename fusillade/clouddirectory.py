@@ -483,12 +483,29 @@ class CloudDirectory:
             'IdentityAttributeValues': self.make_attributes(attributes)
         }
 
-    def clear(self) -> None:
-        for _, obj_ref in self.list_object_children('/user/'):
-            self.delete_object(obj_ref)
-        for _, obj_ref in self.list_object_children('/group/'):
-            self.delete_object(obj_ref)
-        protected_roles = [CloudNode.hash_name(name) for name in ["admin", "default_user"]]
+    def clear(self, users: typing.List[str] = None,
+              groups: typing.List[str] = None,
+              roles: typing.List[str] = None) -> None:
+        """
+
+        :param users: a list of users to keep
+        :param groups: a list of groups to keep
+        :param roles: a list of roles to keep
+        :return:
+        """
+        users = users if users else []
+        groups = groups if groups else []
+        roles = roles if roles else []
+        protected_users = [CloudNode.hash_name(name) for name in users]
+        protected_groups = [CloudNode.hash_name(name) for name in groups]
+        protected_roles = [CloudNode.hash_name(name) for name in ["admin", "default_user"] + roles]
+
+        for name, obj_ref in self.list_object_children('/user/'):
+            if name not in protected_users:
+                self.delete_object(obj_ref)
+        for name, obj_ref in self.list_object_children('/group/'):
+            if name not in protected_groups:
+                self.delete_object(obj_ref)
         for name, obj_ref in self.list_object_children('/role/'):
             if name not in protected_roles:
                 self.delete_object(obj_ref)
