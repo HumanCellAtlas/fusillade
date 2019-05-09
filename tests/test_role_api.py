@@ -8,7 +8,7 @@ import json
 import os
 import sys
 import unittest
-from furl import furl
+from furl import furl, quote
 
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
@@ -42,9 +42,33 @@ def tearDownModule():
 
 
 class TestRoleApi(unittest.TestCase):
+    test_postive_names = [
+        ('helloworl12345', "alpha numerica characters"),
+         ('hello@world.com', "email format") ,
+        ('hello-world=_@.,ZDc', "special characters"),
+        ('HellOWoRLd', "different cases"),
+        ('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789'
+        'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789', "== 128 characters"),
+        ("1", "one character")
+                          ]
+    test_negative_names = [
+        ("&^#$Hello", "illegal characters 1"),
+        ("! <>?world", "illegal characters 2"),
+        ('ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789'
+        'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF01234567890', "> 128 characters"),
+        ('', "empty")
+    ]
+
     @classmethod
     def setUpClass(cls):
         cls.app = ChaliceTestHarness()
+
+    def tearDown(self):
+        directory.clear(
+            users=[
+                service_accounts['admin']['client_email'],
+                service_accounts['user']['client_email']
+            ])
 
     def test_positive(self):
         """
@@ -100,7 +124,7 @@ class TestRoleApi(unittest.TestCase):
             'name': 'test_put_role',
             'policy': create_test_statement("test_role")
         })
-
+        admin_auth_header = get_auth_header(service_accounts['admin'])
         tests = [
             {
                 'name': '401 return when no auth headers.',
@@ -117,13 +141,13 @@ class TestRoleApi(unittest.TestCase):
             {
                 'name': '201 returned when user is authorized.',
                 'data': data,
-                'headers': get_auth_header(service_accounts['admin']),
+                'headers': admin_auth_header,
                 'expected_resp': 201
             },
             {
                 'name': '409 returned when role already exists.',
                 'data': data,
-                'headers': get_auth_header(service_accounts['admin']),
+                'headers': admin_auth_header,
                 'expected_resp': 409
             },
             {
@@ -132,45 +156,7 @@ class TestRoleApi(unittest.TestCase):
                     'name': 'test_role2',
                     'policy': 'garbage statement'
                 }),
-                'headers': get_auth_header(service_accounts['admin']),
-                'expected_resp': 400
-            },
-            {
-                'name': '201 returned when creating a role with special characters.',
-                'data': json.dumps({
-                    'name': 'test$%^&*())!@#role',
-                    'policy': create_test_statement("test_role")
-                }),
-                'headers': get_auth_header(service_accounts['admin']),
-                'expected_resp': 201
-            },
-            {
-                'name': '201 returned when creating a role with a name == 128 characters.',
-                'data': json.dumps({
-                    'name': 'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789'
-                            'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789',
-                    'policy': create_test_statement("test_role")
-                }),
-                'headers': get_auth_header(service_accounts['admin']),
-                'expected_resp': 201
-            },
-            {
-                'name': '400 returned when creating a role with a name over 128 characters.',
-                'data': json.dumps({
-                    'name': 'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789'
-                            'ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF01234567890',
-                    'policy': create_test_statement("test_role")
-                }),
-                'headers': get_auth_header(service_accounts['admin']),
-                'expected_resp': 400
-            },
-            {
-                'name': '400 returned when creating a role with name lenght 0.',
-                'data': json.dumps({
-                    'name': '',
-                    'policy': create_test_statement("test_role")
-                }),
-                'headers': get_auth_header(service_accounts['admin']),
+                'headers': admin_auth_header,
                 'expected_resp': 400
             },
             {
@@ -178,7 +164,7 @@ class TestRoleApi(unittest.TestCase):
                 'data': json.dumps({
                     'policy': create_test_statement("test_role")
                 }),
-                'headers': get_auth_header(service_accounts['admin']),
+                'headers': admin_auth_header,
                 'expected_resp': 400
             },
             {
@@ -186,10 +172,32 @@ class TestRoleApi(unittest.TestCase):
                 'data': json.dumps({
                     'name': 'abcd',
                 }),
-                'headers': get_auth_header(service_accounts['admin']),
+                'headers': admin_auth_header,
                 'expected_resp': 400
             }
         ]
+        tests.extend([
+            {
+                'name': f'201 returned when creating a role when name is {description}',
+                'data': json.dumps({
+                    'name': name,
+                    'policy': create_test_statement("test_role")
+                }),
+                'headers': admin_auth_header,
+                'expected_resp': 201
+            } for name, description in self.test_postive_names
+        ])
+        tests.extend([
+            {
+                'name': f'400 returned when creating a role when name is {description}',
+                'data': json.dumps({
+                    'name': name,
+                    'policy': create_test_statement("test_role")
+                }),
+                'headers': admin_auth_header,
+                'expected_resp': 400
+            } for name, description in self.test_negative_names
+        ])
         for test in tests:
             with self.subTest(test['name']):
                 headers = {'Content-Type': "application/json"}
@@ -199,6 +207,7 @@ class TestRoleApi(unittest.TestCase):
 
     def test_get_role_id(self):
         role_id = 'test_get_role_id'
+        admin_auth_header = get_auth_header(service_accounts['admin'])
         tests = [
             {
                 'name': '401 return when no auth headers.',
@@ -214,19 +223,42 @@ class TestRoleApi(unittest.TestCase):
             },
             {
                 'name': '200 returned when user is authorized.',
-                'headers': get_auth_header(service_accounts['admin']),
+                'headers': admin_auth_header,
                 'role_id': role_id,
                 'expected_resp': 200
             },
             {
                 'name': 'error returned when role does not exist.',
-                'headers': get_auth_header(service_accounts['admin']),
+                'headers': admin_auth_header,
                 'role_id': 'ghost_role',
                 'expected_resp': 404
+            },
+            {
+                'name': f'500 returned when getting a role when name is empty',
+                'role_id': '',
+                'headers': admin_auth_header,
+                'expected_resp': 500
             }
         ]
+        tests.extend([
+            {
+                'name': f'200 returned when getting a role when name is {description}',
+                'role_id': role_id,
+                'headers': admin_auth_header,
+                'expected_resp': 200
+            } for name, description in self.test_postive_names
+        ])
+        tests.extend([
+            {
+                'name': f'400 returned when getting a role when name is {description}',
+                'role_id': role_id,
+                'headers': admin_auth_header,
+                'expected_resp': 400
+            } for role_id, description in self.test_negative_names if role_id is not ''
+        ])
         policy = create_test_statement("test_role")
         Role.create(directory, role_id, policy)
+        [Role.create(directory, role_id, policy) for role_id, _ in self.test_postive_names]
         for test in tests:
             with self.subTest(test['name']):
                 url = furl('/v1/roles/{}'.format(test['role_id']))
@@ -248,7 +280,7 @@ class TestRoleApi(unittest.TestCase):
         policy_2 = create_test_statement('ABCD')
         policy_invalid = "invalid policy"
         Role.create(directory, role_id, policy_1)
-
+        admin_auth_header = get_auth_header(service_accounts['admin'])
         tests = [
             {
                 'name': '401 return when no auth headers.',
@@ -270,7 +302,7 @@ class TestRoleApi(unittest.TestCase):
             },
             {
                 'name': '200 returned when user is authorized.',
-                'headers': get_auth_header(service_accounts['admin']),
+                'headers': admin_auth_header,
                 'role_id': role_id,
                 'data': {
                     'policy': policy_2
@@ -279,7 +311,7 @@ class TestRoleApi(unittest.TestCase):
             },
             {
                 'name': '400 returned when an invalid policy is used.',
-                'headers': get_auth_header(service_accounts['admin']),
+                'headers': admin_auth_header,
                 'role_id': role_id,
                 'data': {
                     'policy': policy_invalid
@@ -288,7 +320,7 @@ class TestRoleApi(unittest.TestCase):
             },
             {
                 'name': '404 returned when role does not exist.',
-                'headers': get_auth_header(service_accounts['admin']),
+                'headers': admin_auth_header,
                 'role_id': 'ghost_role',
                 'data': {
                     'policy': policy_2
