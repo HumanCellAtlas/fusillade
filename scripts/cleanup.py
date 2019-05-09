@@ -1,8 +1,14 @@
 #!/usr/bin/env python
-from fusillade.clouddirectory import cleanup_directory, cleanup_schema, cd_client
 """
 This script is used to clean up test directories and schemas from aws clouddirectory
 """
+import os
+import sys
+
+pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
+sys.path.insert(0, pkg_root)  # noqa
+
+from fusillade.clouddirectory import cleanup_directory, cleanup_schema, cd_client
 
 
 if __name__ == "__main__":
