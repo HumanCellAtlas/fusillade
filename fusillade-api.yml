@@ -859,10 +859,10 @@ components:
       description: The users credentials failed to authenticate.
     403:
       description: The user is not authorized because they do not have adequate permission to perform the action.
-    409:
-      description: The object already exists.
     404:
       description: Resource not found.
+    409:
+      description: The object already exists.
   securitySchemes:
       BearerAuth:
         type: http

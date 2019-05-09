@@ -53,8 +53,9 @@ class TestRoleApi(unittest.TestCase):
         1. Create a role
         2. retrieve that role
         3. modify that role
+        4. retrieve modified role
         """
-        role_id = 'test_role'
+        role_id = 'test_positive'
         policy = create_test_statement(role_id)
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
@@ -70,18 +71,33 @@ class TestRoleApi(unittest.TestCase):
         url = furl(f'/v1/roles/{role_id}')
         resp = self.app.get(url.url, headers=headers)
         self.assertEqual(200, resp.status_code)
+        expected_body = {
+            'name': role_id,
+            'policy': policy
+        }
+        self.assertEqual(expected_body, json.loads(resp.body))
 
         url = furl(f'/v1/roles/{role_id}/policy')
+        policy = create_test_statement('ABCD')
         data = json.dumps({
-            'policy': create_test_statement('ABCD')
+            'policy': policy
         })
         resp = self.app.put(url.url, data=data, headers=headers)
         self.assertEqual(200, resp.status_code)
 
+        url = furl(f'/v1/roles/{role_id}')
+        resp = self.app.get(url.url, headers=headers)
+        self.assertEqual(200, resp.status_code)
+        expected_body = {
+            'name': role_id,
+            'policy': policy
+        }
+        self.assertEqual(expected_body, json.loads(resp.body))
+
     def test_put_role(self):
         url = furl('/v1/roles')
         data = json.dumps({
-            'name': 'test_role',
+            'name': 'test_put_role',
             'policy': create_test_statement("test_role")
         })
 
@@ -181,60 +197,114 @@ class TestRoleApi(unittest.TestCase):
                 resp = self.app.put(url.url, data=test['data'], headers=headers)
                 self.assertEqual(test['expected_resp'], resp.status_code)
 
-    def test_get_roleid(self):
-        roleid = 'test_role'
+    def test_get_role_id(self):
+        role_id = 'test_get_role_id'
         tests = [
             {
                 'name': '401 return when no auth headers.',
                 'headers': {},
-                'roleid': roleid,
+                'role_id': role_id,
                 'expected_resp': 401
             },
             {
                 'name': '403 return when unauthorized user.',
                 'headers': get_auth_header(service_accounts['user']),
-                'roleid': roleid,
+                'role_id': role_id,
                 'expected_resp': 403
             },
             {
                 'name': '200 returned when user is authorized.',
                 'headers': get_auth_header(service_accounts['admin']),
-                'roleid': roleid,
-                'expected_resp': 200
-            },
-            {
-                'name': '200 returned when user is authorized.',
-                'headers': get_auth_header(service_accounts['admin']),
-                'roleid': roleid,
+                'role_id': role_id,
                 'expected_resp': 200
             },
             {
                 'name': 'error returned when role does not exist.',
                 'headers': get_auth_header(service_accounts['admin']),
-                'roleid': 'ghost_role',
+                'role_id': 'ghost_role',
                 'expected_resp': 404
             }
         ]
-
         policy = create_test_statement("test_role")
-        Role.create(directory, 'test_role', policy)
+        Role.create(directory, role_id, policy)
         for test in tests:
             with self.subTest(test['name']):
-                url = furl('/v1/roles/{}'.format(test['roleid']))
+                url = furl('/v1/roles/{}'.format(test['role_id']))
                 headers = {'Content-Type': "application/json"}
                 headers.update(test['headers'])
                 resp = self.app.get(url.url, headers=headers)
                 self.assertEqual(test['expected_resp'], resp.status_code)
                 if test['expected_resp'] == 200:
                     expected_body = {
-                        'name': test['roleid'],
+                        'name': test['role_id'],
                         'policy': policy
                     }
                     self.assertEqual(expected_body, json.loads(resp.body))
 
 
-    def test_put_roleid(self):
-        pass
+    def test_put_role_id_policy(self):
+        role_id = 'test_put_role_id_policy'
+        policy_1 = create_test_statement(role_id)
+        policy_2 = create_test_statement('ABCD')
+        policy_invalid = "invalid policy"
+        Role.create(directory, role_id, policy_1)
+
+        tests = [
+            {
+                'name': '401 return when no auth headers.',
+                'headers': {},
+                'role_id': role_id,
+                'data': {
+                    'policy': policy_2
+                },
+                'expected_resp': 401
+            },
+            {
+                'name': '403 return when unauthorized user.',
+                'headers': get_auth_header(service_accounts['user']),
+                'role_id': role_id,
+                'data': {
+                    'policy': policy_2
+                },
+                'expected_resp': 403
+            },
+            {
+                'name': '200 returned when user is authorized.',
+                'headers': get_auth_header(service_accounts['admin']),
+                'role_id': role_id,
+                'data': {
+                    'policy': policy_2
+                },
+                'expected_resp': 200
+            },
+            {
+                'name': '400 returned when an invalid policy is used.',
+                'headers': get_auth_header(service_accounts['admin']),
+                'role_id': role_id,
+                'data': {
+                    'policy': policy_invalid
+                },
+                'expected_resp': 400
+            },
+            {
+                'name': '404 returned when role does not exist.',
+                'headers': get_auth_header(service_accounts['admin']),
+                'role_id': 'ghost_role',
+                'data': {
+                    'policy': policy_2
+                },
+                'expected_resp': 404
+            }
+        ]
+        for test in tests:
+            with self.subTest(test['name']):
+                headers = {'Content-Type': "application/json"}
+                headers.update(test['headers'])
+                url = furl(f"/v1/roles/{test['role_id']}/policy")
+                data = json.dumps(test['data'])
+                resp = self.app.put(url.url, data=data, headers=headers)
+                self.assertEqual(test['expected_resp'], resp.status_code)
+
 
 if __name__ == '__main__':
     unittest.main()
