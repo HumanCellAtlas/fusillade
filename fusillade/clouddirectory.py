@@ -15,7 +15,7 @@ import typing
 from collections import namedtuple
 from enum import Enum, auto
 
-from fusillade.errors import FusilladeException
+from fusillade.errors import FusilladeException, FusilladeHTTPException
 
 project_arn = "arn:aws:clouddirectory:us-east-1:861229788715:"  # TODO move to config.py
 cd_client = aws_clients.clouddirectory
@@ -52,7 +52,7 @@ def cleanup_schema(sch_arn: str) -> None:
     cd_client.delete_schema(SchemaArn=sch_arn)
 
 
-def publish_schema(name: str, version: str) -> str:
+def publish_schema(name: str, version: str, minor: str) -> str:
     """
     More info about schemas
     https://docs.aws.amazon.com/clouddirectory/latest/developerguide/schemas.html
@@ -68,7 +68,8 @@ def publish_schema(name: str, version: str) -> str:
     cd_client.put_schema_from_json(SchemaArn=dev_schema_arn, Document=schema)
     try:
         pub_schema_arn = cd_client.publish_schema(DevelopmentSchemaArn=dev_schema_arn,
-                                                  Version=version)['PublishedSchemaArn']
+                                                  Version=version,
+                                                  MinorVersion=minor)['PublishedSchemaArn']
     except cd_client.exceptions.SchemaAlreadyPublishedException:
         pub_schema_arn = f"{project_arn}schema/published/{name}/{version}"
     return pub_schema_arn
@@ -86,12 +87,15 @@ def create_directory(name: str, schema: str, admins: typing.List[str]) -> 'Cloud
     try:
         response = cd_client.create_directory(
             Name=name,
-            SchemaArn=schema
+            SchemaArn="arn:aws:clouddirectory:::schema/managed/quick_start/1.0/001"
         )
         directory = CloudDirectory(response['DirectoryArn'])
+
     except cd_client.exceptions.DirectoryAlreadyExistsException:
         directory = CloudDirectory.from_name(name)
     else:
+        directory.apply_schema(schema)
+
         # create structure
         for folder_name in ('group', 'user', 'role', 'policy'):
             directory.create_folder('/', folder_name)
@@ -145,7 +149,8 @@ class CloudDirectory:
 
     def __init__(self, directory_arn: str):
         self._dir_arn = directory_arn
-        self._schema = None
+        self._schema: typing.List[str] = None
+        self._dynamic_schema = "arn:aws:clouddirectory:::schema/managed/quick_start/1.0"
 
     @classmethod
     @functools.lru_cache()
@@ -160,8 +165,14 @@ class CloudDirectory:
     @property
     def schema(self):
         if not self._schema:
-            self._schema = cd_client.list_applied_schema_arns(DirectoryArn=self._dir_arn)['SchemaArns'][0]
+            self._schema = cd_client.list_applied_schema_arns(DirectoryArn=self._dir_arn)['SchemaArns'][1]
         return self._schema
+
+    def apply_schema(self, published_schema_arn):
+        return cd_client.apply_schema(
+            PublishedSchemaArn=published_schema_arn,
+            DirectoryArn=self._dir_arn
+        )
 
     def list_object_children(self, object_ref: str) -> typing.Iterator[typing.Tuple[str, str]]:
         """
@@ -295,15 +306,16 @@ class CloudDirectory:
     def _make_ref(i):
         return '$' + i
 
-    def create_object(self, parent_path, link_name: str, facet_type: str, node_type: str, **kwargs) -> str:
+    def create_object(self, link_name: str, obj_type: str, node_type: str, **kwargs) -> str:
         """
         Create an object and store in cloud directory.
         """
         schema_facets = [
-            dict(SchemaArn=self.schema, FacetName="DynamicObjectFacet"),
+            dict(SchemaArn=self._dynamic_schema, FacetName="DynamicObjectFacet"),
             dict(SchemaArn=f"{self._dir_arn}/schema/CloudDirectory/1.0", FacetName=node_type)
         ]
         object_attribute_list = self.get_object_attribute_list(facet="DynamicObjectFacet", **kwargs)
+        parent_path = self.get_obj_type_path(obj_type)
         cd_client.create_object(DirectoryArn=self._dir_arn,
                                 SchemaFacets=schema_facets,
                                 ObjectAttributeList=object_attribute_list,
@@ -319,14 +331,14 @@ class CloudDirectory:
         return cd_client.get_object_attributes(DirectoryArn=self._dir_arn,
                                                ObjectReference={'Selector': obj_ref},
                                                SchemaFacet={
-                                                   'SchemaArn': self.schema,
+                                                   'SchemaArn': self._dynamic_schema,
                                                    'FacetName': facet
                                                },
                                                AttributeNames=attributes
                                                )
 
     def get_object_attribute_list(self, facet="DynamicObjectFacet", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
-        return [dict(Key=dict(SchemaArn=self.schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
+        return [dict(Key=dict(SchemaArn=self._dynamic_schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
                 for k, v in kwargs.items()]
 
     def get_policy_attribute_list(self,
@@ -365,7 +377,7 @@ class CloudDirectory:
         updates = [
             {
                 'ObjectAttributeKey': {
-                    'SchemaArn': self.schema,
+                    'SchemaArn': self._dynamic_schema,
                     'FacetName': i.facet,
                     'Name': i.attribute
                 },
@@ -387,7 +399,7 @@ class CloudDirectory:
     def create_folder(self, path: str, name: str) -> None:
         """ A folder is just a Group"""
         schema_facets = [
-            dict(SchemaArn=self.schema, FacetName="DynamicObjectFacet"),
+            dict(SchemaArn=self._dynamic_schema, FacetName="DynamicObjectFacet"),
             dict(SchemaArn=f"{self._dir_arn}/schema/CloudDirectory/1.0", FacetName="NODE")
         ]
         object_attribute_list = self.get_object_attribute_list(facet="DynamicObjectFacet")
@@ -483,12 +495,29 @@ class CloudDirectory:
             'IdentityAttributeValues': self.make_attributes(attributes)
         }
 
-    def clear(self) -> None:
-        for _, obj_ref in self.list_object_children('/user/'):
-            self.delete_object(obj_ref)
-        for _, obj_ref in self.list_object_children('/group/'):
-            self.delete_object(obj_ref)
-        protected_roles = [CloudNode.hash_name(name) for name in ["admin", "default_user"]]
+    def clear(self, users: typing.List[str] = None,
+              groups: typing.List[str] = None,
+              roles: typing.List[str] = None) -> None:
+        """
+
+        :param users: a list of users to keep
+        :param groups: a list of groups to keep
+        :param roles: a list of roles to keep
+        :return:
+        """
+        users = users if users else []
+        groups = groups if groups else []
+        roles = roles if roles else []
+        protected_users = [CloudNode.hash_name(name) for name in users]
+        protected_groups = [CloudNode.hash_name(name) for name in groups]
+        protected_roles = [CloudNode.hash_name(name) for name in ["admin", "default_user"] + roles]
+
+        for name, obj_ref in self.list_object_children('/user/'):
+            if name not in protected_users:
+                self.delete_object(obj_ref)
+        for name, obj_ref in self.list_object_children('/group/'):
+            if name not in protected_groups:
+                self.delete_object(obj_ref)
         for name, obj_ref in self.list_object_children('/role/'):
             if name not in protected_roles:
                 self.delete_object(obj_ref)
@@ -538,7 +567,7 @@ class CloudDirectory:
         return {'CreateObject': {
             'SchemaFacet': [
                 {
-                    'SchemaArn': self.schema,
+                    'SchemaArn': self._dynamic_schema,
                     'FacetName': 'DynamicObjectFacet'
                 },
                 {
@@ -564,7 +593,7 @@ class CloudDirectory:
                     'Selector': obj_ref
                 },
                 'SchemaFacet': {
-                    'SchemaArn': self.schema,
+                    'SchemaArn': self._dynamic_schema,
                     'FacetName': facet
                 },
                 'AttributeNames': attributes
@@ -695,10 +724,10 @@ class CloudDirectory:
                 'GetObjectAttributes': {
                     'ObjectReference': {'Selector': f'${policy_id[0]}'},
                     'SchemaFacet': {
-                        'SchemaArn': self.schema,
+                        'SchemaArn': self._dynamic_schema,
                         'FacetName': 'DynamicObjectFacet'
                     },
-                    'AttributeNames': ['Statement']
+                    'AttributeNames': ['policy_document']
                 }
             }
             for policy_id in policy_ids
@@ -776,7 +805,7 @@ class CloudNode:
         """
         filter_attribute_ranges = [
             {
-                'AttributeName': 'DynamicTypedLinkFacet',
+                'AttributeName': 'parent_type',
                 'Range': {
                     'StartMode': 'INCLUSIVE',
                     'StartValue': {'StringValue': object_type},
@@ -787,7 +816,7 @@ class CloudNode:
         ]
         return [
             type_link['SourceObjectReference']['Selector']
-            for type_link in self.cd.list_incoming_typed_links(self.object_ref, filter_attribute_ranges, 'DynamicTypedLinkFacet')
+            for type_link in self.cd.list_incoming_typed_links(self.object_ref, filter_attribute_ranges, 'association')
         ]
 
     def _add_links(self, links: typing.List[str], link_type: str):
@@ -810,13 +839,14 @@ class CloudNode:
                 )
             )
             attributes = {
-                'DynamicTypedLinkAttribute': link_type
+                'parent_type': link_type,
+                'child_type': self._object_type,
             }
             operations.append(
                 batch_attach_typed_link(
                     parent_ref,
                     self.object_ref,
-                    'DynamicTypedLinkFacet',
+                    'association',
                     attributes
                 )
             )
@@ -844,7 +874,7 @@ class CloudNode:
             typed_link_specifier = make_typed_link_specifier(
                 parent_ref,
                 self.object_ref,
-                'DynamicTypedLinkFacet',
+                'association',
                 {'parent_type': link_type, 'child_type': self._object_type}
             )
             operations.append(batch_detach_typed_link(typed_link_specifier))
@@ -863,7 +893,10 @@ class CloudNode:
     @property
     def policy(self):
         if not self._policy:
-            policies = [i for i in self.cd.list_object_policies(self.object_ref)]
+            try:
+                policies = [i for i in self.cd.list_object_policies(self.object_ref)]
+            except cd_client.exceptions.ResourceNotFoundException:
+                raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
             if not policies:
                 return None
             elif len(policies) > 1:
@@ -905,7 +938,7 @@ class CloudNode:
         if not self._statement and self.policy:
             self._statement = self.cd.get_object_attributes(self.policy,
                                                             'DynamicObjectFacet',
-                                                            ['Statement'])['Attributes'][0]['Value'].popitem()[1]
+                                                            ['policy_document'])['Attributes'][0]['Value'].popitem()[1]
 
         return self._statement
 
@@ -920,7 +953,7 @@ class CloudNode:
         else:
             params = [
                 UpdateObjectParams('DynamicObjectFacet',
-                                   'Statement',
+                                   'policy_document',
                                    ValueTypes.StringValue,
                                    statement,
                                    UpdateActions.CREATE_OR_UPDATE)
@@ -932,7 +965,10 @@ class CloudNode:
         """
         retrieve attributes for this from CloudDirectory and sets local private variables.
         """
-        resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        try:
+            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
         for attr in resp['Attributes']:
             self.__setattr__('_' + attr['Key']['Name'], attr['Value'].popitem()[1])
 
@@ -940,7 +976,10 @@ class CloudNode:
         attrs = dict()
         if not attributes:
             return attrs
-        resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        try:
+            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
         for attr in resp['Attributes']:
             attrs[attr['Key']['Name']] = attr['Value'].popitem()[1]  # noqa
         return attrs
@@ -956,8 +995,8 @@ class CloudNode:
             iam.simulate_custom_policy(PolicyInputList=[statement],
                                        ActionNames=["fake:action"],
                                        ResourceArns=["arn:aws:iam::123456789012:user/Bob"])
-        except iam.exceptions.InvalidInputException as ex:
-            raise FusilladeException from ex
+        except iam.exceptions.InvalidInputException:
+            raise FusilladeHTTPException(status=400, title="Bad Request", detail="Invalid policy format.")
 
 
 class User(CloudNode):
@@ -977,8 +1016,7 @@ class User(CloudNode):
         super(User, self).__init__(cloud_directory,
                                    'user',
                                    name=name,
-                                   object_ref=object_ref,
-                                   facet='DynamicObjectFacet')
+                                   object_ref=object_ref)
         self._status = None
         self._groups: typing.Optional[typing.List[str]] = None
         self._roles: typing.Optional[typing.List[str]] = None
@@ -1042,13 +1080,11 @@ class User(CloudNode):
         user = cls(cloud_directory, name)
         try:
             user.cd.create_object(
-                "/user/",
                 user._path_name,
-                user._facet,
+                user._object_type,
                 "LEAF_NODE",
                 name=user.name,
                 status='Enabled',
-                obj_type='user'
             )
         except cd_client.exceptions.LinkNameAlreadyInUseException:
             raise FusilladeException("User already exists.")
@@ -1119,8 +1155,7 @@ class Group(CloudNode):
         if not statement:
             statement = get_json_file(default_group_policy_path)
         cls._verify_statement(statement)
-        cloud_directory.create_object("/group/", cls.hash_name(name), 'DynamicObjectFacet', "NODE", name=name, \
-                                                                                                  obj_type="group")
+        cloud_directory.create_object(cls.hash_name(name), 'group', "NODE", name=name)
         new_node = cls(cloud_directory, name)
         new_node._set_statement(statement)
         return new_node
@@ -1183,8 +1218,10 @@ class Role(CloudNode):
         if not statement:
             statement = get_json_file(default_role_path)
         cls._verify_statement(statement)
-        cloud_directory.create_object("/role/", cls.hash_name(name), 'DynamicObjectFacet', 'NODE', name=name,
-                                      obj_type='role')
+        try:
+            cloud_directory.create_object(cls.hash_name(name), 'role', 'NODE', name=name)
+        except cd_client.exceptions.LinkNameAlreadyInUseException:
+            raise FusilladeHTTPException(status=409, title="Conflict", detail="The object already exists")
         new_node = cls(cloud_directory, name)
         new_node._set_statement(statement)
         return new_node
