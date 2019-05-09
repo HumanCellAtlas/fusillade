@@ -909,7 +909,7 @@ class CloudNode:
         :return:
         """
         operations = list()
-        object_attribute_list = self.cd.get_policy_attribute_list(self._facet, statement)
+        object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement)
         policy_link_name = self.get_policy_name('IAMPolicy')
         parent_path = self.cd.get_obj_type_path('policy')
         operations.append(
