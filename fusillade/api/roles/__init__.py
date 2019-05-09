@@ -4,7 +4,7 @@ from fusillade import Role, directory
 from fusillade.utils.authorize import assert_authorized
 
 
-def put_new_role(user):
+def put_new_role(user: str):
     assert_authorized(user, ['fus:PutRole'], ['arn:hca:fus:*:*:role'])
     json_body = request.json
     Role.create(directory, json_body['name'], statement=json_body.get('policy'))
@@ -15,7 +15,7 @@ def get_roles():
     pass
 
 
-def get_role(user, role_id):
+def get_role(user: str, role_id: str):
     assert_authorized(user, ['fus:GetRole'], [f'arn:hca:fus:*:*:role/{role_id}'])
     role = Role(directory, role_id)
     resp = dict(
@@ -25,7 +25,7 @@ def get_role(user, role_id):
     return make_response(jsonify(resp), 200)
 
 
-def put_role_policy(user, role_id):
+def put_role_policy(user: str, role_id: str):
     assert_authorized(user, ['fus:PutRole'], [f'arn:hca:fus:*:*:role/{role_id}'])
     role = Role(directory, role_id)
     role.statement = request.json['policy']
