@@ -68,8 +68,7 @@ def publish_schema(name: str, version: str, minor: str) -> str:
     cd_client.put_schema_from_json(SchemaArn=dev_schema_arn, Document=schema)
     try:
         pub_schema_arn = cd_client.publish_schema(DevelopmentSchemaArn=dev_schema_arn,
-                                                  Version=version,
-                                                  MinorVersion=minor)['PublishedSchemaArn']
+                                                  Version=version)['PublishedSchemaArn']
     except cd_client.exceptions.SchemaAlreadyPublishedException:
         pub_schema_arn = f"{project_arn}schema/published/{name}/{version}"
     return pub_schema_arn
@@ -149,7 +148,7 @@ class CloudDirectory:
 
     def __init__(self, directory_arn: str):
         self._dir_arn = directory_arn
-        self._schema: typing.List[str] = None
+        self._schema: str = None
         self._dynamic_schema = "arn:aws:clouddirectory:::schema/managed/quick_start/1.0"
 
     @classmethod
