@@ -369,7 +369,7 @@ class CloudDirectory:
         """
         Create an object and store in cloud directory.
         """
-        object_attribute_list = self.get_object_attribute_list(facet=facet_type, obj_type=obj_type, **kwargs)
+        object_attribute_list = self.get_object_attribute_list(facet=facet_type, **kwargs)
         parent_path = self.get_obj_type_path(obj_type)
         cd_client.create_object(DirectoryArn=self._dir_arn,
                                 SchemaFacets=[
@@ -470,8 +470,7 @@ class CloudDirectory:
     def create_folder(self, path: str, name: str) -> None:
         """ A folder is just a NodeFacet"""
         schema_facets = [dict(SchemaArn=self.schema, FacetName="NodeFacet")]
-        object_attribute_list = self.get_object_attribute_list(facet="NodeFacet", name=name, obj_type="folder",
-                                                               created_by="fusillade")
+        object_attribute_list = self.get_object_attribute_list(facet="NodeFacet", name=name, created_by="fusillade")
         try:
             cd_client.create_object(DirectoryArn=self._dir_arn,
                                     SchemaFacets=schema_facets,
