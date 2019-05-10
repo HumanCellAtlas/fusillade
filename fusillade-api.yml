@@ -779,7 +779,7 @@ components:
       name: user_id
       in: path
       required: true
-      description: User name (email)
+      description: User ID (email)
       schema:
         $ref: '#/components/schemas/custom_identifier'
     role_id:
