@@ -146,7 +146,7 @@ class CloudDirectory:
     def __init__(self, directory_arn: str):
         self._dir_arn = directory_arn
         self._schema = None
-        # This is the custom schema applied to the cloud directory. It is defined by the user in directory_schema.json.
+        # This is the custom schema applied to the cloud directory. It is defined in fusillade/directory_schema.json.
         self.node_schema = f"{self._dir_arn}/schema/CloudDirectory/1.0"
         # This is the base schema that is always present in AWS Cloud Directory. It defines the basic Node types, NODE,
         # POLICY, LEAF_NODE, and INDEX.
