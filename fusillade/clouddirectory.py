@@ -721,8 +721,8 @@ class CloudDirectory:
                 'GetObjectAttributes': {
                     'ObjectReference': {'Selector': f'${policy_id[0]}'},
                     'SchemaFacet': {
-                        'SchemaArn': self.schema,
-                        'FacetName': 'IAMPolicy'
+                        'SchemaArn': self.node_schema,
+                        'FacetName': 'POLICY'
                     },
                     'AttributeNames': ['policy_document']
                 }
