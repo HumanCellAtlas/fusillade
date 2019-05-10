@@ -4,9 +4,9 @@ import os, sys
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
-from fusillade.errors import FusilladeHTTPException
+from fusillade.errors import FusilladeHTTPException, FusilladeException
 from fusillade.clouddirectory import Role, cleanup_directory, cleanup_schema, get_json_file, default_role_path
-from tests.common import new_test_directory, create_test_statement
+from tests.common import new_test_directory, create_test_statement, create_test_statements
 
 
 class TestRole(unittest.TestCase):
@@ -49,6 +49,12 @@ class TestRole(unittest.TestCase):
             with self.assertRaises(FusilladeHTTPException):
                 role.statement = "Something else"
             self.assertEqual(role.statement, statement)
+
+        with self.subTest("an error is returned when a policy exceed 10 Kb"):
+            statement = create_test_statements(150)
+            with self.assertRaises(FusilladeException) as ex:
+                role.statement = statement
+
 
 if __name__ == '__main__':
     unittest.main()
