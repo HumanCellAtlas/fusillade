@@ -6,7 +6,7 @@ sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.errors import FusilladeHTTPException
 from fusillade.clouddirectory import User, Group, cd_client, cleanup_directory, cleanup_schema, get_json_file, \
-    default_group_policy_path
+    default_group_policy_path, Role
 from tests.common import new_test_directory, create_test_statement
 
 
@@ -95,6 +95,14 @@ class TestGroup(unittest.TestCase):
                 group.add_users([user])
             except cd_client.exceptions.BatchWriteException:
                 pass
+
+    def test_roles(self):
+        roles = ['role1', 'role2']
+        [Role.create(self.directory, name) for name in roles]
+        group = Group.create(self.directory, "test_roles")
+        group.add_roles(roles)
+        group.roles()
+
 
 if __name__ == '__main__':
     unittest.main()
