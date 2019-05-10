@@ -68,7 +68,7 @@ class TestGroup(unittest.TestCase):
             group = Group.create(self.directory, "test")
             user = User.provision_user(self.directory, "another@place.com")
             group.add_users([user])
-            actual_users = [i[1] for i in group.get_users()]
+            actual_users = [i for i in group.get_users()]
             self.assertEqual(len(actual_users), 1)
             self.assertEqual(User(self.directory,object_ref=actual_users[0]).name, user.name)
 
@@ -98,10 +98,15 @@ class TestGroup(unittest.TestCase):
 
     def test_roles(self):
         roles = ['role1', 'role2']
-        [Role.create(self.directory, name) for name in roles]
-        group = Group.create(self.directory, "test_roles")
-        group.add_roles(roles)
-        group.roles()
+        role_objs = [Role.create(self.directory, name, create_test_statement(name)) for name in roles]
+        with self.subTest("multiple roles return when multiple roles are attached to group."):
+            group = Group.create(self.directory, "test_roles")
+            group.add_roles(roles)
+            self.assertEqual(len(group.roles), 2)
+        with self.subTest("policies inherited from roles are returned when lookup policies is called"):
+            group_policies = sorted(group.lookup_policies())
+            role_policies = sorted([role.statement for role in role_objs] + [self.default_group_statement])
+            self.assertListEqual(group_policies, role_policies)
 
 
 if __name__ == '__main__':

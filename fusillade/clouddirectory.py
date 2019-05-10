@@ -1198,7 +1198,7 @@ class Group(CloudNode):
         :param cloud_directory:
         :param name:
         """
-        super(Group, self).__init__(cloud_directory, 'group', name=name, object_ref=object_ref)
+        super(Group, self).__init__(cloud_directory, 'group', name=name, object_ref=object_ref, facet='LeafFacet')
         self._groups = None
         self._roles = None
 
@@ -1223,7 +1223,7 @@ class Group(CloudNode):
         filter_attribute_ranges = [
         ]
         for type_link in self.cd.list_outgoing_typed_links(self.object_ref, filter_attribute_ranges, 'association'):
-            yield type_link['SourceObjectReference']['Selector']
+            yield type_link['TargetObjectReference']['Selector']
 
     @property
     def roles(self):
@@ -1277,7 +1277,7 @@ class Role(CloudNode):
     """
 
     def __init__(self, cloud_directory: CloudDirectory, name: str = None, object_ref: str = None):
-        super(Role, self).__init__(cloud_directory, 'role', name=name, object_ref=object_ref)
+        super(Role, self).__init__(cloud_directory, 'role', name=name, object_ref=object_ref, facet='NodeFacet')
 
     @classmethod
     def create(cls,
