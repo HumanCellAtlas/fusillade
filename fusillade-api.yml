@@ -810,7 +810,7 @@ components:
         enum: [add, remove]
   schemas:
     custom_identifier:
-      description: used to identify users, groups, and roles. Values are case insensitive so Users == users == UsErS.
+      description: used to identify users, groups, and roles.
       type: string
       minLength: 1
       maxLength: 128
