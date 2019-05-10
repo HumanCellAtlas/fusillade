@@ -52,7 +52,7 @@ class TestRole(unittest.TestCase):
 
         with self.subTest("an error is returned when a policy exceed 10 Kb"):
             statement = create_test_statements(150)
-            with self.assertRaises(FusilladeException) as ex:
+            with self.assertRaises(FusilladeHTTPException) as ex:
                 role.statement = statement
 
 

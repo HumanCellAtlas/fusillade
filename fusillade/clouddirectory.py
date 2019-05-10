@@ -147,7 +147,7 @@ class CloudDirectory:
         self._dir_arn = directory_arn
         self._schema = None
         # This is the custom schema applied to the cloud directory. It is defined by the user in directory_schema.json.
-        self._node_schema = f"{self._dir_arn}/schema/CloudDirectory/1.0"
+        self.node_schema = f"{self._dir_arn}/schema/CloudDirectory/1.0"
         # This is the base schema that is always present in AWS Cloud Directory. It defines the basic Node types, NODE,
         # POLICY, LEAF_NODE, and INDEX.
 
@@ -346,22 +346,24 @@ class CloudDirectory:
         policy_type and policy_document are required field for a policy object. See the section on Policies for more
         info https://docs.aws.amazon.com/clouddirectory/latest/developerguide/key_concepts_directory.html
         """
-        return [
+        attributes = self.get_object_attribute_list(facet='IAMPolicy', **kwargs)
+        attributes.extend([
             dict(
                 Key=dict(
-                    SchemaArn=self._schema,
-                    FacetName='IAMPolicy',
+                    SchemaArn=self.node_schema,
+                    FacetName='POLICY',
                     Name='policy_type'),
                 Value=dict(
                     StringValue=policy_type)),
             dict(
                 Key=dict(
-                    SchemaArn=self._schema,
-                    FacetName='IAMPolicy',
+                    SchemaArn=self.node_schema,
+                    FacetName='POLICY',
                     Name="policy_document"),
                 Value=dict(
                     BinaryValue=statement.encode()))
-        ]
+        ])
+        return attributes
 
     def update_object_attribute(self,
                                 object_ref: str,
@@ -719,7 +721,7 @@ class CloudDirectory:
                 'GetObjectAttributes': {
                     'ObjectReference': {'Selector': f'${policy_id[0]}'},
                     'SchemaFacet': {
-                        'SchemaArn': self._schema,
+                        'SchemaArn': self.schema,
                         'FacetName': 'IAMPolicy'
                     },
                     'AttributeNames': ['policy_document']
@@ -917,8 +919,12 @@ class CloudNode:
                 'CreateObject': {
                     'SchemaFacet': [
                         {
-                            'SchemaArn': self.cd._schema,
+                            'SchemaArn': self.cd.schema,
                             'FacetName': 'IAMPolicy'
+                        },
+                        {
+                            'SchemaArn': self.cd.node_schema,
+                            'FacetName': 'POLICY'
                         },
                     ],
                     'ObjectAttributeList': object_attribute_list,
@@ -946,9 +952,9 @@ class CloudNode:
         """
         if not self._statement and self.policy:
             self._statement = self.cd.get_object_attributes(self.policy,
-                                                            'IAMPolicy',
+                                                            'POLICY',
                                                             ['policy_document'],
-                                                            self.cd._schema
+                                                            self.cd.node_schema
                                                             )['Attributes'][0]['Value'].popitem()[1].decode("utf-8")
 
         return self._statement
@@ -964,16 +970,16 @@ class CloudNode:
                 self.create_policy(statement)
             else:
                 params = [
-                    UpdateObjectParams('IAMPolicy',
+                    UpdateObjectParams('POLICY',
                                        'policy_document',
                                        ValueTypes.BinaryValue,
                                        statement,
                                        UpdateActions.CREATE_OR_UPDATE,
                                        )
                 ]
-                self.cd.update_object_attribute(self.policy, params, self.cd._schema)
+                self.cd.update_object_attribute(self.policy, params, self.cd.node_schema)
         except cd_client.exceptions.LimitExceededException as ex:
-            raise FusilladeException(ex)
+            raise FusilladeHTTPException(ex)
         self._statement = None
 
     def _get_attributes(self, attributes: typing.List[str]):
