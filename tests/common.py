@@ -60,9 +60,9 @@ def create_test_statements(length=1):
 
 def new_test_directory(directory_name=None) -> typing.Tuple[CloudDirectory, str]:
     directory_name = directory_name if directory_name else "test_dir_" + random_hex_string()
-    schema_arn = publish_schema(schema_name, 'T' + random_hex_string(), '0')
+    schema_arn = publish_schema(schema_name, 'T' + random_hex_string())
     directory = create_directory(directory_name, schema_arn, [service_accounts['admin']['client_email']])
-    return directory
+    return directory, schema_arn
 
 
 def get_service_jwt(service_credentials, email=True, audience=None):

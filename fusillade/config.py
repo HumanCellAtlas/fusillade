@@ -37,7 +37,7 @@ class Config:
 
     @classmethod
     def get_schema_name(cls):
-        version = 0.2
+        version = "0.2"
         return f"hca_fusillade_base_{os.environ['FUS_DEPLOYMENT_STAGE']}", version
 
     @classmethod

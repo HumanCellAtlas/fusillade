@@ -52,7 +52,7 @@ def cleanup_schema(sch_arn: str) -> None:
     cd_client.delete_schema(SchemaArn=sch_arn)
 
 
-def publish_schema(name: str, version: str, minor: str) -> str:
+def publish_schema(name: str, version: str) -> str:
     """
     More info about schemas
     https://docs.aws.amazon.com/clouddirectory/latest/developerguide/schemas.html
@@ -150,9 +150,9 @@ class CloudDirectory:
         self._dir_arn = directory_arn
         self._schema: str = None
         # This is the custom schema applied to the cloud directory. It is defined by the user in directory_schema.json.
-        self._dynamic_schema = "arn:aws:clouddirectory:::schema/managed/quick_start/1.0"
+        self.dynamic_schema: str = "arn:aws:clouddirectory:::schema/managed/quick_start/1.0"
         # This is the dynamic schema provided by AWS
-        self._node_schema = f"{self._dir_arn}/schema/CloudDirectory/1.0"
+        self.node_schema = f"{self._dir_arn}/schema/CloudDirectory/1.0"
         # This is the base schema that is always present in AWS Cloud Directory. It defines the basic Node types, NODE,
         # POLICY, LEAF_NODE, and INDEX.
 
@@ -315,7 +315,7 @@ class CloudDirectory:
         Create an object and store in cloud directory.
         """
         schema_facets = [
-            dict(SchemaArn=self._dynamic_schema, FacetName="DynamicObjectFacet"),
+            dict(SchemaArn=self.dynamic_schema, FacetName="DynamicObjectFacet"),
             dict(SchemaArn=f"{self._dir_arn}/schema/CloudDirectory/1.0", FacetName=node_type)
         ]
         object_attribute_list = self.get_object_attribute_list(facet="DynamicObjectFacet", **kwargs)
@@ -334,7 +334,7 @@ class CloudDirectory:
         a wrapper around CloudDirectory.Client.get_object_attributes
         """
         if not schema:
-            schema = self._dynamic_schema,
+            schema = self.dynamic_schema
         return cd_client.get_object_attributes(DirectoryArn=self._dir_arn,
                                                ObjectReference={'Selector': obj_ref},
                                                SchemaFacet={
@@ -345,7 +345,7 @@ class CloudDirectory:
                                                )
 
     def get_object_attribute_list(self, facet="DynamicObjectFacet", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
-        return [dict(Key=dict(SchemaArn=self._dynamic_schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
+        return [dict(Key=dict(SchemaArn=self.dynamic_schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
                 for k, v in kwargs.items()]
 
     def get_policy_attribute_list(self,
@@ -361,14 +361,14 @@ class CloudDirectory:
         obj.extend([
             dict(
                 Key=dict(
-                    SchemaArn=self._node_schema,
+                    SchemaArn=self.node_schema,
                     FacetName="POLICY",
                     Name='policy_type'),
                 Value=dict(
                     StringValue=policy_type)),
             dict(
                 Key=dict(
-                    SchemaArn=self._node_schema,
+                    SchemaArn=self.node_schema,
                     FacetName="POLICY",
                     Name="policy_document"),
                 Value=dict(
@@ -388,7 +388,7 @@ class CloudDirectory:
         :return:
         """
         if not schema:
-            schema = self._dynamic_schema
+            schema = self.dynamic_schema
         updates = [
             {
                 'ObjectAttributeKey': {
@@ -414,7 +414,7 @@ class CloudDirectory:
     def create_folder(self, path: str, name: str) -> None:
         """ A folder is just a Group"""
         schema_facets = [
-            dict(SchemaArn=self._dynamic_schema, FacetName="DynamicObjectFacet"),
+            dict(SchemaArn=self.dynamic_schema, FacetName="DynamicObjectFacet"),
             dict(SchemaArn=f"{self._dir_arn}/schema/CloudDirectory/1.0", FacetName="NODE")
         ]
         object_attribute_list = self.get_object_attribute_list(facet="DynamicObjectFacet")
@@ -582,7 +582,7 @@ class CloudDirectory:
         return {'CreateObject': {
             'SchemaFacet': [
                 {
-                    'SchemaArn': self._dynamic_schema,
+                    'SchemaArn': self.dynamic_schema,
                     'FacetName': 'DynamicObjectFacet'
                 },
                 {
@@ -608,7 +608,7 @@ class CloudDirectory:
                     'Selector': obj_ref
                 },
                 'SchemaFacet': {
-                    'SchemaArn': self._dynamic_schema,
+                    'SchemaArn': self.dynamic_schema,
                     'FacetName': facet
                 },
                 'AttributeNames': attributes
@@ -739,7 +739,7 @@ class CloudDirectory:
                 'GetObjectAttributes': {
                     'ObjectReference': {'Selector': f'${policy_id[0]}'},
                     'SchemaFacet': {
-                        'SchemaArn': self._node_schema,
+                        'SchemaArn': self.node_schema,
                         'FacetName': 'POLICY'
                     },
                     'AttributeNames': ['policy_document']
@@ -937,7 +937,7 @@ class CloudNode:
                 'CreateObject': {
                     'SchemaFacet': [
                         {
-                            'SchemaArn': self.cd._node_schema,
+                            'SchemaArn': self.cd.node_schema,
                             'FacetName': 'POLICY'
                         },
                     ],
@@ -968,7 +968,7 @@ class CloudNode:
             self._statement = self.cd.get_object_attributes(self.policy,
                                                             'POLICY',
                                                             ['policy_document'],
-                                                            self.cd._node_schema
+                                                            self.cd.node_schema
                                                             )['Attributes'][0]['Value'].popitem()[1].decode("utf-8")
 
         return self._statement
@@ -991,7 +991,7 @@ class CloudNode:
                         statement,
                         UpdateActions.CREATE_OR_UPDATE)
                 ]
-                self.cd.update_object_attribute(self.policy, params, self.cd._node_schema)
+                self.cd.update_object_attribute(self.policy, params, self.cd.node_schema)
         except cd_client.exceptions.LimitExceededException as ex:
             raise FusilladeException(ex)
         self._statement = None
