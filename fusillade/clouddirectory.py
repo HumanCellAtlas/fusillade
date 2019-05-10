@@ -86,10 +86,9 @@ def create_directory(name: str, schema: str, admins: typing.List[str]) -> 'Cloud
     try:
         response = cd_client.create_directory(
             Name=name,
-            SchemaArn="arn:aws:clouddirectory:::schema/managed/quick_start/1.0/001"
+            SchemaArn=CloudDirectory.dynamic_schema
         )
         directory = CloudDirectory(response['DirectoryArn'])
-
     except cd_client.exceptions.DirectoryAlreadyExistsException:
         directory = CloudDirectory.from_name(name)
     else:
@@ -145,12 +144,12 @@ class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute',
 
 class CloudDirectory:
     _page_limit = 30  # This is the max allowed by AWS
+    # This is the custom schema applied to the cloud directory. It is defined by the user in directory_schema.json.
+    dynamic_schema: str = "arn:aws:clouddirectory:::schema/managed/quick_start/1.0"
 
     def __init__(self, directory_arn: str):
         self._dir_arn = directory_arn
         self._schema: str = None
-        # This is the custom schema applied to the cloud directory. It is defined by the user in directory_schema.json.
-        self.dynamic_schema: str = "arn:aws:clouddirectory:::schema/managed/quick_start/1.0"
         # This is the dynamic schema provided by AWS
         self.node_schema = f"{self._dir_arn}/schema/CloudDirectory/1.0"
         # This is the base schema that is always present in AWS Cloud Directory. It defines the basic Node types, NODE,
@@ -316,7 +315,7 @@ class CloudDirectory:
         """
         schema_facets = [
             dict(SchemaArn=self.dynamic_schema, FacetName="DynamicObjectFacet"),
-            dict(SchemaArn=f"{self._dir_arn}/schema/CloudDirectory/1.0", FacetName=node_type)
+            dict(SchemaArn=self.node_schema, FacetName=node_type)
         ]
         object_attribute_list = self.get_object_attribute_list(facet="DynamicObjectFacet", **kwargs)
         parent_path = self.get_obj_type_path(obj_type)
@@ -359,22 +358,16 @@ class CloudDirectory:
         info https://docs.aws.amazon.com/clouddirectory/latest/developerguide/key_concepts_directory.html
         """
         obj = self.get_object_attribute_list(facet=facet, **kwargs)
-        obj.extend([
-            dict(
-                Key=dict(
-                    SchemaArn=self.node_schema,
-                    FacetName="POLICY",
-                    Name='policy_type'),
-                Value=dict(
-                    StringValue=policy_type)),
-            dict(
-                Key=dict(
-                    SchemaArn=self.node_schema,
-                    FacetName="POLICY",
-                    Name="policy_document"),
-                Value=dict(
-                    BinaryValue=policy_document.encode()))
-        ])
+        obj.append(dict(Key=dict(
+            SchemaArn=self.node_schema,
+            FacetName="POLICY",
+            Name='policy_type'),
+            Value=dict(StringValue=policy_type)))
+        obj.append(dict(Key=dict(
+            SchemaArn=self.node_schema,
+            FacetName="POLICY",
+            Name="policy_document"),
+            Value=dict(BinaryValue=policy_document.encode())))
         return obj
 
     def update_object_attribute(self,
@@ -587,7 +580,7 @@ class CloudDirectory:
                     'FacetName': 'DynamicObjectFacet'
                 },
                 {
-                    'SchemaArn': f"{self._dir_arn}/schema/CloudDirectory/1.0",
+                    'SchemaArn': self.node_schema,
                     'FacetName': node_type,
                 },
             ],
@@ -599,10 +592,16 @@ class CloudDirectory:
         }
         }
 
-    def batch_get_attributes(self, obj_ref, facet, attributes: typing.List[str]) -> typing.Dict[str, typing.Any]:
+    def batch_get_attributes(self,
+                             obj_ref,
+                             facet,
+                             attributes: typing.List[str],
+                             schema: str = None) -> typing.Dict[str, typing.Any]:
         """
         A helper function to format a batch get_attributes operation
         """
+        if not schema:
+            schema = self.dynamic_schema
         return {
             'GetObjectAttributes': {
                 'ObjectReference': {

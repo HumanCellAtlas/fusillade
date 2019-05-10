@@ -20,10 +20,7 @@ def get_directory():
         from .clouddirectory import publish_schema, create_directory
         schema_arn = publish_schema(*Config.get_schema_name())
         admins = Config.get_admin_emails()
-        _directory = create_directory(
-            directory_name,
-            schema_arn,
-            admins)
+        _directory = create_directory(directory_name,schema_arn,admins)
     return _directory
 
 
