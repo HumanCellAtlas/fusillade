@@ -344,7 +344,8 @@ class CloudDirectory:
                                                AttributeNames=attributes
                                                )
 
-    def get_object_attribute_list(self, facet="DynamicObjectFacet", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
+    def get_object_attribute_list(self, facet="DynamicObjectFacet", **kwargs) \
+            -> typing.List[typing.Dict[str, typing.Any]]:
         return [dict(Key=dict(SchemaArn=self.dynamic_schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
                 for k, v in kwargs.items()]
 
