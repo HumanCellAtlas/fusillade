@@ -349,15 +349,15 @@ class CloudDirectory:
         return [
             dict(
                 Key=dict(
-                    SchemaArn=self._node_schema,
-                    FacetName="POLICY",
+                    SchemaArn=self._schema,
+                    FacetName='IAMPolicy',
                     Name='policy_type'),
                 Value=dict(
                     StringValue=policy_type)),
             dict(
                 Key=dict(
-                    SchemaArn=self._node_schema,
-                    FacetName="POLICY",
+                    SchemaArn=self._schema,
+                    FacetName='IAMPolicy',
                     Name="policy_document"),
                 Value=dict(
                     BinaryValue=statement.encode()))
@@ -719,8 +719,8 @@ class CloudDirectory:
                 'GetObjectAttributes': {
                     'ObjectReference': {'Selector': f'${policy_id[0]}'},
                     'SchemaFacet': {
-                        'SchemaArn': self._node_schema,
-                        'FacetName': 'POLICY'
+                        'SchemaArn': self._schema,
+                        'FacetName': 'IAMPolicy'
                     },
                     'AttributeNames': ['policy_document']
                 }
@@ -917,8 +917,8 @@ class CloudNode:
                 'CreateObject': {
                     'SchemaFacet': [
                         {
-                            'SchemaArn': self.cd._node_schema,
-                            'FacetName': 'POLICY'
+                            'SchemaArn': self.cd._schema,
+                            'FacetName': 'IAMPolicy'
                         },
                     ],
                     'ObjectAttributeList': object_attribute_list,
@@ -946,9 +946,9 @@ class CloudNode:
         """
         if not self._statement and self.policy:
             self._statement = self.cd.get_object_attributes(self.policy,
-                                                            'POLICY',
+                                                            'IAMPolicy',
                                                             ['policy_document'],
-                                                            self.cd._node_schema
+                                                            self.cd._schema
                                                             )['Attributes'][0]['Value'].popitem()[1].decode("utf-8")
 
         return self._statement
@@ -964,14 +964,14 @@ class CloudNode:
                 self.create_policy(statement)
             else:
                 params = [
-                    UpdateObjectParams('POLICY',
+                    UpdateObjectParams('IAMPolicy',
                                        'policy_document',
                                        ValueTypes.BinaryValue,
                                        statement,
                                        UpdateActions.CREATE_OR_UPDATE,
                                        )
                 ]
-                self.cd.update_object_attribute(self.policy, params, self.cd._node_schema)
+                self.cd.update_object_attribute(self.policy, params, self.cd._schema)
         except cd_client.exceptions.LimitExceededException as ex:
             raise FusilladeException(ex)
         self._statement = None
