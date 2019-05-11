@@ -5,7 +5,9 @@ from fusillade.utils.authorize import assert_authorized
 
 
 def put_new_role(token_info: dict):
-    assert_authorized(token_info['https://auth.data.humancellatlas.org/email'], ['fus:PutRole'], ['arn:hca:fus:*:*:role'])
+    assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
+                      ['fus:PutRole'],
+                      ['arn:hca:fus:*:*:role'])
     json_body = request.json
     Role.create(directory, json_body['name'], statement=json_body.get('policy'))
     return make_response(f"New role {json_body['name']} created.", 201)
