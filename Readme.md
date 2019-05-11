@@ -1,5 +1,4 @@
-Fusillade
-=========
+# Fusillade
 
 Fusillade (Federated User Identity Login & Access Decision Engine) is a service and library for managing user
 authentication and authorization in federated services. Fusillade is built to be simple and to leverage well-known auth
@@ -43,34 +42,72 @@ To do this, your application should define an access control model consisting of
   }
   ```
 
-Installing and configuring Fusillade
-------------------------------------
- 
+## AWS Cloud Architecture
+![AWS Cloud Architecture](https://www.lucidchart.com/publicSegments/view/b3470977-3924-4fb3-a07f-ce97be59dac1/image.png)
+## Cloud Directory Structure
+![Cloud Directory Structure](https://www.lucidchart.com/publicSegments/view/3f6f3cdc-7429-460c-b45f-33ae35d9e07c/image.png)
+
+
+# Installing and configuring Fusillade
+
+Create `oauth2_config.json` with the OIDC providers you'd like to use to 
+authenticate users. This file is uploaded to AWS secrets manager using `make set_oauth2_config`. Use 
+[`oauth2_config.example.json`](../master/oauth2_config.example.json) for help.
+    
+
 - pip install -r ./requirements-dev
 - brew install jq
 - brew install pandoc
+- brew install moreutils
 - brew install gettext
 - brew link --force gettext 
+- brew install terraform
 
-Using Fusillade as a service
-----------------------------
+- Setup [AWS CLI](https://github.com/aws/aws-cli) with the correct profile, default region, and output format.
+- Local environment variables can be set in *environment.local* for convenience. If you use "source environment" and it 
+  will set environment variables from *environment.local* after *environment* varaibles have been set, if you choose to 
+  set them.
+- Populate `FUS_ADMIN_EMAILS` with a list of admins to assigned upon creating the fusillade deployment. This
+  is only used when fusillade is first deployed to create the first users. Afterwards this variable has no effect. If
+  more admins are required assign a user the admin role.
+- Environment variables can be set in `environment.local` for convenience.
+- **Optionally** modify the [default policies and roles](../blob/master/policies) to suite your needs prior to 
+  deployment. 
 
-Using Fusillade as a library
-----------------------------
+## Set secrets
+Fusillade uses AWS Secret Store for its secrets. Use ./scripts/set_secrets to set the following secrets:
 
-Using Fusillade as a proxy
---------------------------
+* **test_service_accounts** - contains google service accounts to test users access and admin access. See 
+*./test_accounts_example.json* for the expected format.
+* **oauth2_config** - contains the fields needed to proxy an OIDC provider. See *./oauth2_config.example.json* for 
+expected format
 
-Bundling native cloud credentials
----------------------------------
+# Using Fusillade as a Service
+
+When Fusillade is first deployed two roles are created. The first role is `admin` and is assigned
+to the users created from the csv of emails found in `FUS_ADMIN_EMAILS`. The second role is `default_user` this role is 
+assigned to all other users created using the login API. The policies assigned to these roles can be customized prior to
+deployment. Afterwards all modifications to users, roles, groups, and policies must be made using the fusillade API.
+
+## Adding Users to Roles
+
+New admins can be assigned using the fusillade API and assigning the role of admin to a user.
+
+# Using Fusillade as a library
+
+# Using Fusillade as a proxy
+
+# Bundling native cloud credentials
+
+# Creating Custom Policy
+
+Uses [AWS IAM Policy grammar](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html)
 
 ### AWS
 
 ### GCP
 
-Service access control
-----------------------
-
+# Service access control
 To use Fusillade, your service must itself be authenticated and authorized. The access control model for this depends on
 how you're using Fusillade.
 
@@ -102,3 +139,6 @@ Licensed under the terms of the [MIT License](https://opensource.org/licenses/MI
 [![PyPI version](https://img.shields.io/pypi/v/fusillade.svg)](https://pypi.python.org/pypi/fusillade)
 [![PyPI license](https://img.shields.io/pypi/l/fusillade.svg)](https://pypi.python.org/pypi/fusillade)
 [![Read The Docs](https://readthedocs.org/projects/fusillade/badge/?version=latest)](https://pypi.python.org/pypi/fusillade)
+[![Known Vulnerabilities](https://snyk.io/test/github/HumanCellAtlas/fusillade/badge.svg)](https://snyk.io/test/github/HumanCellAtlas/fusillade)
+[![Build Status](https://travis-ci.com/HumanCellAtlas/fusillade.svg?branch=master)](https://travis-ci.com/HumanCellAtlas/fusillade)
+[![codecov](https://codecov.io/gh/HumanCellAtlas/fusillade/branch/master/graph/badge.svg)](https://codecov.io/gh/HumanCellAtlas/fusillade)

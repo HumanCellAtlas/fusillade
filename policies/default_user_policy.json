@@ -1,0 +1,13 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DefaulUserPolicy",
+      "Effect": "Deny",
+      "Action": [
+        "fake:action"
+      ],
+       "Resource": "fake:resource"
+    }
+  ]
+}

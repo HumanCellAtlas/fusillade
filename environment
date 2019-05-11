@@ -1,0 +1,42 @@
+# HCA Fusillade environment variables
+#
+# Source this file in your bash shell using "source environment".
+#
+# The environment variables set in this file are appropriate for the
+# HCA Fusillade development environment. Individual environment variable
+# values are overridden when deployed, based on the deployment stage.
+
+# Resolve the location of this file and set FUS_HOME to the root
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ] ; do SOURCE="$(readlink "$SOURCE")"; done
+export FUS_HOME="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+
+EXPORT_ENV_VARS_TO_LAMBDA_ARRAY=(
+    FUS_DEPLOYMENT_STAGE
+    FUS_SECRETS_STORE
+    OPENID_PROVIDER
+    FUS_ADMIN_EMAILS
+    API_DOMAIN_NAME
+)
+
+set -a
+EXPORT_ENV_VARS_TO_LAMBDA=${EXPORT_ENV_VARS_TO_LAMBDA_ARRAY[*]}
+FUS_PARAMETER_STORE=dcp/fusillade
+FUS_DEPLOYMENT_STAGE=dev
+FUS_SECRETS_STORE=dcp/fusillade
+OPENID_PROVIDER=humancellatlas.auth0.com
+ACM_CERTIFICATE_IDENTIFIER="826dbdb8-2b23-4cc9-8fd6-73aa6fc658d7"
+FUS_TERRAFORM_BACKEND_BUCKET_TEMPLATE=terraform-tsmith
+FUS_ADMIN_EMAILS=test_email@domain.com
+
+AWS_SDK_LOAD_CONFIG=1 # Needed for Terraform to correctly use AWS assumed roles
+set +a
+
+if [[ -f "${FUS_HOME}/environment.local" ]]; then
+    source "${FUS_HOME}/environment.local"
+fi
+
+set -a
+FUS_ZONE_NAME=${FUS_DEPLOYMENT_STAGE}.data.humancellatlas.org
+API_DOMAIN_NAME=auth.${FUS_ZONE_NAME}
+set +a

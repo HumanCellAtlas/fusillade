@@ -4,4 +4,5 @@ oauthlib
 google_auth_oauthlib
 coverage
 sphinx
+flake8
 -r requirements.txt

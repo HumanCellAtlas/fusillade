@@ -39,3 +39,12 @@ npm-debug.log
 /.chalice/deployed.json
 /.chalice/policy-*.json
 /README.rst
+
+# fusillade specific
+/oauth2_config.json
+
+# terraform
+.terraform
+/infra/*/backend.tf
+/infra/*/providers.tf
+/infra/*/variables.tf
