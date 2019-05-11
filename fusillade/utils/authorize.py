@@ -1,3 +1,4 @@
+import json
 import logging
 import typing
 
@@ -32,7 +33,10 @@ def evaluate_policy(
 
 
 def assert_authorized(user, actions, resources):
-    policies = User(directory, user).lookup_policies()
+    u = User(directory, user)
+    policies = u.lookup_policies()
     if not evaluate_policy(user, actions, resources, policies):
-        logger.info(f"User not authorized. {user}, {actions}, {resources}")
+        logger.info(json.dumps(dict(msg="User not authorized.",user=u._path_name, action=actions, resources=resources)))
         raise FusilladeForbiddenException()
+    else:
+        logger.info(json.dumps(dict(msg="User authorized.",user=u._path_name, action=actions, resources=resources)))
