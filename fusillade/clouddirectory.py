@@ -1097,7 +1097,8 @@ class User(CloudNode):
                                UpdateActions.CREATE_OR_UPDATE)
         ]
         self.cd.update_object_attribute(self.object_ref, update_params)
-        logger.info(json.dumps(dict(msg="User Enabled",object=dict(type=self._object_type, path_name=self._path_name))))
+        logger.info(
+            json.dumps(dict(msg="User Enabled", object=dict(type=self._object_type, path_name=self._path_name))))
         self._status = None
 
     def disable(self):

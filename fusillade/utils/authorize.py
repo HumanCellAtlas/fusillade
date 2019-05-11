@@ -31,7 +31,7 @@ def evaluate_policy(
         ]
     )
     logger.debug(json.dumps(response))
-    results = [ result['EvalDecision'] for result in response['EvaluationResults']]
+    results = [result['EvalDecision'] for result in response['EvaluationResults']]
     if 'explicitDeny' in results:
         return False
     elif 'allowed' in results:
@@ -44,7 +44,8 @@ def assert_authorized(user, actions, resources):
     u = User(directory, user)
     policies = u.lookup_policies()
     if not evaluate_policy(user, actions, resources, policies):
-        logger.info(json.dumps(dict(msg="User not authorized.",user=u._path_name, action=actions, resources=resources)))
+        logger.info(
+            json.dumps(dict(msg="User not authorized.", user=u._path_name, action=actions, resources=resources)))
         raise FusilladeForbiddenException()
     else:
-        logger.info(json.dumps(dict(msg="User authorized.",user=u._path_name, action=actions, resources=resources)))
+        logger.info(json.dumps(dict(msg="User authorized.", user=u._path_name, action=actions, resources=resources)))
