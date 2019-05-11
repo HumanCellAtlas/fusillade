@@ -13,6 +13,8 @@ import functools
 import json
 import typing
 from collections import namedtuple
+from threading import Thread
+from concurrent.futures import Future
 from enum import Enum, auto
 
 from fusillade.errors import FusilladeException, FusilladeHTTPException
@@ -704,12 +706,14 @@ class CloudDirectory:
             )
             for path in response['PolicyToPathList']
         ]
+        return policies_paths
 
+    def get_policies(self, policy_paths: typing.List[str]) -> typing.List[str]:
         # Parse the policyIds from the policies path. Only keep the unique ids
         policy_ids = set(
             [
                 (o['PolicyId'], o['PolicyType'])
-                for p in policies_paths
+                for p in policy_paths
                 for o in p['Policies']
                 if o.get('PolicyId')
             ]
@@ -903,7 +907,8 @@ class CloudNode:
         return operations
 
     def lookup_policies(self) -> typing.List[str]:
-        return self.cd.lookup_policy(self.object_ref)
+        policy_paths = self.cd.lookup_policy(self.object_ref)
+        return self.cd.get_policies(policy_paths)
 
     @property
     def name(self):
@@ -1069,11 +1074,35 @@ class User(CloudNode):
 
     def lookup_policies(self) -> typing.List[str]:
         try:
-            policies = self.cd.lookup_policy(self.object_ref)
+            if self.groups:
+                policy_paths = self._lookup_policies_threaded()
+            else:
+                policy_paths = self.cd.lookup_policy(self.object_ref)
         except cd_client.exceptions.ResourceNotFoundException:
             self.provision_user(self.cd, self.name)
-            policies = self.cd.lookup_policy(self.object_ref)
-        return policies
+            policy_paths = self.cd.lookup_policy(self.object_ref)
+        return self.cd.get_policies(policy_paths)
+
+    def _lookup_policies_threaded(self):
+        object_refs = self.groups + [self.object_ref]
+
+        def _call_with_future(fn, _future, args):
+            """
+            Returns the result of the wrapped threaded function.
+            """
+            try:
+                result = fn(*args)
+                _future.set_result(result)
+            except Exception as exc:
+                _future.set_exception(exc)
+
+        futures = []
+        for object_ref in object_refs:
+            future = Future()
+            Thread(target=_call_with_future, args=(self.cd.lookup_policy, future, [object_ref])).start()
+            futures.append(future)
+        results = [i for future in futures for i in future.result()]
+        return results
 
     @property
     def status(self):
