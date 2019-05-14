@@ -778,7 +778,7 @@ class CloudDirectory:
             health_status.update(iam_health_status='ok')
 
         try:
-            status = self.get_object_information('/')['ResponseMetadata']['HTTPStatusCode']
+            self.get_object_information('/')['ResponseMetadata']['HTTPStatusCode']
         except Exception:
             health_status.update(clouddirectory_health_status='unhealthy')
         else:
