@@ -1,8 +1,8 @@
 # You should not edit this file directly.  Instead, you should edit requirements.txt.in.
 asn1crypto==0.24.0
 attrs==17.4.0
-boto3==1.9.146
-botocore==1.12.146
+boto3==1.9.148
+botocore==1.12.148
 certifi==2019.3.9
 cffi==1.12.3
 chalice==1.8.0
@@ -37,4 +37,4 @@ s3transfer==0.2.0
 six==1.12.0
 typing==3.6.4
 urllib3==1.24.3
-Werkzeug==0.15.2
+Werkzeug==0.15.3
