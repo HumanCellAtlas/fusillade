@@ -25,8 +25,9 @@ logger = logging.getLogger(__name__)
 
 cd_client = aws_clients.clouddirectory
 iam = aws_clients.iam
-project_arn = f"arn:aws:clouddirectory:{os.getenv('AWS_DEFAULT_REGION')}:{cd_client.get_caller_identity().get('Account')}:"  # TODO move to config.py
-
+project_arn = "arn:aws:clouddirectory:{}:{}:".format(
+    os.getenv('AWS_DEFAULT_REGION'),
+    aws_clients.sts.get_caller_identity().get('Account'))
 proj_path = os.path.dirname(__file__)
 
 # TODO make all configurable
