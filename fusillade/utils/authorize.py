@@ -48,4 +48,4 @@ def assert_authorized(user, actions, resources):
         raise FusilladeForbiddenException()
     else:
         logger.info(dict(message="User authorized.", user=u._path_name, action=actions,
-                                    resources=resources))
+                         resources=resources))

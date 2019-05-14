@@ -54,7 +54,7 @@ def get_published_schema_from_directory(dir_arn: str) -> str:
 def cleanup_directory(dir_arn: str):
     cd_client.disable_directory(DirectoryArn=dir_arn)
     cd_client.delete_directory(DirectoryArn=dir_arn)
-    logger.warning({"message":"Deleted directory", "directory_arn": dir_arn})
+    logger.warning({"message": "Deleted directory", "directory_arn": dir_arn})
 
 
 def cleanup_schema(sch_arn: str) -> None:
@@ -1015,14 +1015,14 @@ class CloudNode:
         operations.append(self.cd.batch_attach_policy(policy_ref, self.object_ref))
         self.cd.batch_write(operations)
         self.log.info(dict(message="Policy created",
-                     object=dict(
-                         type=self._object_type,
-                         path_name=self._path_name
-                     ),
-                     policy=dict(
-                         link_name=policy_link_name,
-                         policy_type="IAMPolicy")
-        ))
+                           object=dict(
+                               type=self._object_type,
+                               path_name=self._path_name
+                           ),
+                           policy=dict(
+                               link_name=policy_link_name,
+                               policy_type="IAMPolicy")
+                           ))
         return policy_ref
 
     def get_policy_name(self, policy_type):
@@ -1066,14 +1066,14 @@ class CloudNode:
             raise FusilladeHTTPException(ex)
         else:
             self.log.info(dict(message="Policy updated",
-                         object=dict(
-                             type=self._object_type,
-                             path_name=self._path_name
-                         ),
-                         policy=dict(
-                             link_name=self.get_policy_name('IAMPolicy'),
-                             policy_type="IAMPolicy")
-                         ))
+                               object=dict(
+                                   type=self._object_type,
+                                   path_name=self._path_name
+                               ),
+                               policy=dict(
+                                   link_name=self.get_policy_name('IAMPolicy'),
+                                   policy_type="IAMPolicy")
+                               ))
 
         self._statement = None
 
@@ -1231,7 +1231,7 @@ class User(CloudNode):
             raise FusilladeException("User already exists.")
         else:
             user.log.info(dict(message="User created",
-                         object=dict(type=user._object_type, path_name=user._path_name)))
+                               object=dict(type=user._object_type, path_name=user._path_name)))
         if roles:
             user.add_roles(roles + cls.default_roles)
         else:
@@ -1258,8 +1258,8 @@ class User(CloudNode):
         self.cd.batch_write(operations)
         self._groups = None  # update groups
         self.log.info(dict(message="Groups joined",
-                     object=dict(type=self._object_type, path_name=self._path_name),
-                     groups=groups))
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           groups=groups))
 
     def remove_groups(self, groups: typing.List[str]):
         operations = []
@@ -1267,8 +1267,8 @@ class User(CloudNode):
         self.cd.batch_write(operations)
         self._groups = None  # update groups
         self.log.info(dict(message="Groups left",
-                     object=dict(type=self._object_type, path_name=self._path_name),
-                     groups=groups))
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           groups=groups))
 
     @property
     def roles(self) -> typing.List[str]:
@@ -1283,8 +1283,8 @@ class User(CloudNode):
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         self.log.info(dict(message="Roles added",
-                     object=dict(type=self._object_type, path_name=self._path_name),
-                     roles=roles))
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           roles=roles))
 
     def remove_roles(self, roles: typing.List[str]):
         operations = []
@@ -1293,8 +1293,8 @@ class User(CloudNode):
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         self.log.info(dict(message="Roles removed",
-                     object=dict(type=self._object_type, path_name=self._path_name),
-                     roles=roles))
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           roles=roles))
 
 
 class Group(CloudNode):
@@ -1323,7 +1323,7 @@ class Group(CloudNode):
         cloud_directory.create_object(cls.hash_name(name), 'LeafFacet', name=name, obj_type="group")
         new_node = cls(cloud_directory, name)
         new_node.log.info(dict(message="Group created",
-                     object=dict(type=new_node._object_type, path_name=new_node._path_name)))
+                               object=dict(type=new_node._object_type, path_name=new_node._path_name)))
         new_node._set_statement(statement)
         return new_node
 
@@ -1350,8 +1350,8 @@ class Group(CloudNode):
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         self.log.info(dict(message="Roles added",
-                     object=dict(type=self._object_type, path_name=self._path_name),
-                     roles=roles))
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           roles=roles))
 
     def remove_roles(self, roles: typing.List[str]):
         operations = []
@@ -1360,8 +1360,8 @@ class Group(CloudNode):
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         self.log.info(dict(message="Roles added",
-                     object=dict(type=self._object_type, path_name=self._path_name),
-                     roles=roles))
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           roles=roles))
 
     def add_users(self, users: typing.List[User]) -> None:
         if users:
@@ -1378,8 +1378,8 @@ class Group(CloudNode):
                 for i in users]
             self.cd.batch_write(operations)
             self.log.info(dict(message="Adding users to group",
-                         object=dict(type=self._object_type, path_name=self._path_name),
-                         users=[user._path_name for user in users]))
+                               object=dict(type=self._object_type, path_name=self._path_name),
+                               users=[user._path_name for user in users]))
 
     def remove_users(self, users: typing.List[str]) -> None:
         """
@@ -1391,8 +1391,8 @@ class Group(CloudNode):
         for user in users:
             User(self.cd, user).remove_groups([self._path_name])
         self.log.info(dict(message="Removing users from group",
-                     object=dict(type=self._object_type, path_name=self._path_name),
-                     users=[user for user in users]))
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           users=[user for user in users]))
 
 
 class Role(CloudNode):
@@ -1417,6 +1417,6 @@ class Role(CloudNode):
             raise FusilladeHTTPException(status=409, title="Conflict", detail="The object already exists")
         new_node = cls(cloud_directory, name)
         new_node.log.info(dict(message="Role created",
-                     object=dict(type=new_node._object_type, path_name=new_node._path_name)))
+                               object=dict(type=new_node._object_type, path_name=new_node._path_name)))
         new_node._set_statement(statement)
         return new_node
