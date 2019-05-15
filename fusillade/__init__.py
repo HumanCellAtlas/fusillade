@@ -11,11 +11,11 @@ service config:
 - provisioning policy
 '''
 
+
 def get_directory():
     directory_name = Config.get_directory_name()
     try:
         _directory = CloudDirectory.from_name(directory_name)
-
     except FusilladeException:
         from .clouddirectory import publish_schema, create_directory
         schema_name = Config.get_schema_name()
