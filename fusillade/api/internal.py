@@ -1,5 +1,3 @@
-import json
-
 import requests
 from connexion.lifecycle import ConnexionResponse
 from flask import request, jsonify
