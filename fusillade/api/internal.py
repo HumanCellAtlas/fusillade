@@ -2,7 +2,7 @@ import json
 
 import requests
 from connexion.lifecycle import ConnexionResponse
-from flask import request
+from flask import request, jsonify
 from furl import furl
 from fusillade.config import Config
 from fusillade import directory
@@ -52,4 +52,4 @@ def get_openip_health_status() -> dict:
 
 
 def echo():
-    return str(request.__dict__)
+    return jsonify(request.__dict__)
