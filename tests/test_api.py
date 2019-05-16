@@ -305,7 +305,7 @@ class TestApi(unittest.TestCase):
             }
         ]
         for test in tests:
-            with self.subTest(test['json_request_body']):
+            with self.subTest(test["name"]):
                 headers = {'Content-Type': "application/json"}
                 headers.update(get_auth_header(service_accounts['admin']))
                 url = furl(f'/v1/users/{test["name"]}')
@@ -321,7 +321,7 @@ class TestApi(unittest.TestCase):
                 self.assertEqual(test['response']['code'], resp.status_code)
                 resp.raise_for_status()
 
-    def test_put_users_groups(self):
+    def test_put_username_groups(self):
         tests = [
             {
                 'name': "test_put_user_group0@email.com",
@@ -362,7 +362,7 @@ class TestApi(unittest.TestCase):
                 self.assertEqual(test['response']['code'], resp.status_code)
                 resp.raise_for_status()
 
-    def test_get_users_groups(self):
+    def test_get_username_groups(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         name = "test_user_group_api@email.com"
@@ -371,7 +371,7 @@ class TestApi(unittest.TestCase):
         self.assertEqual(0, len(json.loads(resp.body)['groups']))
         resp.raise_for_status()
 
-    def test_put_users_roles(self):
+    def test_put_username_roles(self):
         tests = [
             {
                 'name': "test_put_user_role0@email.com",
@@ -412,7 +412,7 @@ class TestApi(unittest.TestCase):
                 self.assertEqual(test['response']['code'], resp.status_code)
                 resp.raise_for_status()
 
-    def test_get_users_roles(self):
+    def test_get_username_roles(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         name = "test_user_role_api@email.com"
