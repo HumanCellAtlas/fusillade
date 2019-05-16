@@ -13,13 +13,21 @@ import functools
 import json
 import typing
 from collections import namedtuple
+from threading import Thread
+from concurrent.futures import Future
 from enum import Enum, auto
+import logging
 
 from fusillade.errors import FusilladeException, FusilladeHTTPException
 
-project_arn = "arn:aws:clouddirectory:us-east-1:861229788715:"  # TODO move to config.py
-cd_client = aws_clients.clouddirectory
+logger = logging.getLogger(__name__)
 
+
+cd_client = aws_clients.clouddirectory
+iam = aws_clients.iam
+project_arn = "arn:aws:clouddirectory:{}:{}:".format(
+    os.getenv('AWS_DEFAULT_REGION'),
+    aws_clients.sts.get_caller_identity().get('Account'))
 proj_path = os.path.dirname(__file__)
 
 # TODO make all configurable
@@ -46,10 +54,12 @@ def get_published_schema_from_directory(dir_arn: str) -> str:
 def cleanup_directory(dir_arn: str):
     cd_client.disable_directory(DirectoryArn=dir_arn)
     cd_client.delete_directory(DirectoryArn=dir_arn)
+    logger.warning({"message": "Deleted directory", "directory_arn": dir_arn})
 
 
 def cleanup_schema(sch_arn: str) -> None:
     cd_client.delete_schema(SchemaArn=sch_arn)
+    logger.warning({"message": "Deleted schema", "schema_arn": sch_arn})
 
 
 def publish_schema(name: str, version: str) -> str:
@@ -60,6 +70,7 @@ def publish_schema(name: str, version: str) -> str:
     # don't create if already created
     try:
         dev_schema_arn = cd_client.create_schema(Name=name)['SchemaArn']
+        logger.info({"message": "Created development schema", "developement_schema_arn": dev_schema_arn})
     except cd_client.exceptions.SchemaAlreadyExistsException:
         dev_schema_arn = f"{project_arn}schema/development/{name}"
 
@@ -69,6 +80,9 @@ def publish_schema(name: str, version: str) -> str:
     try:
         pub_schema_arn = cd_client.publish_schema(DevelopmentSchemaArn=dev_schema_arn,
                                                   Version=version)['PublishedSchemaArn']
+        logger.info({"message": "Published development schema",
+                     "developement_schema_arn": dev_schema_arn,
+                     "published_schema_arn": pub_schema_arn})
     except cd_client.exceptions.SchemaAlreadyPublishedException:
         pub_schema_arn = f"{project_arn}schema/published/{name}/{version}"
     return pub_schema_arn
@@ -89,6 +103,7 @@ def create_directory(name: str, schema: str, admins: typing.List[str]) -> 'Cloud
             SchemaArn=schema
         )
         directory = CloudDirectory(response['DirectoryArn'])
+        logger.info({"message": "Created new directory", "directory_arn": directory._dir_arn})
     except cd_client.exceptions.DirectoryAlreadyExistsException:
         directory = CloudDirectory.from_name(name)
     else:
@@ -146,6 +161,10 @@ class CloudDirectory:
     def __init__(self, directory_arn: str):
         self._dir_arn = directory_arn
         self._schema = None
+        # This is the custom schema applied to the cloud directory. It is defined in fusillade/directory_schema.json.
+        self.node_schema = f"{self._dir_arn}/schema/CloudDirectory/1.0"
+        # This is the base schema that is always present in AWS Cloud Directory. It defines the basic Node types, NODE,
+        # POLICY, LEAF_NODE, and INDEX.
 
     @classmethod
     @functools.lru_cache()
@@ -314,50 +333,57 @@ class CloudDirectory:
         object_ref = parent_path + link_name
         return object_ref
 
-    def get_object_attributes(self, obj_ref: str, facet: str, attributes: typing.List[str]) -> typing.Dict[str, str]:
+    def get_object_attributes(self, obj_ref: str, facet: str, attributes: typing.List[str],
+                              schema=None) -> typing.Dict[str, str]:
         """
         a wrapper around CloudDirectory.Client.get_object_attributes
         """
+        if not schema:
+            schema = self.schema
         return cd_client.get_object_attributes(DirectoryArn=self._dir_arn,
                                                ObjectReference={'Selector': obj_ref},
                                                SchemaFacet={
-                                                   'SchemaArn': self.schema,
+                                                   'SchemaArn': schema,
                                                    'FacetName': facet
                                                },
                                                AttributeNames=attributes
                                                )
 
-    def get_object_attribute_list(self, facet="UserFacet", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
+    def get_object_attribute_list(self, facet="LeafFacet", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
         return [dict(Key=dict(SchemaArn=self.schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
                 for k, v in kwargs.items()]
 
     def get_policy_attribute_list(self,
                                   policy_type: str,
                                   statement: str,
-                                  facet: str = "IAMPolicy",
                                   **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
         """
-        policy_type and policy_document are required field for a policy object. However only policy_type is used by
-        fusillade. Statement is used to store policy information. See the section on Policies for more
+        policy_type and policy_document are required field for a policy object. See the section on Policies for more
         info https://docs.aws.amazon.com/clouddirectory/latest/developerguide/key_concepts_directory.html
         """
-        kwargs["Statement"] = statement
-        obj = self.get_object_attribute_list(facet=facet, **kwargs)
-        obj.append(dict(Key=dict(
-            SchemaArn=self.schema,
-            FacetName=facet,
-            Name='policy_type'),
-            Value=dict(StringValue=f"{policy_type}_{facet}")))
-        obj.append(
-            dict(Key=dict(SchemaArn=self.schema,
-                          FacetName=facet,
-                          Name="policy_document"),
-                 Value=dict(BinaryValue='None'.encode())))
-        return obj
+        attributes = self.get_object_attribute_list(facet='IAMPolicy', **kwargs)
+        attributes.extend([
+            dict(
+                Key=dict(
+                    SchemaArn=self.node_schema,
+                    FacetName='POLICY',
+                    Name='policy_type'),
+                Value=dict(
+                    StringValue=policy_type)),
+            dict(
+                Key=dict(
+                    SchemaArn=self.node_schema,
+                    FacetName='POLICY',
+                    Name="policy_document"),
+                Value=dict(
+                    BinaryValue=statement.encode()))
+        ])
+        return attributes
 
     def update_object_attribute(self,
                                 object_ref: str,
-                                update_params: typing.List[UpdateObjectParams]) -> typing.Dict[str, typing.Any]:
+                                update_params: typing.List[UpdateObjectParams],
+                                schema=None) -> typing.Dict[str, typing.Any]:
         """
         a wrapper around CloudDirectory.Client.update_object_attributes
 
@@ -365,10 +391,12 @@ class CloudDirectory:
         :param update_params: a list of attributes to modify.
         :return:
         """
+        if not schema:
+            schema = self.schema
         updates = [
             {
                 'ObjectAttributeKey': {
-                    'SchemaArn': self.schema,
+                    'SchemaArn': schema,
                     'FacetName': i.facet,
                     'Name': i.attribute
                 },
@@ -388,15 +416,16 @@ class CloudDirectory:
         )
 
     def create_folder(self, path: str, name: str) -> None:
-        """ A folder is just a Group"""
-        schema_facets = [dict(SchemaArn=self.schema, FacetName="BasicFacet")]
-        object_attribute_list = self.get_object_attribute_list(facet="BasicFacet", name=name, obj_type="folder")
+        """ A folder is just a NodeFacet"""
+        schema_facets = [dict(SchemaArn=self.schema, FacetName="NodeFacet")]
+        object_attribute_list = self.get_object_attribute_list(facet="NodeFacet", name=name, obj_type="folder")
         try:
             cd_client.create_object(DirectoryArn=self._dir_arn,
                                     SchemaFacets=schema_facets,
                                     ObjectAttributeList=object_attribute_list,
                                     ParentReference=dict(Selector=path),
                                     LinkName=name)
+            logger.info({"message": "creating folder", "name": name, "path": path})
         except cd_client.exceptions.LinkNameAlreadyInUseException:
             pass
 
@@ -630,17 +659,17 @@ class CloudDirectory:
         }
 
     def batch_attach_typed_link(self,
-                                source_ref: str,
-                                target_ref: str,
+                                parent: str,
+                                child: str,
                                 facet_name: str,
                                 attributes: typing.Dict) -> typing.Dict[str, typing.Any]:
         return {
             'AttachTypedLink': {
                 'SourceObjectReference': {
-                    'Selector': source_ref
+                    'Selector': parent
                 },
                 'TargetObjectReference': {
-                    'Selector': target_ref
+                    'Selector': child
                 },
                 'TypedLinkFacet': {
                     'SchemaArn': self.schema,
@@ -691,12 +720,14 @@ class CloudDirectory:
             )
             for path in response['PolicyToPathList']
         ]
+        return policies_paths
 
+    def get_policies(self, policy_paths: typing.List[str]) -> typing.List[str]:
         # Parse the policyIds from the policies path. Only keep the unique ids
         policy_ids = set(
             [
                 (o['PolicyId'], o['PolicyType'])
-                for p in policies_paths
+                for p in policy_paths
                 for o in p['Policies']
                 if o.get('PolicyId')
             ]
@@ -708,10 +739,10 @@ class CloudDirectory:
                 'GetObjectAttributes': {
                     'ObjectReference': {'Selector': f'${policy_id[0]}'},
                     'SchemaFacet': {
-                        'SchemaArn': self.schema,
-                        'FacetName': 'IAMPolicy'
+                        'SchemaArn': self.node_schema,
+                        'FacetName': 'POLICY'
                     },
-                    'AttributeNames': ['Statement']
+                    'AttributeNames': ['policy_document']
                 }
             }
             for policy_id in policy_ids
@@ -719,7 +750,8 @@ class CloudDirectory:
 
         # parse the policies from the responses
         policies = [
-            response['SuccessfulResponse']['GetObjectAttributes']['Attributes'][0]['Value']['StringValue']
+            response['SuccessfulResponse']['GetObjectAttributes']['Attributes'][0]['Value']['BinaryValue'].decode(
+                'utf-8')
             for response in cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations)['Responses']
         ]
         return policies
@@ -736,6 +768,37 @@ class CloudDirectory:
             ConsistencyLevel='EVENTUAL'
         )
 
+    def get_health_status(self) -> dict:
+        """
+        Runs a health check on AWS cloud directory and iam policy simulator
+        :return: the status of the services.
+        """
+        health_status = {}
+        try:
+            iam.simulate_custom_policy(
+                PolicyInputList=[json.dumps({
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Sid": "DefaultRole",
+                        "Effect": "Deny",
+                        "Action": ["fake:action"],
+                        "Resource": "fake:resource"
+                    }]})],
+                ActionNames=["fake:action"],
+                ResourceArns=["arn:aws:iam::123456789012:user/Bob"])
+        except Exception:
+            health_status.update(iam_health_status='unhealthy')
+        else:
+            health_status.update(iam_health_status='ok')
+
+        try:
+            self.get_object_information('/')['ResponseMetadata']['HTTPStatusCode']
+        except Exception:
+            health_status.update(clouddirectory_health_status='unhealthy')
+        else:
+            health_status.update(clouddirectory_health_status='ok')
+        return health_status
+
 
 class CloudNode:
     """
@@ -748,7 +811,7 @@ class CloudNode:
                  object_type: str,
                  name: str = None,
                  object_ref: str = None,
-                 facet="BasicFacet"):
+                 facet="NodeFacet"):
         """
 
         :param cloud_directory:
@@ -757,6 +820,7 @@ class CloudNode:
         :param object_reference:
         :param facet:
         """
+        self.log = logging.getLogger('.'.join([__name__, self.__class__.__name__]))
         if name and object_ref:
             raise FusilladeException("object_reference XOR name")
         if name:
@@ -803,15 +867,14 @@ class CloudNode:
             for type_link in self.cd.list_incoming_typed_links(self.object_ref, filter_attribute_ranges, 'association')
         ]
 
-    def _add_links(self, links: typing.List[str], link_type: str):
+    def _add_links_batch(self, links: typing.List[str], link_type: str):
         """
         Attaches links to this object in CloudDirectory.
         """
         if not links:
-            return
+            return []
         parent_path = self.cd.get_obj_type_path(link_type)
         batch_attach_object = self.cd.batch_attach_object
-        batch_attach_typed_link = self.cd.batch_attach_typed_link
         operations = []
         for link in links:
             parent_ref = f"{parent_path}{self.hash_name(link)}"
@@ -822,6 +885,19 @@ class CloudNode:
                     self._get_link_name(parent_ref, self.object_ref)
                 )
             )
+        return operations
+
+    def _add_typed_links_batch(self, links: typing.List[str], link_type: str):
+        """
+        Attaches links to this object in CloudDirectory.
+        """
+        if not links:
+            return []
+        parent_path = self.cd.get_obj_type_path(link_type)
+        batch_attach_typed_link = self.cd.batch_attach_typed_link
+        operations = []
+        for link in links:
+            parent_ref = f"{parent_path}{self.hash_name(link)}"
             attributes = {
                 'parent_type': link_type,
                 'child_type': self._object_type,
@@ -834,18 +910,16 @@ class CloudNode:
                     attributes
                 )
             )
-        self.cd.batch_write(operations)
+        return operations
 
-    def _remove_links(self, links: typing.List[str], link_type: str):
+    def _remove_links_batch(self, links: typing.List[str], link_type: str):
         """
         Removes links from this object in CloudDirectory.
         """
         if not links:
-            return
+            return []
         parent_path = self.cd.get_obj_type_path(link_type)
         batch_detach_object = self.cd.batch_detach_object
-        batch_detach_typed_link = self.cd.batch_detach_typed_link
-        make_typed_link_specifier = self.cd.make_typed_link_specifier
         operations = []
         for link in links:
             parent_ref = f"{parent_path}{self.hash_name(link)}"
@@ -855,6 +929,20 @@ class CloudNode:
                     self._get_link_name(parent_ref, self.object_ref)
                 )
             )
+        return operations
+
+    def _remove_typed_links_batch(self, links: typing.List[str], link_type: str):
+        """
+        Removes links from this object in CloudDirectory.
+        """
+        if not links:
+            return []
+        parent_path = self.cd.get_obj_type_path(link_type)
+        batch_detach_typed_link = self.cd.batch_detach_typed_link
+        make_typed_link_specifier = self.cd.make_typed_link_specifier
+        operations = []
+        for link in links:
+            parent_ref = f"{parent_path}{self.hash_name(link)}"
             typed_link_specifier = make_typed_link_specifier(
                 parent_ref,
                 self.object_ref,
@@ -862,10 +950,11 @@ class CloudNode:
                 {'parent_type': link_type, 'child_type': self._object_type}
             )
             operations.append(batch_detach_typed_link(typed_link_specifier))
-        self.cd.batch_write(operations)
+        return operations
 
     def lookup_policies(self) -> typing.List[str]:
-        return self.cd.lookup_policy(self.object_ref)
+        policy_paths = self.cd.lookup_policy(self.object_ref)
+        return self.cd.get_policies(policy_paths)
 
     @property
     def name(self):
@@ -897,17 +986,43 @@ class CloudNode:
         :return:
         """
         operations = list()
-        object_attribute_list = self.cd.get_policy_attribute_list(self._facet, statement)
+        object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement)
         policy_link_name = self.get_policy_name('IAMPolicy')
         parent_path = self.cd.get_obj_type_path('policy')
-        operations.append(self.cd.batch_create_object(parent_path,
-                                                      policy_link_name,
-                                                      'IAMPolicy',
-                                                      object_attribute_list))
+        operations.append(
+            {
+                'CreateObject': {
+                    'SchemaFacet': [
+                        {
+                            'SchemaArn': self.cd.schema,
+                            'FacetName': 'IAMPolicy'
+                        },
+                        {
+                            'SchemaArn': self.cd.node_schema,
+                            'FacetName': 'POLICY'
+                        },
+                    ],
+                    'ObjectAttributeList': object_attribute_list,
+                    'ParentReference': {
+                        'Selector': parent_path
+                    },
+                    'LinkName': policy_link_name,
+                }
+            }
+        )
         policy_ref = parent_path + policy_link_name
 
         operations.append(self.cd.batch_attach_policy(policy_ref, self.object_ref))
         self.cd.batch_write(operations)
+        self.log.info(dict(message="Policy created",
+                           object=dict(
+                               type=self._object_type,
+                               path_name=self._path_name
+                           ),
+                           policy=dict(
+                               link_name=policy_link_name,
+                               policy_type="IAMPolicy")
+                           ))
         return policy_ref
 
     def get_policy_name(self, policy_type):
@@ -921,8 +1036,10 @@ class CloudNode:
         """
         if not self._statement and self.policy:
             self._statement = self.cd.get_object_attributes(self.policy,
-                                                            'IAMPolicy',
-                                                            ['Statement'])['Attributes'][0]['Value'].popitem()[1]
+                                                            'POLICY',
+                                                            ['policy_document'],
+                                                            self.cd.node_schema
+                                                            )['Attributes'][0]['Value'].popitem()[1].decode("utf-8")
 
         return self._statement
 
@@ -932,17 +1049,32 @@ class CloudNode:
         self._set_statement(statement)
 
     def _set_statement(self, statement: str):
-        if not self.policy:
-            self.create_policy(statement)
+        try:
+            if not self.policy:
+                self.create_policy(statement)
+            else:
+                params = [
+                    UpdateObjectParams('POLICY',
+                                       'policy_document',
+                                       ValueTypes.BinaryValue,
+                                       statement,
+                                       UpdateActions.CREATE_OR_UPDATE,
+                                       )
+                ]
+                self.cd.update_object_attribute(self.policy, params, self.cd.node_schema)
+        except cd_client.exceptions.LimitExceededException as ex:
+            raise FusilladeHTTPException(ex)
         else:
-            params = [
-                UpdateObjectParams('IAMPolicy',
-                                   'Statement',
-                                   ValueTypes.StringValue,
-                                   statement,
-                                   UpdateActions.CREATE_OR_UPDATE)
-            ]
-            self.cd.update_object_attribute(self.policy, params)
+            self.log.info(dict(message="Policy updated",
+                               object=dict(
+                                   type=self._object_type,
+                                   path_name=self._path_name
+                               ),
+                               policy=dict(
+                                   link_name=self.get_policy_name('IAMPolicy'),
+                                   policy_type="IAMPolicy")
+                               ))
+
         self._statement = None
 
     def _get_attributes(self, attributes: typing.List[str]):
@@ -974,7 +1106,7 @@ class CloudNode:
         Verifies the policy statement is syntactically correct based on AWS's IAM Policy Grammar.
         A fake ActionNames and ResourceArns are used to facilitate the simulation of the policy.
         """
-        iam = aws_clients.iam
+
         try:
             iam.simulate_custom_policy(PolicyInputList=[statement],
                                        ActionNames=["fake:action"],
@@ -1001,18 +1133,42 @@ class User(CloudNode):
                                    'user',
                                    name=name,
                                    object_ref=object_ref,
-                                   facet='UserFacet')
+                                   facet='LeafFacet')
         self._status = None
         self._groups: typing.Optional[typing.List[str]] = None
         self._roles: typing.Optional[typing.List[str]] = None
 
     def lookup_policies(self) -> typing.List[str]:
         try:
-            policies = self.cd.lookup_policy(self.object_ref)
+            if self.groups:
+                policy_paths = self._lookup_policies_threaded()
+            else:
+                policy_paths = self.cd.lookup_policy(self.object_ref)
         except cd_client.exceptions.ResourceNotFoundException:
             self.provision_user(self.cd, self.name)
-            policies = self.cd.lookup_policy(self.object_ref)
-        return policies
+            policy_paths = self.cd.lookup_policy(self.object_ref)
+        return self.cd.get_policies(policy_paths)
+
+    def _lookup_policies_threaded(self):
+        object_refs = self.groups + [self.object_ref]
+
+        def _call_with_future(fn, _future, args):
+            """
+            Returns the result of the wrapped threaded function.
+            """
+            try:
+                result = fn(*args)
+                _future.set_result(result)
+            except Exception as exc:
+                _future.set_exception(exc)
+
+        futures = []
+        for object_ref in object_refs:
+            future = Future()
+            Thread(target=_call_with_future, args=(self.cd.lookup_policy, future, [object_ref])).start()
+            futures.append(future)
+        results = [i for future in futures for i in future.result()]
+        return results
 
     @property
     def status(self):
@@ -1030,7 +1186,7 @@ class User(CloudNode):
                                UpdateActions.CREATE_OR_UPDATE)
         ]
         self.cd.update_object_attribute(self.object_ref, update_params)
-
+        self.log.info(dict(message="User Enabled", object=dict(type=self._object_type, path_name=self._path_name)))
         self._status = None
 
     def disable(self):
@@ -1043,6 +1199,7 @@ class User(CloudNode):
                                UpdateActions.CREATE_OR_UPDATE)
         ]
         self.cd.update_object_attribute(self.object_ref, update_params)
+        self.log.info(dict(message="User Disabled", object=dict(type=self._object_type, path_name=self._path_name)))
         self._status = None
 
     @classmethod
@@ -1072,7 +1229,9 @@ class User(CloudNode):
                                   )
         except cd_client.exceptions.LinkNameAlreadyInUseException:
             raise FusilladeException("User already exists.")
-
+        else:
+            user.log.info(dict(message="User created",
+                               object=dict(type=user._object_type, path_name=user._path_name)))
         if roles:
             user.add_roles(roles + cls.default_roles)
         else:
@@ -1094,12 +1253,22 @@ class User(CloudNode):
         return self._groups
 
     def add_groups(self, groups: typing.List[str]):
-        self._add_links(groups, 'group')
+        operations = []
+        operations.extend(self._add_typed_links_batch(groups, 'group'))
+        self.cd.batch_write(operations)
         self._groups = None  # update groups
+        self.log.info(dict(message="Groups joined",
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           groups=groups))
 
     def remove_groups(self, groups: typing.List[str]):
-        self._remove_links(groups, 'group')
+        operations = []
+        operations.extend(self._remove_typed_links_batch(groups, 'group'))
+        self.cd.batch_write(operations)
         self._groups = None  # update groups
+        self.log.info(dict(message="Groups left",
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           groups=groups))
 
     @property
     def roles(self) -> typing.List[str]:
@@ -1108,12 +1277,24 @@ class User(CloudNode):
         return self._roles
 
     def add_roles(self, roles: typing.List[str]):
-        self._add_links(roles, 'role')
+        operations = []
+        operations.extend(self._add_links_batch(roles, 'role'))
+        operations.extend(self._add_typed_links_batch(roles, 'role'))
+        self.cd.batch_write(operations)
         self._roles = None  # update roles
+        self.log.info(dict(message="Roles added",
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           roles=roles))
 
     def remove_roles(self, roles: typing.List[str]):
-        self._remove_links(roles, 'role')
+        operations = []
+        operations.extend(self._remove_links_batch(roles, 'role'))
+        operations.extend(self._remove_typed_links_batch(roles, 'role'))
+        self.cd.batch_write(operations)
         self._roles = None  # update roles
+        self.log.info(dict(message="Roles removed",
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           roles=roles))
 
 
 class Group(CloudNode):
@@ -1127,7 +1308,7 @@ class Group(CloudNode):
         :param cloud_directory:
         :param name:
         """
-        super(Group, self).__init__(cloud_directory, 'group', name=name, object_ref=object_ref)
+        super(Group, self).__init__(cloud_directory, 'group', name=name, object_ref=object_ref, facet='LeafFacet')
         self._groups = None
         self._roles = None
 
@@ -1139,8 +1320,10 @@ class Group(CloudNode):
         if not statement:
             statement = get_json_file(default_group_policy_path)
         cls._verify_statement(statement)
-        cloud_directory.create_object(cls.hash_name(name), 'BasicFacet', name=name, obj_type="group")
+        cloud_directory.create_object(cls.hash_name(name), 'LeafFacet', name=name, obj_type="group")
         new_node = cls(cloud_directory, name)
+        new_node.log.info(dict(message="Group created",
+                               object=dict(type=new_node._object_type, path_name=new_node._path_name)))
         new_node._set_statement(statement)
         return new_node
 
@@ -1149,8 +1332,10 @@ class Group(CloudNode):
         Retrieves the object_refs for all user in this group.
         :return: (user name, user object reference)
         """
-        for link, object_ref in self.cd.list_object_children(self.object_ref):
-            yield User(self.cd, object_ref).name, object_ref
+        filter_attribute_ranges = [
+        ]
+        for type_link in self.cd.list_outgoing_typed_links(self.object_ref, filter_attribute_ranges, 'association'):
+            yield type_link['TargetObjectReference']['Selector']
 
     @property
     def roles(self):
@@ -1159,21 +1344,42 @@ class Group(CloudNode):
         return self._roles
 
     def add_roles(self, roles: typing.List[str]):
-        self._add_links(roles, 'role')
+        operations = []
+        operations.extend(self._add_links_batch(roles, 'role'))
+        operations.extend(self._add_typed_links_batch(roles, 'role'))
+        self.cd.batch_write(operations)
         self._roles = None  # update roles
+        self.log.info(dict(message="Roles added",
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           roles=roles))
 
     def remove_roles(self, roles: typing.List[str]):
-        self._remove_links(roles, 'role')
+        operations = []
+        operations.extend(self._remove_links_batch(roles, 'role'))
+        operations.extend(self._remove_typed_links_batch(roles, 'role'))
+        self.cd.batch_write(operations)
         self._roles = None  # update roles
+        self.log.info(dict(message="Roles added",
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           roles=roles))
 
     def add_users(self, users: typing.List[User]) -> None:
         if users:
             operations = [
-                self.cd.batch_attach_object(self.object_ref,
-                                            i.object_ref,
-                                            self._get_link_name(self.object_ref, i.object_ref))
+                self.cd.batch_attach_typed_link(
+                    self.object_ref,
+                    i.object_ref,
+                    'association',
+                    {
+                        'parent_type': self._object_type,
+                        'child_type': i._object_type,
+                    }
+                )
                 for i in users]
             self.cd.batch_write(operations)
+            self.log.info(dict(message="Adding users to group",
+                               object=dict(type=self._object_type, path_name=self._path_name),
+                               users=[user._path_name for user in users]))
 
     def remove_users(self, users: typing.List[str]) -> None:
         """
@@ -1184,6 +1390,9 @@ class Group(CloudNode):
         """
         for user in users:
             User(self.cd, user).remove_groups([self._path_name])
+        self.log.info(dict(message="Removing users from group",
+                           object=dict(type=self._object_type, path_name=self._path_name),
+                           users=[user for user in users]))
 
 
 class Role(CloudNode):
@@ -1192,7 +1401,7 @@ class Role(CloudNode):
     """
 
     def __init__(self, cloud_directory: CloudDirectory, name: str = None, object_ref: str = None):
-        super(Role, self).__init__(cloud_directory, 'role', name=name, object_ref=object_ref)
+        super(Role, self).__init__(cloud_directory, 'role', name=name, object_ref=object_ref, facet='NodeFacet')
 
     @classmethod
     def create(cls,
@@ -1203,9 +1412,11 @@ class Role(CloudNode):
             statement = get_json_file(default_role_path)
         cls._verify_statement(statement)
         try:
-            cloud_directory.create_object(cls.hash_name(name), 'BasicFacet', name=name, obj_type='role')
+            cloud_directory.create_object(cls.hash_name(name), 'NodeFacet', name=name, obj_type='role')
         except cd_client.exceptions.LinkNameAlreadyInUseException:
             raise FusilladeHTTPException(status=409, title="Conflict", detail="The object already exists")
         new_node = cls(cloud_directory, name)
+        new_node.log.info(dict(message="Role created",
+                               object=dict(type=new_node._object_type, path_name=new_node._path_name)))
         new_node._set_statement(statement)
         return new_node

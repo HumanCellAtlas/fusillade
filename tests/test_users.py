@@ -4,6 +4,9 @@ import os, sys
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
+from fusillade import logging
+logging.configure_test_logging()
+
 from fusillade.errors import FusilladeException, FusilladeHTTPException
 from fusillade.clouddirectory import User, Group, Role, cd_client, cleanup_directory, cleanup_schema, \
     get_json_file, default_user_policy_path, default_user_role_path
@@ -211,8 +214,8 @@ class TestUser(unittest.TestCase):
         user.add_roles(role_names)
         user.add_groups(group_names)
         user.statement = self.default_policy
-        user_role_names = [Role(self.directory,None,role).name for role in user.roles]
-        user_group_names = [Group(self.directory,None,group).name for group in user.groups]
+        user_role_names = [Role(self.directory, object_ref=role).name for role in user.roles]
+        user_group_names = [Group(self.directory, object_ref=group).name for group in user.groups]
 
         self.assertListEqual(sorted(user_role_names), ['default_user'] + role_names)
         self.assertEqual(sorted(user_group_names), group_names)

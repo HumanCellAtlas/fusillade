@@ -19,7 +19,7 @@ except FileNotFoundError:
         f"/test_service_accounts")["SecretString"]
     )
     with open(f"{os.environ['FUS_HOME']}/test_accounts_{os.environ['FUS_DEPLOYMENT_STAGE']}.json", 'w') as fh:
-        json.dump(service_accounts,fh)
+        json.dump(service_accounts, fh)
 
 
 def create_test_statement(name: str):
@@ -41,6 +41,23 @@ def create_test_statement(name: str):
     return json.dumps(statement)
 
 
+def create_test_statements(length=1):
+    """Assists with the creation of policy statements for testing"""
+    statement = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Deny",
+                "Action": [
+                    "fake:action"
+                ],
+                "Resource": "fake:resource"
+            } for i in range(length)
+        ]
+    }
+    return json.dumps(statement)
+
+
 def new_test_directory(directory_name=None) -> typing.Tuple[CloudDirectory, str]:
     directory_name = directory_name if directory_name else "test_dir_" + random_hex_string()
     schema_arn = publish_schema(schema_name, 'T' + random_hex_string())
@@ -56,7 +73,8 @@ def get_service_jwt(service_credentials, email=True, audience=None):
                'aud': audience or Config.audience,
                'iat': iat,
                'exp': exp,
-               'scope': ['email', 'openid', 'offline_access']
+               'scope': ['email', 'openid', 'offline_access'],
+               'https://auth.data.humancellatlas.org/email': service_credentials["client_email"]
                }
     if email:
         payload['email'] = service_credentials["client_email"]
@@ -70,4 +88,3 @@ def get_auth_header(service_credentials: dict, email=True):
     info = service_credentials
     token = get_service_jwt(info, email=email)
     return {"Authorization": f"Bearer {token}"}
-
