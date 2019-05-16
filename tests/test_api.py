@@ -287,7 +287,7 @@ class TestApi(unittest.TestCase):
         self.assertEqual(name,json.loads(resp.body)['name'])
         resp.raise_for_status()
 
-    def test_put_user(self):
+    def test_put_user_id(self):
         tests = [
             {
                 'name': "test_put_user0@email.com",
@@ -305,7 +305,7 @@ class TestApi(unittest.TestCase):
             }
         ]
         for test in tests:
-            with self.subTest():
+            with self.subTest(test['json_request_body']):
                 headers = {'Content-Type': "application/json"}
                 headers.update(get_auth_header(service_accounts['admin']))
                 url = furl(f'/v1/users/{test["name"]}')
@@ -443,57 +443,3 @@ class TestApi(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-""",
-            {
-                'json_request_body': {
-                    "username": "test_put_user1@email.com",
-                    "groups": [Group.create(directory, "group_01").name]
-                },
-                'response': {
-                    'code': 201,
-                    'result': True
-                }
-            },
-            {
-                'json_request_body': {
-                    "username": "test_put_user2@email.com",
-                    "roles": [Role.create(directory, "role_02").name]
-                },
-                'response': {
-                    'code': 201,
-                    'result': True
-                }
-            },
-            {
-                'json_request_body': {
-                    "username": "test_put_user3@email.com",
-                    "policy": create_test_statement("policy_03")
-                },
-                'response': {
-                    'code': 201,
-                    'result': True
-                }
-            },
-            {
-                'json_request_body': {
-                    "username": "test_put_user4@email.com",
-                    "groups": [Group.create(directory, "group_04").name],
-                    "roles": [Role.create(directory, "role_04").name],
-                    "policy": create_test_statement("policy_04")
-                },
-                'response': {
-                    'code': 201,
-                    'result': True
-                }
-            },
-            {
-                'json_request_body': {
-                    "groups": [Group.create(directory, "group_05").name],
-                    "roles": [Role.create(directory, "role_05").name],
-                    "policy": create_test_statement("policy_05")
-                },
-                'response': {
-                    'code': 400,
-                    'result': True
-                }
-            }"""
