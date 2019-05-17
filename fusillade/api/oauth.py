@@ -51,21 +51,22 @@ def authorize():
     return ConnexionResponse(status_code=requests.codes.found, headers=dict(Location=dest))
 
 
-def proxy_response(dest_url, method='GET', headers=None, body='', query_params=None, **extra_query_params):
-    if query_params or extra_query_params:
-        dest_url = furl(dest_url).add(dict(query_params, **extra_query_params)).url
-    proxy_res = requests.request(method=method,
+def proxy_response(dest_url, **extra_query_params):
+    cr = Config.app.current_request
+    if cr.query_params or extra_query_params:
+        dest_url = furl(dest_url).add(dict(cr.query_params, **extra_query_params)).url
+    proxy_res = requests.request(method=cr.method,
                                  url=dest_url,
-                                 headers=headers,
-                                 data=body)
+                                 headers=cr.headers,
+                                 data=cr.raw_body)
     if proxy_res.headers.get("Content-Type", "").startswith("application/json"):
         body = proxy_res.json()
     else:
         body = proxy_res.content
     for header in "connection", "content-length", "date":
         proxy_res.headers.pop(header, None)
-    content_type = proxy_res.headers.get('Content-Type')
-    mimetype = content_type.split(';')[0] if content_type else None
+    content_type = mimetype = proxy_res.headers.get('Content-Type')
+    # mimetype = content_type.split(';')[0] if content_type else None
     proxy_resp = ConnexionResponse(body=body,
                                    status_code=proxy_res.status_code,
                                    headers=dict(proxy_res.headers),
