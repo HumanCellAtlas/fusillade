@@ -66,7 +66,6 @@ def proxy_response(dest_url, **extra_query_params):
     for header in "connection", "content-length", "date":
         proxy_res.headers.pop(header, None)
     content_type = mimetype = proxy_res.headers.get('Content-Type')
-    # mimetype = content_type.split(';')[0] if content_type else None
     proxy_resp = ConnexionResponse(body=body,
                                    status_code=proxy_res.status_code,
                                    headers=dict(proxy_res.headers),
@@ -75,11 +74,13 @@ def proxy_response(dest_url, **extra_query_params):
     return proxy_resp
 
 
-proxied_endpoints = dict(authorization_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/authorize",
-                         token_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/token",
-                         jwks_uri=f"https://{os.environ['API_DOMAIN_NAME']}/.well-known/jwks.json",
-                         revocation_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/revoke",
-                         userinfo_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/userinfo")
+proxied_endpoints = dict(
+    authorization_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/authorize",
+    token_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/token",
+    jwks_uri=f"https://{os.environ['API_DOMAIN_NAME']}/.well-known/jwks.json",
+    # revocation_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/revoke",  # TODO implement
+    userinfo_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/userinfo"
+)
 
 
 def serve_openid_config():
