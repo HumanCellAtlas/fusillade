@@ -64,7 +64,13 @@ def proxy_response(dest_url, method='GET', headers=None, body='', query_params=N
         body = proxy_res.content
     for header in "connection", "content-length", "date":
         proxy_res.headers.pop(header, None)
-    proxy_resp = ConnexionResponse(body=body, status_code=proxy_res.status_code, headers=dict(proxy_res.headers))
+    content_type = proxy_res.headers.get('Content-Type')
+    mimetype = content_type.split(';')[0] if content_type else None
+    proxy_resp = ConnexionResponse(body=body,
+                                   status_code=proxy_res.status_code,
+                                   headers=dict(proxy_res.headers),
+                                   mimetype=mimetype,
+                                   content_type=content_type)
     return proxy_resp
 
 
