@@ -34,9 +34,15 @@ class ChaliceWithConnexion(chalice.Chalice):
             stripped_route = route.rstrip("/")
             if route.endswith("/"):
                 self.trailing_slash_routes.append(stripped_route)
-            routes[stripped_route] += rule.methods, self._get_content_types(rule)
+            route = routes.get(stripped_route, dict(methods=set(), content_types=[]))
+            route['methods'] |= rule.methods
+            route['content_types'].extend(self._get_content_types(rule))
+            routes[stripped_route] = route
         for route, args in routes.items():
-            self.route(route, methods=list(set(args[0]) - {"OPTIONS"}), cors=True, content_types=args[1])(self.dispatch)
+            self.route(route,
+                       methods=list(set(args['methods']) - {"OPTIONS"}),
+                       cors=True,
+                       content_types=args['content_types'])(self.dispatch)
 
     def _get_content_types(self, rule) -> typing.List[str]:
         content_types = []
