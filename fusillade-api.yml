@@ -122,6 +122,11 @@ paths:
                   type: string
                 client_secret:
                   type: string
+                refresh_token:
+                  type: string
+                scope:
+                  type: string
+
       tags:
         - oauth
       responses:
