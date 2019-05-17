@@ -39,7 +39,7 @@ class ChaliceWithConnexion(chalice.Chalice):
             self.route(route, methods=list(set(args[0]) - {"OPTIONS"}), cors=True, content_types=args[1])(self.dispatch)
 
     def _get_content_types(self, rule) -> typing.List[str]:
-        content_types=[]
+        content_types = []
         methods = {}
         for api in self.connexion_apis:
             try:
@@ -51,12 +51,10 @@ class ChaliceWithConnexion(chalice.Chalice):
                 break
         for method in methods.values():
             try:
-                content_types =[content for content in method["requestBody"]['content'].keys()]
+                content_types = [content for content in method["requestBody"]['content'].keys()]
             except KeyError:
                 return content_types
         return content_types
-
-
 
     def create_connexion_app(self):
         app = FlaskApp('fusillade')
@@ -71,10 +69,10 @@ class ChaliceWithConnexion(chalice.Chalice):
 
         resolver = RestyResolver("fusillade.api", collection_endpoint_name="list")
         self.connexion_apis.append(app.add_api(self.swagger_spec_path,
-                    resolver=resolver,
-                    validate_responses=True,
-                    arguments=os.environ,
-                    options={"swagger_path": self.swagger_spec_path}))
+                                               resolver=resolver,
+                                               validate_responses=True,
+                                               arguments=os.environ,
+                                               options={"swagger_path": self.swagger_spec_path}))
         self.connexion_apis.append(app.add_api(self.swagger_internal_spec_path, validate_responses=True))
         return app
 
