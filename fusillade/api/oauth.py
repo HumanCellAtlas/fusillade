@@ -78,7 +78,7 @@ proxied_endpoints = dict(
     authorization_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/authorize",
     token_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/token",
     jwks_uri=f"https://{os.environ['API_DOMAIN_NAME']}/.well-known/jwks.json",
-    # revocation_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/revoke",  # TODO implement
+    revocation_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/revoke",  # TODO implement
     userinfo_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/userinfo"
 )
 
