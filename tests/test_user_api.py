@@ -66,29 +66,114 @@ class TestUserApi(unittest.TestCase):
         directory.clear()
 
     def test_put_new_user(self):
-        tests = []
-        tests.extend([{
-                'name': f'201 returned when creating a role when name is {description}',
+        tests = [
+            {
+                'name': f'201 returned when creating a user',
                 'json_request_body': {
-                    "user_id": name
+                    "user_id": "test_put_user0@email.com"
+
                 },
-                'response': 201
-            } for name, description in self.test_postive_names
+                'response': {
+                    'code': 201
+                }
+            },
+            {
+                'name': f'201 returned when creating a user with group only',
+                'json_request_body': {
+                    "user_id": "test_put_user1@email.com",
+                    "groups": [Group.create(directory, "group_01").name]
+                },
+                'response': {
+                    'code': 201
+                }
+            },
+            {
+                'name': f'201 returned when creating a user with role only',
+                'json_request_body': {
+                    "user_id": "test_put_user2@email.com",
+                    "roles": [Role.create(directory, "role_02").name]
+                },
+                'response': {
+                    'code': 201
+                }
+            },
+            {
+                'name': f'201 returned when creating a user with policy only',
+                'json_request_body': {
+                    "user_id": "test_put_user3@email.com",
+                    "policy": create_test_statement("policy_03")
+                },
+                'response': {
+                    'code': 201
+                }
+            },
+            {
+                'name': f'201 returned when creating a user with group, role and policy',
+                'json_request_body': {
+                    "user_id": "test_put_user4@email.com",
+                    "groups": [Group.create(directory, "group_04").name],
+                    "roles": [Role.create(directory, "role_04").name],
+                    "policy": create_test_statement("policy_04")
+                },
+                'response': {
+                    'code': 201
+                }
+            },
+            {
+                'name': f'201 returned when creating a user without username',
+                'json_request_body': {
+                    "groups": [Group.create(directory, "group_05").name],
+                    "roles": [Role.create(directory, "role_05").name],
+                    "policy": create_test_statement("policy_05")
+                },
+                'response': {
+                    'code': 400
+                }
+            },
+            {
+                'name': f'400 returned when creating a user that already exists',
+                'json_request_body': {
+                    "user_id": "test_put_user4@email.com"
+                },
+                'response': {
+                    'code': 500
+                }
+            }
+        ]
+        tests.extend([{
+            'name': f'201 returned when creating a role when name is {description}',
+            'json_request_body': {
+                "user_id": name
+            },
+            'response': {
+                    'code': 201
+            }
+        } for name, description in self.test_postive_names
         ])
         tests.extend([{
             'name': f'400 returned when creating a role when name is {description}',
             'json_request_body': {
                 "user_id": name
             },
-            'response': 400
+            'response': {
+                'code': 400
+            }
         } for name, description in self.test_negative_names
         ])
         for test in tests:
             with self.subTest(test['name']):
                 headers={'Content-Type': "application/json"}
                 headers.update(get_auth_header(service_accounts['admin']))
+                if test['name']=="400 returned when creating a user that already exists":
+                    self.app.put('/v1/users', headers=headers, data=json.dumps(test['json_request_body']))
                 resp = self.app.put('/v1/users', headers=headers, data=json.dumps(test['json_request_body']))
-                self.assertEqual(test['response'], resp.status_code)
+                self.assertEqual(test['response']['code'], resp.status_code)
+                if resp.status_code==201:
+                    resp = self.app.get(f'/v1/users/{test["json_request_body"]["user_id"]}/', headers=headers)
+                    self.assertEqual(test["json_request_body"]["user_id"], json.loads(resp.body)['name'])
+
+
+
 
 if __name__ == '__main__':
     unittest.main()

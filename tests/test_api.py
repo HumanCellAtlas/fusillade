@@ -205,79 +205,6 @@ class TestApi(unittest.TestCase):
                 self.assertEqual(test['response']['code'], resp.status_code)
                 self.assertEqual(test['response']['result'], json.loads(resp.body)['result'])
 
-    def test_put_new_user(self):
-        tests = [
-            {
-                'json_request_body': {
-                    "user_id": "test_put_user0@email.com"
-
-                },
-                'response': {
-                    'code': 201
-                }
-            },
-            {
-                'json_request_body': {
-                    "user_id": "test_put_user1@email.com",
-                    "groups": [Group.create(directory,"group_01").name]
-                },
-                'response': {
-                    'code': 201,
-                    'result': True
-                }
-            },
-            {
-                'json_request_body': {
-                    "user_id": "test_put_user2@email.com",
-                    "roles": [Role.create(directory,"role_02").name]
-                },
-                'response': {
-                    'code': 201,
-                    'result': True
-                }
-            },
-            {
-                'json_request_body': {
-                    "user_id": "test_put_user3@email.com",
-                    "policy": create_test_statement("policy_03")
-                },
-                'response': {
-                    'code': 201,
-                    'result': True
-                }
-            },
-            {
-                'json_request_body': {
-                    "user_id": "test_put_user4@email.com",
-                    "groups": [Group.create(directory, "group_04").name],
-                    "roles": [Role.create(directory, "role_04").name],
-                    "policy": create_test_statement("policy_04")
-                },
-                'response': {
-                    'code': 201,
-                    'result': True
-                }
-            },
-            {
-                'json_request_body': {
-                    "groups": [Group.create(directory, "group_05").name],
-                    "roles": [Role.create(directory, "role_05").name],
-                    "policy": create_test_statement("policy_05")
-                },
-                'response': {
-                    'code': 400,
-                    'result': True
-                }
-            }
-        ]
-        for test in tests:
-            with self.subTest(test['json_request_body']):
-                data=json.dumps(test['json_request_body'])
-                headers={'Content-Type': "application/json"}
-                headers.update(get_auth_header(service_accounts['admin']))
-                resp = self.app.put('/v1/users', headers=headers, data=data)
-                self.assertEqual(test['response']['code'], resp.status_code)
-
     def test_get_user(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
@@ -366,9 +293,13 @@ class TestApi(unittest.TestCase):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         name = "test_user_group_api@email.com"
-        User.provision_user(directory, name)
+        user = User.provision_user(directory, name)
         resp = self.app.get(f'/v1/users/{name}/groups', headers=headers)
         self.assertEqual(0, len(json.loads(resp.body)['groups']))
+        user.add_groups([Group.create(directory, "group_0").name,Group.create(directory, "group_1").name])
+        resp = self.app.get(f'/v1/users/{name}/groups', headers=headers)
+        self.assertEqual(2, len(json.loads(resp.body)['groups']))
+
         resp.raise_for_status()
 
     def test_put_username_roles(self):
@@ -421,6 +352,9 @@ class TestApi(unittest.TestCase):
         user_role_names = [Role(directory, None, role).name for role in user.roles]
         self.assertEqual(1, len(json.loads(resp.body)['roles']))
         self.assertEqual(user_role_names,['default_user'])
+        user.add_roles([Role.create(directory, "role_1").name,Role.create(directory, "role_2").name])
+        resp = self.app.get(f'/v1/users/{name}/roles', headers=headers)
+        self.assertEqual(3, len(json.loads(resp.body)['roles']))
         resp.raise_for_status()
 
  
