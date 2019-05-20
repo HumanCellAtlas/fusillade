@@ -131,7 +131,7 @@ def update_version() -> str:
     if args.stage == "production":
         new_version = semver.finalize_version(str(version))
     else:
-        new_version = str(semver.bump_prerelease(str(version)))
+        new_version = str(semver.bump_prerelease(str(version), token=args.stage))
     with open(f"{os.environ['FUS_HOME']}/service_config.json", 'r') as fp:
         sys_config = json.load(fp)
     sys_config['version'] = str(new_version)
