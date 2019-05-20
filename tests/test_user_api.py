@@ -29,12 +29,6 @@ from fusillade.clouddirectory import cleanup_directory, User, Group, Role
 from tests.infra.server import ChaliceTestHarness
 # ChaliceTestHarness must be imported after FUSILLADE_DIR has be set
 
-
-def setUpModule():
-    pass
-#    User.provision_user(directory, service_accounts['admin']['client_email'], roles=['admin'])
-
-
 @eventually(5,1, {fusillade.errors.FusilladeException})
 def tearDownModule():
     cleanup_directory(directory._dir_arn)
@@ -63,7 +57,10 @@ class TestUserApi(unittest.TestCase):
         cls.app = ChaliceTestHarness()
 
     def tearDown(self):
-        directory.clear()
+        directory.clear(users=[
+                service_accounts['admin']['client_email'],
+                service_accounts['user']['client_email']
+            ])
 
     def test_put_new_user(self):
         tests = [
@@ -176,10 +173,11 @@ class TestUserApi(unittest.TestCase):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         name = "test_user_api@email.com"
+        resp = self.app.get(f'/v1/users/{name}/', headers=headers)
+        self.assertEqual(404, resp.status_code)
         User.provision_user(directory, name)
         resp = self.app.get(f'/v1/users/{name}/', headers=headers)
         self.assertEqual(name, json.loads(resp.body)['name'])
-        resp.raise_for_status()
 
     def test_put_user_id(self):
         tests = [
@@ -213,7 +211,6 @@ class TestUserApi(unittest.TestCase):
                     user.enable()
                 resp = self.app.put(url.url, headers=headers)
                 self.assertEqual(test['response']['code'], resp.status_code)
-                resp.raise_for_status()
 
     def test_put_username_groups(self):
         tests = [
@@ -254,7 +251,6 @@ class TestUserApi(unittest.TestCase):
                     user.add_groups(test['json_request_body']['groups'])
                 resp = self.app.put(url.url, headers=headers, data=data)
                 self.assertEqual(test['response']['code'], resp.status_code)
-                resp.raise_for_status()
 
     def test_get_username_groups(self):
         headers = {'Content-Type': "application/json"}
@@ -266,8 +262,6 @@ class TestUserApi(unittest.TestCase):
         user.add_groups([Group.create(directory, "group_0").name, Group.create(directory, "group_1").name])
         resp = self.app.get(f'/v1/users/{name}/groups', headers=headers)
         self.assertEqual(2, len(json.loads(resp.body)['groups']))
-
-        resp.raise_for_status()
 
     def test_put_username_roles(self):
         tests = [
@@ -308,7 +302,6 @@ class TestUserApi(unittest.TestCase):
                     user.add_roles(test['json_request_body']['roles'])
                 resp = self.app.put(url.url, headers=headers, data=data)
                 self.assertEqual(test['response']['code'], resp.status_code)
-                resp.raise_for_status()
 
     def test_get_username_roles(self):
         headers = {'Content-Type': "application/json"}
@@ -322,7 +315,6 @@ class TestUserApi(unittest.TestCase):
         user.add_roles([Role.create(directory, "role_1").name, Role.create(directory, "role_2").name])
         resp = self.app.get(f'/v1/users/{name}/roles', headers=headers)
         self.assertEqual(3, len(json.loads(resp.body)['roles']))
-        resp.raise_for_status()
 
 
 if __name__ == '__main__':
