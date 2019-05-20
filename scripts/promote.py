@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-A tool for promoting code to different stages of productions, and minting new releases in github.
+A tool for promoting server code to different stages of productions, and minting new releases in github.
 
 In order to release you must have a github access token with permissions to write to your repository. Set
 environment variable `GITHUB_TOKEN_PATH` to the path of a file which contains github access token.
