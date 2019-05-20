@@ -10,9 +10,6 @@ environment variable `GITHUB_TOKEN_PATH` to the path of a file which contains gi
 `./promote.py production` promotes staging to production and creates a release in github.
 
 Versioning follows https://semver.org/ standard
-
-https://blogs.sap.com/2018/06/22/generating-release-notes-from-git-commit-messages-using-basic-shell-commands-gitgrep/
-https://github.com/kinverarity1/lasio/wiki/Creating-a-new-release-(GitHub-and-PyPi)
 """
 import json
 import tempfile
