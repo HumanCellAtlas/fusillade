@@ -12,7 +12,8 @@ class Config:
                 else "https://dev.data.humancellatlas.org/",
                 "https://auth.data.humancellatlas.org/"]
     _openid_provider = None
-    version="unversioned"
+    version = "unversioned"
+
     # TODO make configurable
 
     @classmethod
