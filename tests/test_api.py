@@ -167,8 +167,12 @@ class TestApi(unittest.TestCase):
     def setUpClass(cls):
         cls.app = ChaliceTestHarness()
 
-    def tearDown(self) -> None:
-        directory.clear()
+    def tearDown(self):
+        directory.clear(
+            users=[
+                service_accounts['admin']['client_email'],
+                service_accounts['user']['client_email']
+            ])
 
     def test_evaluate_policy(self):
         email = "test_evaluate_api@email.com"
