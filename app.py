@@ -2,6 +2,7 @@ import json
 import os
 import sys
 
+import yaml
 from botocore.vendored import requests
 from chalice import Response as chalice_response
 
