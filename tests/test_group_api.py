@@ -40,7 +40,7 @@ def tearDownModule():
         os.environ["FUSILLADE_DIR"] = old_directory_name
 
 
-class TestUserApi(unittest.TestCase):
+class TestGroupApi(unittest.TestCase):
     test_postive_names = [('helloworl12345', "alpha numerica characters"),
          ('hello@world.com', "email format") ,
         ('hello-world=_@.,ZDc', "special characters"),
@@ -221,7 +221,6 @@ class TestUserApi(unittest.TestCase):
         group.add_roles([Role.create(directory, "role_1").name, Role.create(directory, "role_2").name])
         resp = self.app.get(f'/v1/groups/{name}/roles', headers=headers)
         self.assertEqual(2, len(json.loads(resp.body)['roles']))
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -163,7 +163,7 @@ class TestUserApi(unittest.TestCase):
             with self.subTest(test['name']):
                 headers={'Content-Type': "application/json"}
                 headers.update(get_auth_header(service_accounts['admin']))
-                if test['name']=="400 returned when creating a user that already exists":
+                if test['name']=="500 returned when creating a user that already exists":
                     self.app.put('/v1/users', headers=headers, data=json.dumps(test['json_request_body']))
                 resp = self.app.put('/v1/users', headers=headers, data=json.dumps(test['json_request_body']))
                 self.assertEqual(test['response']['code'], resp.status_code)
