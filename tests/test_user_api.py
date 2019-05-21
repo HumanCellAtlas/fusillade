@@ -29,6 +29,9 @@ from fusillade.clouddirectory import cleanup_directory, User, Group, Role
 from tests.infra.server import ChaliceTestHarness
 # ChaliceTestHarness must be imported after FUSILLADE_DIR has be set
 
+def setUpModule():
+    User.provision_user(directory, service_accounts['admin']['client_email'], roles=['admin'])
+
 @eventually(5,1, {fusillade.errors.FusilladeException})
 def tearDownModule():
     cleanup_directory(directory._dir_arn)
@@ -142,7 +145,7 @@ class TestUserApi(unittest.TestCase):
                 "user_id": name
             },
             'response': {
-                    'code': 201
+                'code': 201
             }
         } for name, description in self.test_postive_names
         ])
