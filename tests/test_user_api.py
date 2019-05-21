@@ -119,7 +119,7 @@ class TestUserApi(unittest.TestCase):
                 }
             },
             {
-                'name': f'201 returned when creating a user without username',
+                'name': f'400 returned when creating a user without username',
                 'json_request_body': {
                     "groups": [Group.create(directory, "group_05").name],
                     "roles": [Role.create(directory, "role_05").name],
@@ -130,7 +130,7 @@ class TestUserApi(unittest.TestCase):
                 }
             },
             {
-                'name': f'400 returned when creating a user that already exists',
+                'name': f'500 returned when creating a user that already exists',
                 'json_request_body': {
                     "user_id": "test_put_user4@email.com"
                 },
