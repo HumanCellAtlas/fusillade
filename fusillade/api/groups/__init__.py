@@ -33,6 +33,12 @@ def put_group_policy(token_info: dict, group_id: str):
     group.statement = request.json['policy']
     return make_response("", 200)
 
+
+def get_group_users(group_id:str):
+    group = Group(directory,group_id)
+    return make_response(jsonify(users=group.get_users()), 200)
+
+
 def get_groups_roles(token_info: dict, group_id: str):
     assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
                       ['fus:GetRole'],
