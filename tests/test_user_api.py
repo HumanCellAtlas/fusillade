@@ -58,8 +58,7 @@ class TestUserApi(unittest.TestCase):
 
     def tearDown(self):
         directory.clear(users=[
-                service_accounts['admin']['client_email'],
-                service_accounts['user']['client_email']
+                service_accounts['admin']['client_email']
             ])
 
     def test_put_new_user(self):
@@ -171,11 +170,10 @@ class TestUserApi(unittest.TestCase):
 
     def test_get_user(self):
         headers = {'Content-Type': "application/json"}
-        headers.update(get_auth_header(service_accounts['admin']))
-        name = "test_user_api@email.com"
-        resp = self.app.get(f'/v1/users/{name}/', headers=headers)
-        self.assertEqual(404, resp.status_code)
-        User.provision_user(directory, name)
+        headers.update(get_auth_header(service_accounts['user']))
+        name = service_accounts['user']['client_email']
+        resp = self.app.get(f'/v1/users/test_user_api@email.com/', headers=headers)
+        self.assertEqual(403, resp.status_code)
         resp = self.app.get(f'/v1/users/{name}/', headers=headers)
         self.assertEqual(name, json.loads(resp.body)['name'])
 

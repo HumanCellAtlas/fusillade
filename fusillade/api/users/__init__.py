@@ -1,5 +1,6 @@
 from flask import request, make_response, jsonify
 from fusillade import User, directory
+from fusillade.utils.authorize import assert_authorized
 
 
 def put_new_user():
@@ -10,7 +11,10 @@ def put_new_user():
     return make_response('', 201)
 
 
-def get_user(user_id):
+def get_user(token_info:dict, user_id:str):
+    assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
+                      ['fus:GetUser'],
+                      [f'arn:hca:fus:*:*:user/{user_id}/'])
     user = User(directory, user_id)
     return make_response(jsonify(name=user.name, status=user.status, policy=user.statement), 200)
 
