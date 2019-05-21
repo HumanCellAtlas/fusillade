@@ -222,6 +222,7 @@ class TestGroupApi(unittest.TestCase):
         resp = self.app.get(f'/v1/groups/{name}/roles', headers=headers)
         self.assertEqual(2, len(json.loads(resp.body)['roles']))
 
+    @unittest.skip("Incomplete - need to add the paging for groups")
     def test_get_group_users(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
