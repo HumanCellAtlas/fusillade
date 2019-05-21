@@ -160,6 +160,68 @@ class TestUserApi(unittest.TestCase):
                     resp = self.app.get(f'/v1/groups/{test["json_request_body"]["group_id"]}/', headers=headers)
                     self.assertEqual(test["json_request_body"]["group_id"], json.loads(resp.body)['name'])
 
+    def test_get_group(self):
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(service_accounts['admin']))
+        name = "Groupx"
+        resp = self.app.get(f'/v1/groups/{name}/', headers=headers)
+        self.assertEqual(404, resp.status_code)
+        Group.create(directory,name)
+        resp = self.app.get(f'/v1/groups/{name}/', headers=headers)
+        self.assertEqual(name, json.loads(resp.body)['name'])
+
+    def test_put_group_roles(self):
+        tests = [
+            {
+                'group_id': "Group1",
+                'action': 'add',
+                'json_request_body': {
+                    "roles": [Role.create(directory, "role_0").name]
+                },
+                'response': {
+                    'code': 200
+                }
+            },
+            {
+                'group_id': "Group2",
+                'action': 'remove',
+                'json_request_body': {
+                    "roles": [Role.create(directory, "role_1").name]
+                },
+                'response': {
+                    'code': 200
+                }
+            }
+        ]
+        for test in tests:
+            with self.subTest(test['json_request_body']):
+                data = json.dumps(test['json_request_body'])
+                headers = {'Content-Type': "application/json"}
+                headers.update(get_auth_header(service_accounts['admin']))
+                url = furl(f'/v1/groups/{test["group_id"]}/roles/')
+                query_params = {
+                    'group_id': test['group_id'],
+                    'action': test['action']
+                }
+                url.add(query_params=query_params)
+                group = Group.create(directory, test['group_id'])
+                if test['action'] == 'remove':
+                    group.add_roles(test['json_request_body']['roles'])
+                resp = self.app.put(url.url, headers=headers, data=data)
+                self.assertEqual(test['response']['code'], resp.status_code)
+
+    def test_get_group_roles(self):
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(service_accounts['admin']))
+        name = "Group1"
+        group = Group.create(directory,name)
+        resp = self.app.get(f'/v1/groups/{name}/roles', headers=headers)
+        group_role_names = [Role(directory, None, role).name for role in group.roles]
+        self.assertEqual(0, len(json.loads(resp.body)['roles']))
+        group.add_roles([Role.create(directory, "role_1").name, Role.create(directory, "role_2").name])
+        resp = self.app.get(f'/v1/groups/{name}/roles', headers=headers)
+        self.assertEqual(2, len(json.loads(resp.body)['roles']))
+
 
 if __name__ == '__main__':
     unittest.main()
