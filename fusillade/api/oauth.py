@@ -145,13 +145,6 @@ def post_userinfo():
     return userinfo()
 
 
-def refresh():
-    """
-    Part of OIDC
-    """
-    pass
-
-
 def cb():
     """
     Part of OIDC

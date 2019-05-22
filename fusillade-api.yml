@@ -145,39 +145,6 @@ paths:
                 type: object
         default:
           description: Unexpected error
-  /oauth/refresh:
-    post:
-      description: This endpoint is part of OIDC and is used to redirect to an openid provider
-        see https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens
-      operationId: fusillade.api.oauth.refresh
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: grant_type
-          description: the type of grant requested.
-          in: query
-          schema:
-            type: string
-        - name: refresh_token
-          description: the type of grant requested.
-          in: query
-          schema:
-            type: string
-        - name: client_id
-          in: query
-          schema:
-            type: string
-        - name: client_secret
-          in: query
-          schema:
-            type: string
-      tags:
-        - oauth
-      responses:
-        200:
-          description: OK
-        default:
-          description: Unexpected error
   /oauth/userinfo:
     get:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
