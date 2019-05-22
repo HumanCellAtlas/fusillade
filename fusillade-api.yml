@@ -103,7 +103,6 @@ paths:
       summary: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint, and
         https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens
-
       operationId: fusillade.api.oauth.serve_oauth_token
       requestBody:
         content:
