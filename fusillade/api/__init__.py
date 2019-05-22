@@ -1,7 +1,8 @@
 import collections
-import logging
+import json
 import os
 import re
+import typing
 
 import chalice
 import requests
@@ -10,6 +11,7 @@ from connexion import FlaskApp
 from connexion.resolver import RestyResolver
 
 from fusillade import Config
+from fusillade import logging
 
 
 class ChaliceWithConnexion(chalice.Chalice):
@@ -21,6 +23,7 @@ class ChaliceWithConnexion(chalice.Chalice):
         super().__init__(*args, **kwargs)
         self.swagger_spec_path = swagger_spec_path
         self.swagger_internal_spec_path = swagger_internal_spec_path
+        self.connexion_apis = []
         self.connexion_app = self.create_connexion_app()
         self.connexion_full_dispatch_request = self.connexion_app.app.full_dispatch_request
         self.connexion_request_context = self.connexion_app.app.test_request_context
@@ -31,9 +34,33 @@ class ChaliceWithConnexion(chalice.Chalice):
             stripped_route = route.rstrip("/")
             if route.endswith("/"):
                 self.trailing_slash_routes.append(stripped_route)
-            routes[stripped_route] += rule.methods
-        for route, methods in routes.items():
-            self.route(route, methods=list(set(methods) - {"OPTIONS"}), cors=True)(self.dispatch)
+            route = routes.get(stripped_route, dict(methods=set(), content_types=[]))
+            route['methods'] |= rule.methods
+            route['content_types'].extend(self._get_content_types(rule))
+            routes[stripped_route] = route
+        for route, args in routes.items():
+            self.route(route,
+                       methods=list(set(args['methods']) - {"OPTIONS"}),
+                       cors=True,
+                       content_types=args['content_types'])(self.dispatch)
+
+    def _get_content_types(self, rule) -> typing.List[str]:
+        content_types = []
+        methods = {}
+        for api in self.connexion_apis:
+            try:
+                methods = api.specification.raw['paths'][rule.rule]
+            except KeyError:
+                continue
+            else:
+                # There shouldn't be duplicates across the APIs so take the first hit.
+                break
+        for method in methods.values():
+            try:
+                content_types = [content for content in method["requestBody"]['content'].keys()]
+            except KeyError:
+                return content_types
+        return content_types
 
     def create_connexion_app(self):
         app = FlaskApp('fusillade')
@@ -47,12 +74,12 @@ class ChaliceWithConnexion(chalice.Chalice):
         app.app.logger.info('Flask debug is %s.', 'enabled' if debug else 'disabled')
 
         resolver = RestyResolver("fusillade.api", collection_endpoint_name="list")
-        app.add_api(self.swagger_spec_path,
-                    resolver=resolver,
-                    validate_responses=True,
-                    arguments=os.environ,
-                    options={"swagger_path": self.swagger_spec_path})
-        app.add_api(self.swagger_internal_spec_path, validate_responses=True)
+        self.connexion_apis.append(app.add_api(self.swagger_spec_path,
+                                               resolver=resolver,
+                                               validate_responses=True,
+                                               arguments=os.environ,
+                                               options={"swagger_path": self.swagger_spec_path}))
+        self.connexion_apis.append(app.add_api(self.swagger_internal_spec_path, validate_responses=True))
         return app
 
     def dispatch(self, *args, **kwargs):
@@ -78,13 +105,16 @@ class ChaliceWithConnexion(chalice.Chalice):
         # TODO figure out of host should be os.environ["API_DOMAIN_NAME"]
 
         self.log.info(
-            """[request] "%s %s" %s %s "%s" %s""",
-            method,
-            path,
-            context['identity']['sourceIp'],
-            cr.headers.get('content-length', '-'),
-            cr.headers.get('user-agent'),
-            str(query_params) if query_params is not None else '',
+            {
+                "request": {
+                    'method': method,
+                    'path': path,
+                    'sourceIp': context['identity']['sourceIp'],
+                    'content-length': cr.headers.get('content-length', '-'),
+                    'user-agent': cr.headers.get('user-agent'),
+                    'query-params': str(query_params) if query_params is not None else ''
+                }
+            }
         )
         with self.connexion_request_context(path=path,
                                             base_url=os.environ["API_DOMAIN_NAME"],
@@ -96,16 +126,19 @@ class ChaliceWithConnexion(chalice.Chalice):
             try:
                 flask_res = self.connexion_full_dispatch_request()
                 status_code = flask_res._status_code
-            except Exception:
-                self.log.exception('The request failed!')
+            except Exception as ex:
+                self.log.exception(json.dumps(dict(
+                    msg='The request failed!',
+                    exception=ex
+                )))
             finally:
-                self.log.info(
-                    "[dispatch] \"%s %s\" %s%s",
-                    method,
-                    path,
-                    str(status_code),
-                    ' ' + str(query_params) if query_params is not None else '',
-                )
+                self.log.info(dict(
+                    dispatch=dict(
+                        method=method,
+                        path=path,
+                        status_code=status_code,
+                        query_params=' ' + str(query_params) if query_params is not None else ''
+                    )))
         res_headers = dict(flask_res.headers)
         res_headers.update(
             {"X-AWS-REQUEST-ID": self.lambda_context.aws_request_id,
@@ -117,25 +150,9 @@ class ChaliceWithConnexion(chalice.Chalice):
 
 
 class ChaliceWithLoggingConfig(chalice.Chalice):
-    """
-    Subclasses Chalice to configure all Python loggers to our liking.
-    """
-    silence_debug_loggers = ["botocore"]
-
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        logging.basicConfig()
-        if Config.debug_level() == 0:
-            self.debug = False
-            logging.root.setLevel(logging.WARN)
-        elif Config.debug_level() == 1:
-            self.debug = True
-            logging.root.setLevel(logging.INFO)
-        elif Config.debug_level() > 1:
-            self.debug = True
-            logging.root.setLevel(logging.DEBUG)
-            for logger_name in self.silence_debug_loggers:
-                logging.getLogger(logger_name).setLevel(logging.INFO)
+        super().__init__(*args, configure_logs=False, **kwargs)
+        self.debug = logging.is_debug()
 
 
 class FusilladeServer(ChaliceWithConnexion, ChaliceWithLoggingConfig):

@@ -1,7 +1,7 @@
 from .errors import FusilladeException, FusilladeBindingException
 from .config import Config
 from .clouddirectory import User, Group, Role, CloudDirectory
-
+from fusillade import logging
 
 '''
 system config:
@@ -26,3 +26,4 @@ def get_directory():
 
 
 directory = get_directory()
+# TODO: change the deployment to be in a separate file

@@ -4,6 +4,9 @@ import os, sys
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
+from fusillade import logging
+logging.configure_test_logging()
+
 from fusillade.errors import FusilladeException, FusilladeHTTPException
 from fusillade.clouddirectory import User, Group, Role, cd_client, cleanup_directory, cleanup_schema, \
     get_json_file, default_user_policy_path, default_user_role_path
@@ -122,7 +125,7 @@ class TestUser(unittest.TestCase):
             self.assertEqual(user.statement, statement)
 
     def test_status(self):
-        name = "test_sete_policy@test.com"
+        name = "test_set_policy@test.com"
         user = User.provision_user(self.directory, name)
 
         with self.subTest("A user's status is enabled when provisioned."):
@@ -130,7 +133,7 @@ class TestUser(unittest.TestCase):
         with self.subTest("A user's status is disabled when user.disable is called."):
             user.disable()
             self.assertEqual(user.status, 'Disabled')
-        with self.subTest("A user's status is enabled when user.enabled is called."):
+        with self.subTest("A user's status is enabled when user.enable is called."):
             user.enable()
             self.assertEqual(user.status, 'Enabled')
 
