@@ -6,7 +6,6 @@ Functional Test of the API
 """
 import base64
 import json
-import os
 import unittest
 from furl import furl
 import os
