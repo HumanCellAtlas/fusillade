@@ -28,6 +28,7 @@ from fusillade import directory, User, Group, Role
 from fusillade.clouddirectory import cleanup_directory
 
 from tests.infra.server import ChaliceTestHarness
+from tests.infra.integration_server import IntegrationTestHarness
 # ChaliceTestHarness must be imported after FUSILLADE_DIR has be set
 
 
@@ -45,7 +46,10 @@ def tearDownModule():
 class TestAuthentication(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = ChaliceTestHarness()
+        # if True:
+        #     cls.app = IntegrationTestHarness()
+        # else:
+            cls.app = ChaliceTestHarness()
 
     def test_login(self):
         url = furl('/login')
@@ -145,10 +149,21 @@ class TestAuthentication(unittest.TestCase):
 
     def test_userinfo(self):
         # TODO: login
-        # TODO: use token to get userinfo
-        with self.subTest("userinfo denied when no token is included."):
-            resp = self.app.get('/oauth/userinfo')
-            self.assertEqual(401, resp.status_code)  # TODO fix
+        # TODO:use token to get userinfo
+        tests =[
+            {
+                "headers": {},
+                "expected_status_code": 401,
+                "description": "userinfo denied when no token is included."
+            }
+        ]
+        for test in tests:
+            with self.subTest("POST " + test["description"]):
+                resp = self.app.post('/oauth/userinfo', headers=test['headers'])
+                self.assertEqual(test["expected_status_code"], resp.status_code)
+            with self.subTest("GET " + test["description"]):
+                resp = self.app.get('/oauth/userinfo', headers=test['headers'])
+                self.assertEqual(test["expected_status_code"], resp.status_code)
 
     def test_serve_oauth_token(self):
         # TODO: login

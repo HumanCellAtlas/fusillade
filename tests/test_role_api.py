@@ -15,43 +15,54 @@ sys.path.insert(0, pkg_root)  # noqa
 
 from tests import random_hex_string, eventually
 
-directory_name = "test_api_" + random_hex_string()
-os.environ['OPENID_PROVIDER'] = "humancellatlas.auth0.com"
-old_directory_name = os.getenv("FUSILLADE_DIR", None)
-os.environ["FUSILLADE_DIR"] = directory_name
+integration = os.getenv('INTEGRATION_TEST', False)
+if not integration:
+    directory_name = "test_api_" + random_hex_string()
+    os.environ['OPENID_PROVIDER'] = "humancellatlas.auth0.com"
+    old_directory_name = os.getenv("FUSILLADE_DIR", None)
+    os.environ["FUSILLADE_DIR"] = directory_name
 
 
 from tests.common import get_auth_header, service_accounts, create_test_statement
 from tests.data import TEST_NAMES_NEG, TEST_NAMES_POS
 import fusillade
-from fusillade import directory, User
-from fusillade.clouddirectory import cleanup_directory, Role
+from fusillade import directory, Config
+from fusillade.clouddirectory import cleanup_directory, Role, User
 
-from tests.infra.server import ChaliceTestHarness
+
 # ChaliceTestHarness must be imported after FUSILLADE_DIR has be set
 
 
 def setUpModule():
-    User.provision_user(directory, service_accounts['admin']['client_email'], roles=['admin'])
+    try:
+        User.provision_user(directory, service_accounts['admin']['client_email'], roles=['admin'])
+    except Exception:
+        pass
 
 
 @eventually(5,1, {fusillade.errors.FusilladeException})
 def tearDownModule():
-    cleanup_directory(directory._dir_arn)
-    if old_directory_name:
+    if old_directory_name and not integration:
+        cleanup_directory(directory._dir_arn)
         os.environ["FUSILLADE_DIR"] = old_directory_name
 
 
 class TestRoleApi(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = ChaliceTestHarness()
+        if integration:
+            from tests.infra.integration_server import IntegrationTestHarness
+            cls.app = IntegrationTestHarness()
+        else:
+            from tests.infra.server import ChaliceTestHarness
+            cls.app = ChaliceTestHarness()
 
     def tearDown(self):
         directory.clear(
             users=[
                 service_accounts['admin']['client_email'],
-                service_accounts['user']['client_email']
+                service_accounts['user']['client_email'],
+                *Config.get_admin_emails()
             ])
 
     def test_positive(self):
