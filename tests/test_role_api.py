@@ -123,7 +123,7 @@ class TestRoleApi(unittest.TestCase):
                 'expected_resp': 403
             },
             {
-                'role_id': '201 returned when user is authorized.',
+                'name': '201 returned when user is authorized.',
                 'data': data,
                 'headers': admin_auth_header,
                 'expected_resp': 201
