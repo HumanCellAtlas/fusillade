@@ -5,64 +5,22 @@
 Functional Test of the Roles API
 """
 import json
-import os
-import sys
 import unittest
-from furl import furl, quote
+from furl import furl
 
-pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
-sys.path.insert(0, pkg_root)  # noqa
-
-from tests import random_hex_string, eventually
-
-integration = os.getenv('INTEGRATION_TEST', False)
-if not integration:
-    directory_name = "test_api_" + random_hex_string()
-    os.environ['OPENID_PROVIDER'] = "humancellatlas.auth0.com"
-    old_directory_name = os.getenv("FUSILLADE_DIR", None)
-    os.environ["FUSILLADE_DIR"] = directory_name
-
-
+from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_statement
 from tests.data import TEST_NAMES_NEG, TEST_NAMES_POS
-import fusillade
 from fusillade import directory, Config
-from fusillade.clouddirectory import cleanup_directory, Role, User
+from fusillade.clouddirectory import Role
 
 
-# ChaliceTestHarness must be imported after FUSILLADE_DIR has be set
-
-
-def setUpModule():
-    try:
-        User.provision_user(directory, service_accounts['admin']['client_email'], roles=['admin'])
-    except Exception:
-        pass
-
-
-@eventually(5,1, {fusillade.errors.FusilladeException})
-def tearDownModule():
-    if old_directory_name and not integration:
-        cleanup_directory(directory._dir_arn)
-        os.environ["FUSILLADE_DIR"] = old_directory_name
-
-
-class TestRoleApi(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if integration:
-            from tests.infra.integration_server import IntegrationTestHarness
-            cls.app = IntegrationTestHarness()
-        else:
-            from tests.infra.server import ChaliceTestHarness
-            cls.app = ChaliceTestHarness()
-
+class TestRoleApi(BaseAPITest, unittest.TestCase):
     def tearDown(self):
-        directory.clear(
+        self.clear_directory(
             users=[
                 service_accounts['admin']['client_email'],
                 service_accounts['user']['client_email'],
-                *Config.get_admin_emails()
             ])
 
     def test_positive(self):

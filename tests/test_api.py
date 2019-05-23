@@ -7,50 +7,13 @@ Functional Test of the API
 import base64
 import json
 import os
-import sys
 import unittest
 from furl import furl
 
-pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
-sys.path.insert(0, pkg_root)  # noqa
+from tests.base_api_test import BaseAPITest
+from tests.common import get_auth_header, service_accounts
 
-from tests import random_hex_string, eventually
-
-directory_name = "test_api_" + random_hex_string()
-os.environ['OPENID_PROVIDER'] = "humancellatlas.auth0.com"
-old_directory_name = os.getenv("FUSILLADE_DIR", None)
-os.environ["FUSILLADE_DIR"] = directory_name
-
-
-from tests.common import get_auth_header, service_accounts, create_test_statement
-import fusillade
-from fusillade import directory, User, Group, Role
-from fusillade.clouddirectory import cleanup_directory
-
-from tests.infra.server import ChaliceTestHarness
-from tests.infra.integration_server import IntegrationTestHarness
-# ChaliceTestHarness must be imported after FUSILLADE_DIR has be set
-
-
-def setUpModule():
-    User.provision_user(directory, service_accounts['admin']['client_email'], roles=['admin'])
-
-
-@eventually(5,1, {fusillade.errors.FusilladeException})
-def tearDownModule():
-    cleanup_directory(directory._dir_arn)
-    if old_directory_name:
-        os.environ["FUSILLADE_DIR"] = old_directory_name
-
-
-class TestAuthentication(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # if True:
-        #     cls.app = IntegrationTestHarness()
-        # else:
-            cls.app = ChaliceTestHarness()
-
+class TestAuthentication(BaseAPITest, unittest.TestCase):
     def test_login(self):
         url = furl('/login')
         query_params = {
@@ -88,7 +51,7 @@ class TestAuthentication(unittest.TestCase):
             self.assertEqual(redirect_url.args["state"], state)
             self.assertEqual(redirect_url.args["redirect_uri"], REDIRECT_URI)
             self.assertEqual(redirect_url.args["scope"], scopes)
-            self.assertEqual(redirect_url.host, 'humancellatlas.auth0.com')
+            self.assertEqual(redirect_url.host, os.environ["OPENID_PROVIDER"])
             self.assertEqual(redirect_url.path, '/authorize')
         with self.subTest("without client_id"):
             url.remove(query_params=["client_id"])
@@ -97,12 +60,12 @@ class TestAuthentication(unittest.TestCase):
             redirect_url = furl(resp.headers['Location'])
             self.assertIn('client_id', redirect_url.args)
             self.assertEqual(redirect_url.args["response_type"], 'code')
-            query_params["openid_provider"] = "humancellatlas.auth0.com"
+            query_params["openid_provider"] = os.environ["OPENID_PROVIDER"]
             self.assertDictEqual(json.loads(base64.b64decode(redirect_url.args["state"])), query_params)
             redirect_uri = furl(redirect_url.args["redirect_uri"])
             self.assertTrue(redirect_uri.pathstr.endswith('/cb'))
             self.assertEqual(redirect_url.args["scope"], scopes)
-            self.assertEqual(redirect_url.host, 'humancellatlas.auth0.com')
+            self.assertEqual(redirect_url.host, os.environ["OPENID_PROVIDER"])
             self.assertEqual(redirect_url.path, '/authorize')
 
     def test_well_know_openid_configuration(self):
@@ -177,13 +140,9 @@ class TestAuthentication(unittest.TestCase):
         self.assertEqual(400, resp.status_code)  # TODO fix
 
 
-class TestApi(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.app = ChaliceTestHarness()
-
+class TestApi(BaseAPITest, unittest.TestCase):
     def tearDown(self):
-        directory.clear(
+        self.clear_directory(
             users=[
                 service_accounts['admin']['client_email'],
                 service_accounts['user']['client_email']
