@@ -7,6 +7,6 @@
     "lambda_memory_size": 1536,
     "tags": {
         "managedBy": "chalice",
-        "Name": "fusillade"
+        "service": "fusillade"
     }
 }
