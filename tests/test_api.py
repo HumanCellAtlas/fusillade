@@ -93,14 +93,15 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
             for key in expected_response_types_supported:
                 self.assertIn(key, body['response_types_supported'])
 
-        with self.subTest("an error is returned when no host is provided in the header"):
-            resp = self.app.get('/.well-known/openid-configuration')
-            self.assertEqual(400, resp.status_code)
+        if self.integration:
+            with self.subTest("openid config is returned when no host is provided in the header"):
+                resp = self.app.get('/.well-known/openid-configuration')
+                self.assertEqual(200, resp.status_code)
 
-        with self.subTest("Error return when invalid host is provided in header."):
-            host = 'localhost:8080'
-            resp = self.app.get('/.well-known/openid-configuration', headers={'host': host})
-            self.assertEqual(400, resp.status_code)
+            with self.subTest("Error return when invalid host is provided in header."):
+                host = 'localhost:8080'
+                resp = self.app.get('/.well-known/openid-configuration', headers={'host': host})
+                self.assertEqual(403, resp.status_code)
 
     def test_serve_jwks_json(self):
         resp = self.app.get('/.well-known/jwks.json')
