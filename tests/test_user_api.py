@@ -22,7 +22,7 @@ from fusillade.clouddirectory import User, Group, Role
 
 class TestUserApi(BaseAPITest, unittest.TestCase):
     def tearDown(self):
-        directory.clear(users=[
+        self.clear_directory(users=[
                 service_accounts['admin']['client_email']
             ])
 

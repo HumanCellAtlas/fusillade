@@ -145,13 +145,6 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
 
 
 class TestApi(BaseAPITest, unittest.TestCase):
-    def tearDown(self):
-        self.clear_directory(
-            users=[
-                service_accounts['admin']['client_email'],
-                service_accounts['user']['client_email']
-            ])
-
     def test_evaluate_policy(self):
         email = "test_evaluate_api@email.com"
         tests = [
