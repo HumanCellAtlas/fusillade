@@ -2,7 +2,7 @@ import os
 
 from tests import random_hex_string
 
-integration = os.getenv('INTEGRATION_TEST', False)
+integration = bool(os.getenv('INTEGRATION_TEST', 'False'))
 if not integration:
     old_directory_name = os.getenv("FUSILLADE_DIR", None)
     os.environ["FUSILLADE_DIR"] = "test_api_" + random_hex_string()
