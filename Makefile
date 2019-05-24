@@ -14,9 +14,6 @@ test: before-test lint $(tests)
 $(tests): %.py : lint
 	coverage run -p --source=fusillade $*.py -v
 
-integration_test:
-	python ./tests/integration_test.py
-
 init_docs:
 	cd docs; sphinx-quickstart
 
