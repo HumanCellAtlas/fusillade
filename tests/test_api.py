@@ -76,7 +76,7 @@ class TestAuthentication(unittest.TestCase):
                 "redirect_uri": REDIRECT_URI,
                 "scope": _scope
             }
-            with self.subTest(f"with client_id: {state} {scope}"):
+            with self.subTest(f"with client_id: {state} {scope}"):  # TODO improve description
                 url = furl("/oauth/authorize")
                 url.add(query_params=query_params)
                 url.add(query_params={"client_id": CLIENT_ID})
@@ -91,7 +91,7 @@ class TestAuthentication(unittest.TestCase):
                 self.assertEqual(redirect_url.args["scope"], _scope)
                 self.assertEqual(redirect_url.host, os.environ["OPENID_PROVIDER"])
                 self.assertEqual(redirect_url.path, '/authorize')
-            with self.subTest(f"without client_id: {state} {scope}"):
+            with self.subTest(f"without client_id: {state} {scope}"): #TODO improve description
                 url = furl("/oauth/authorize")
                 url.add(query_params=query_params)
                 url.remove(query_params=["client_id"])
