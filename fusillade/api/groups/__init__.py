@@ -2,7 +2,7 @@ from flask import request, make_response, jsonify
 
 from fusillade import directory, Group
 from fusillade.utils.authorize import assert_authorized
-from fusillade.utils.paging import get_next_token, build_next_url, build_link_header
+from fusillade.api.paging import get_next_token, build_next_url, build_link_header, get_page
 
 
 def put_new_group(token_info: dict):
@@ -20,13 +20,7 @@ def get_groups(token_info: dict):
                       ['fus:GetRole'],
                       [f'arn:hca:fus:*:*:group'])
     next_token, per_page = get_next_token(request.args)
-    result, next_token = Group.list_all(directory, next_token, per_page)
-    if next_token:
-        next_url = build_next_url(request.host, request.path, next_token, per_page)
-        headers = {'Link': build_link_header({next_url: {"rel": "next"}})}
-        return make_response(jsonify(result), 206, headers)
-    else:
-        return make_response(jsonify(result), 200)
+    return get_page(Group.list_all, next_token, per_page, directory)
 
 
 def get_group(token_info: dict, group_id: str):
@@ -50,16 +44,18 @@ def get_group_users(token_info: dict, group_id: str):
     assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
                       ['fus:GetUser'],
                       [f'arn:hca:fus:*:*:group/{group_id}/users'])
+    next_token, per_page = get_next_token(request.args)
     group = Group(directory, group_id)
-    return make_response(jsonify(users=group.get_users()), 200)
+    return get_page(group.get_users, next_token, per_page)
 
 
 def get_groups_roles(token_info: dict, group_id: str):
     assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
                       ['fus:GetRole'],
                       [f'arn:hca:fus:*:*:group/{group_id}/roles'])
+    next_token, per_page = get_next_token(request.args)
     group = Group(directory, group_id)
-    return make_response(jsonify(roles=group.roles), 200)
+    return get_page(group.get_roles, next_token, per_page)
 
 
 def put_groups_roles(token_info: dict, group_id: str):

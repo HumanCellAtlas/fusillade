@@ -23,8 +23,8 @@ from fusillade.clouddirectory import User, Group, Role
 class TestUserApi(BaseAPITest, unittest.TestCase):
     def tearDown(self):
         self.clear_directory(users=[
-                service_accounts['admin']['client_email']
-            ])
+            service_accounts['admin']['client_email']
+        ])
 
     def test_put_new_user(self):
         tests = [
@@ -123,13 +123,13 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         ])
         for test in tests:
             with self.subTest(test['name']):
-                headers={'Content-Type': "application/json"}
+                headers = {'Content-Type': "application/json"}
                 headers.update(get_auth_header(service_accounts['admin']))
-                if test['name']=="500 returned when creating a user that already exists":
+                if test['name'] == "500 returned when creating a user that already exists":
                     self.app.put('/v1/users', headers=headers, data=json.dumps(test['json_request_body']))
                 resp = self.app.put('/v1/users', headers=headers, data=json.dumps(test['json_request_body']))
                 self.assertEqual(test['response']['code'], resp.status_code)
-                if resp.status_code==201:
+                if resp.status_code == 201:
                     resp = self.app.get(f'/v1/users/{test["json_request_body"]["user_id"]}/', headers=headers)
                     self.assertEqual(test["json_request_body"]["user_id"], json.loads(resp.body)['name'])
 
@@ -143,16 +143,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 data=json.dumps({"user_id": f"test_put_user{i}@email.com"})
             )
             self.assertEqual(201, resp.status_code)
-        url = furl('/v1/users', query_params={'per_page': 6})
-        resp = self.app.get(url.url, headers=headers)
-        self.assertEqual(206, resp.status_code)
-        self.assertTrue("Link" in resp.headers)
-        self.assertEqual(len(json.loads(resp.body)), 6)
-        next_url = resp.headers['Link'].split(';')[0][3:-1]
-        resp = self.app.get(next_url, headers=headers)
-        self.assertEqual(200, resp.status_code)
-        self.assertFalse("Link" in resp.headers)
-        self.assertEqual(len(json.loads(resp.body)), 6)
+        self._test_paging(f'/v1/users', headers, 6)
 
     def test_get_user(self):
         headers = {'Content-Type': "application/json"}
@@ -242,10 +233,10 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         name = "test_user_group_api@email.com"
         user = User.provision_user(directory, name)
         resp = self.app.get(f'/v1/users/{name}/groups', headers=headers)
-        self.assertEqual(0, len(json.loads(resp.body)['groups']))
-        user.add_groups([Group.create(directory, "group_0").name, Group.create(directory, "group_1").name])
-        resp = self.app.get(f'/v1/users/{name}/groups', headers=headers)
-        self.assertEqual(2, len(json.loads(resp.body)['groups']))
+        self.assertEqual(0, len(json.loads(resp.body)))
+        groups = [Group.create(directory, f"group_{i}").name for i in range(10)]
+        user.add_groups(groups)
+        self._test_paging(f'/v1/users/{name}/groups', headers, 5)
 
     def test_put_username_roles(self):
         tests = [
@@ -294,12 +285,11 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         user = User.provision_user(directory, name)
         resp = self.app.get(f'/v1/users/{name}/roles', headers=headers)
         user_role_names = [Role(directory, None, role).name for role in user.roles]
-        self.assertEqual(1, len(json.loads(resp.body)['roles']))
+        self.assertEqual(1, len(json.loads(resp.body)))
         self.assertEqual(user_role_names, ['default_user'])
-        user.add_roles([Role.create(directory, "role_1").name, Role.create(directory, "role_2").name])
-        resp = self.app.get(f'/v1/users/{name}/roles', headers=headers)
-        self.assertEqual(3, len(json.loads(resp.body)['roles']))
-
+        roles = [Role.create(directory, f"role_{i}").name for i in range(11)]
+        user.add_roles(roles)
+        self._test_paging(f'/v1/users/{name}/roles', headers, 6)
 
 if __name__ == '__main__':
     unittest.main()

@@ -295,16 +295,18 @@ class CloudDirectory:
                           key: str,
                           object_ref: str,
                           filter_attribute_ranges: typing.Optional[typing.List],
-                          filter_typed_link: typing.Optional[str]
-                          ):
+                          filter_typed_link: typing.Optional[str],
+                          paged=False,
+                          per_page=None,
+                          **kwargs) -> typing.Union[typing.Iterator[dict], typing.Tuple[typing.List[typing.Dict], str]]:
         def unpack_response(i):
             return i
 
-        kwargs = dict(
+        kwargs.update(dict(
             DirectoryArn=self._dir_arn,
             ObjectReference={'Selector': object_ref},
-            MaxResults=self._page_limit
-        )
+            MaxResults=min(per_page, self._page_limit) if per_page else self._page_limit
+        ))
         if filter_attribute_ranges:
             kwargs['FilterAttributeRanges'] = filter_attribute_ranges
         if filter_typed_link:
@@ -312,12 +314,19 @@ class CloudDirectory:
                 'SchemaArn': self.schema,
                 'TypedLinkName': filter_typed_link
             }
-        return _paging_loop(func, key, unpack_response, **kwargs)
+        if paged:
+            if not kwargs["NextToken"]:
+                kwargs.pop("NextToken")
+            resp = func(**kwargs)
+            return [i for i in resp[key]], resp.get("NextToken")
+        else:
+            return _paging_loop(func, key, unpack_response, **kwargs)
 
     def list_outgoing_typed_links(self,
                                   object_ref: str,
                                   filter_attribute_ranges: typing.List = None,
-                                  filter_typed_link: str = None) -> typing.Iterator[dict]:
+                                  filter_typed_link: str = None,
+                                  **kwargs):
         """
         a wrapper around CloudDirectory.Client.list_outgoing_typed_links
 
@@ -327,22 +336,27 @@ class CloudDirectory:
                                       'TypedLinkSpecifiers',
                                       object_ref,
                                       filter_attribute_ranges,
-                                      filter_typed_link)
+                                      filter_typed_link,
+                                      **kwargs)
 
-    def list_incoming_typed_links(self,
-                                  object_ref: str,
-                                  filter_attribute_ranges: typing.List = None,
-                                  filter_typed_link: str = None) -> typing.Iterator[dict]:
+    def list_incoming_typed_links(
+            self,
+            object_ref: str,
+            filter_attribute_ranges: typing.List = None,
+            filter_typed_link: str = None,
+            **kwargs):
         """
         a wrapper around CloudDirectory.Client.list_incoming_typed_links
 
         :return: typed link specifier generator
         """
-        return self._list_typed_links(cd_client.list_incoming_typed_links,
-                                      'LinkSpecifiers',
-                                      object_ref,
-                                      filter_attribute_ranges,
-                                      filter_typed_link)
+        return self._list_typed_links(
+            cd_client.list_incoming_typed_links,
+            'LinkSpecifiers',
+            object_ref,
+            filter_attribute_ranges,
+            filter_typed_link,
+            **kwargs)
 
     @staticmethod
     def _make_ref(i):
@@ -841,6 +855,7 @@ class CloudNode:
     _attributes = ["name"]  # the different attributes of a node stored
     _facet = 'LeafNode'
     object_type = 'node'
+
     def __init__(self,
                  cloud_directory: CloudDirectory,
                  name: str = None,
@@ -852,13 +867,12 @@ class CloudNode:
         :param object_reference:
         """
         self.log = logging.getLogger('.'.join([__name__, self.__class__.__name__]))
-        self._object_type = self.__class__.__name__.lower()
         if name and object_ref:
             raise FusilladeException("object_reference XOR name")
         if name:
             self._name: str = name
             self._path_name: str = self.hash_name(name)
-            self.object_ref: str = cloud_directory.get_obj_type_path(self._object_type) + self._path_name
+            self.object_ref: str = cloud_directory.get_obj_type_path(self.object_type) + self._path_name
         else:
             self._name: str = None
             self._path_name: str = None
@@ -876,26 +890,47 @@ class CloudNode:
         return self.hash_name(parent_path + child_path)
         # links names must be unique between two objects
 
-    def _get_links(self, object_type):
+    def _get_links(self, node: 'CloudNode', paged=False, NextToken=None, per_page=None, incoming=True):
         """
         Retrieves the links attached to this object from CloudDirectory and separates them into groups and roles
         based on the link name
         """
+        get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
         filter_attribute_ranges = [
             {
                 'AttributeName': 'parent_type',
                 'Range': {
                     'StartMode': 'INCLUSIVE',
-                    'StartValue': {'StringValue': object_type},
+                    'StartValue': {'StringValue': node.object_type},
                     'EndMode': 'INCLUSIVE',
-                    'EndValue': {'StringValue': object_type}
+                    'EndValue': {'StringValue': node.object_type}
                 }
             }
         ]
-        return [
-            type_link['SourceObjectReference']['Selector']
-            for type_link in self.cd.list_incoming_typed_links(self.object_ref, filter_attribute_ranges, 'association')
-        ]
+        if paged:
+            result, next_token = get_links(self.object_ref, filter_attribute_ranges,
+                                                                 'association',
+                                                     NextToken=NextToken, paged=paged, per_page=per_page)
+            if result:
+                operations = [self.cd.batch_get_attributes(
+                    obj_ref['SourceObjectReference']['Selector'],
+                    node._facet,
+                    ['name'])
+                    for obj_ref in result]
+                result = []
+                for r in self.cd.batch_read(operations)['Responses']:
+                    if r.get('SuccessfulResponse'):
+                        result.append(
+                            r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
+                    else:
+                        logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
+            return result, next_token
+        else:
+            return [
+                type_link['SourceObjectReference']['Selector']
+                for type_link in
+                get_links(self.object_ref, filter_attribute_ranges, 'association')
+            ]
 
     def _add_links_batch(self, links: typing.List[str], link_type: str):
         """
@@ -930,7 +965,7 @@ class CloudNode:
             parent_ref = f"{parent_path}{self.hash_name(link)}"
             attributes = {
                 'parent_type': link_type,
-                'child_type': self._object_type,
+                'child_type': self.object_type,
             }
             operations.append(
                 batch_attach_typed_link(
@@ -977,7 +1012,7 @@ class CloudNode:
                 parent_ref,
                 self.object_ref,
                 'association',
-                {'parent_type': link_type, 'child_type': self._object_type}
+                {'parent_type': link_type, 'child_type': self.object_type}
             )
             operations.append(batch_detach_typed_link(typed_link_specifier))
         return operations
@@ -1046,7 +1081,7 @@ class CloudNode:
         self.cd.batch_write(operations)
         self.log.info(dict(message="Policy created",
                            object=dict(
-                               type=self._object_type,
+                               type=self.object_type,
                                path_name=self._path_name
                            ),
                            policy=dict(
@@ -1056,7 +1091,7 @@ class CloudNode:
         return policy_ref
 
     def get_policy_name(self, policy_type):
-        return self.hash_name(f"{self._path_name}{self._object_type}{policy_type}")
+        return self.hash_name(f"{self._path_name}{self.object_type}{policy_type}")
 
     @property
     def statement(self):
@@ -1097,7 +1132,7 @@ class CloudNode:
         else:
             self.log.info(dict(message="Policy updated",
                                object=dict(
-                                   type=self._object_type,
+                                   type=self.object_type,
                                    path_name=self._path_name
                                ),
                                policy=dict(
@@ -1233,7 +1268,7 @@ class User(CloudNode):
                                UpdateActions.CREATE_OR_UPDATE)
         ]
         self.cd.update_object_attribute(self.object_ref, update_params)
-        self.log.info(dict(message="User Enabled", object=dict(type=self._object_type, path_name=self._path_name)))
+        self.log.info(dict(message="User Enabled", object=dict(type=self.object_type, path_name=self._path_name)))
         self._status = None
 
     def disable(self):
@@ -1246,7 +1281,7 @@ class User(CloudNode):
                                UpdateActions.CREATE_OR_UPDATE)
         ]
         self.cd.update_object_attribute(self.object_ref, update_params)
-        self.log.info(dict(message="User Disabled", object=dict(type=self._object_type, path_name=self._path_name)))
+        self.log.info(dict(message="User Disabled", object=dict(type=self.object_type, path_name=self._path_name)))
         self._status = None
 
     @classmethod
@@ -1278,7 +1313,7 @@ class User(CloudNode):
             raise FusilladeException("User already exists.")
         else:
             user.log.info(dict(message="User created",
-                               object=dict(type=user._object_type, path_name=user._path_name)))
+                               object=dict(type=user.object_type, path_name=user._path_name)))
         if roles:
             user.add_roles(roles + cls.default_roles)
         else:
@@ -1296,8 +1331,11 @@ class User(CloudNode):
     @property
     def groups(self) -> typing.List[str]:
         if not self._groups:
-            self._groups = self._get_links(Group.object_type)
+            self._groups = self._get_links(Group)
         return self._groups
+
+    def get_groups(self, NextToken=None, per_page=None):
+        return self._get_links(Group, paged=True, NextToken=NextToken, per_page=per_page)
 
     def add_groups(self, groups: typing.List[str]):
         operations = []
@@ -1305,7 +1343,7 @@ class User(CloudNode):
         self.cd.batch_write(operations)
         self._groups = None  # update groups
         self.log.info(dict(message="Groups joined",
-                           object=dict(type=self._object_type, path_name=self._path_name),
+                           object=dict(type=self.object_type, path_name=self._path_name),
                            groups=groups))
 
     def remove_groups(self, groups: typing.List[str]):
@@ -1314,14 +1352,17 @@ class User(CloudNode):
         self.cd.batch_write(operations)
         self._groups = None  # update groups
         self.log.info(dict(message="Groups left",
-                           object=dict(type=self._object_type, path_name=self._path_name),
+                           object=dict(type=self.object_type, path_name=self._path_name),
                            groups=groups))
 
     @property
     def roles(self) -> typing.List[str]:
         if not self._roles:
-            self._roles = self._get_links(Role.object_type)
+            self._roles = self._get_links(Role)
         return self._roles
+
+    def get_roles(self, NextToken=None, per_page=None):
+        return self._get_links(Role, paged=True, NextToken=NextToken, per_page=per_page, incoming=False)
 
     def add_roles(self, roles: typing.List[str]):
         operations = []
@@ -1330,7 +1371,7 @@ class User(CloudNode):
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         self.log.info(dict(message="Roles added",
-                           object=dict(type=self._object_type, path_name=self._path_name),
+                           object=dict(type=self.object_type, path_name=self._path_name),
                            roles=roles))
 
     def remove_roles(self, roles: typing.List[str]):
@@ -1340,7 +1381,7 @@ class User(CloudNode):
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         self.log.info(dict(message="Roles removed",
-                           object=dict(type=self._object_type, path_name=self._path_name),
+                           object=dict(type=self.object_type, path_name=self._path_name),
                            roles=roles))
 
 
@@ -1372,25 +1413,33 @@ class Group(CloudNode):
         cloud_directory.create_object(cls.hash_name(name), 'LeafFacet', name=name, obj_type="group")
         new_node = cls(cloud_directory, name)
         new_node.log.info(dict(message="Group created",
-                               object=dict(type=new_node._object_type, path_name=new_node._path_name)))
+                               object=dict(type=new_node.object_type, path_name=new_node._path_name)))
         new_node._set_statement(statement)
         return new_node
 
-    def get_users(self) -> typing.Iterator[typing.Tuple[str, str]]:
+    def get_users(self, NextToken=None) -> typing.Tuple[typing.List[dict], str]:
         """
         Retrieves the object_refs for all user in this group.
         :return: (user name, user object reference)
         """
         filter_attribute_ranges = [
         ]
-        for type_link in self.cd.list_outgoing_typed_links(self.object_ref, filter_attribute_ranges, 'association'):
-            yield type_link['TargetObjectReference']['Selector']
+        return self.cd.list_outgoing_typed_links(
+            self.object_ref,
+            filter_attribute_ranges,
+            'association',
+            paged=True,
+            NextToken=NextToken
+        )
 
     @property
     def roles(self):
         if not self._roles:
-            self._roles = self._get_links(Role.object_type)
+            self._roles = self._get_links(Role)
         return self._roles
+
+    def get_roles(self, NextToken=None, per_page=None):
+        return self._get_links(Role, paged=True, NextToken=NextToken, per_page=per_page)
 
     def add_roles(self, roles: typing.List[str]):
         operations = []
@@ -1399,7 +1448,7 @@ class Group(CloudNode):
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         self.log.info(dict(message="Roles added",
-                           object=dict(type=self._object_type, path_name=self._path_name),
+                           object=dict(type=self.object_type, path_name=self._path_name),
                            roles=roles))
 
     def remove_roles(self, roles: typing.List[str]):
@@ -1409,7 +1458,7 @@ class Group(CloudNode):
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         self.log.info(dict(message="Roles added",
-                           object=dict(type=self._object_type, path_name=self._path_name),
+                           object=dict(type=self.object_type, path_name=self._path_name),
                            roles=roles))
 
     def add_users(self, users: typing.List[User]) -> None:
@@ -1420,14 +1469,14 @@ class Group(CloudNode):
                     i.object_ref,
                     'association',
                     {
-                        'parent_type': self._object_type,
-                        'child_type': i._object_type,
+                        'parent_type': self.object_type,
+                        'child_type': i.object_type,
                     }
                 )
                 for i in users]
             self.cd.batch_write(operations)
             self.log.info(dict(message="Adding users to group",
-                               object=dict(type=self._object_type, path_name=self._path_name),
+                               object=dict(type=self.object_type, path_name=self._path_name),
                                users=[user._path_name for user in users]))
 
     def remove_users(self, users: typing.List[str]) -> None:
@@ -1440,7 +1489,7 @@ class Group(CloudNode):
         for user in users:
             User(self.cd, user).remove_groups([self._path_name])
         self.log.info(dict(message="Removing users from group",
-                           object=dict(type=self._object_type, path_name=self._path_name),
+                           object=dict(type=self.object_type, path_name=self._path_name),
                            users=[user for user in users]))
 
 
@@ -1463,11 +1512,11 @@ class Role(CloudNode):
             statement = get_json_file(default_role_path)
         cls._verify_statement(statement)
         try:
-            cloud_directory.create_object(cls.hash_name(name), 'NodeFacet', name=name, obj_type=Role.object_type)
+            cloud_directory.create_object(cls.hash_name(name), 'NodeFacet', name=name, obj_type=cls.object_type)
         except cd_client.exceptions.LinkNameAlreadyInUseException:
             raise FusilladeHTTPException(status=409, title="Conflict", detail="The object already exists")
         new_node = cls(cloud_directory, name)
         new_node.log.info(dict(message="Role created",
-                               object=dict(type=new_node._object_type, path_name=new_node._path_name)))
+                               object=dict(type=new_node.object_type, path_name=new_node._path_name)))
         new_node._set_statement(statement)
         return new_node

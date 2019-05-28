@@ -88,16 +88,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
 
             )
             self.assertEqual(201, resp.status_code)
-        url = furl('/v1/roles', query_params={'per_page': 6})
-        resp = self.app.get(url.url, headers=headers)
-        self.assertEqual(206, resp.status_code)
-        self.assertTrue("Link" in resp.headers)
-        self.assertEqual(len(json.loads(resp.body)), 6)
-        next_url = resp.headers['Link'].split(';')[0][3:-1]
-        resp = self.app.get(next_url, headers=headers)
-        self.assertEqual(200, resp.status_code)
-        self.assertFalse("Link" in resp.headers)
-        self.assertEqual(len(json.loads(resp.body)), 6)
+        self._test_paging(f'/v1/roles', headers, 6)
 
     def test_put_role(self):
         url = furl('/v1/roles')
@@ -213,12 +204,6 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
                 'headers': admin_auth_header,
                 'role_id': 'ghost_role',
                 'expected_resp': 404
-            },
-            {
-                'name': f'500 returned when getting a role when name is empty',
-                'role_id': '',
-                'headers': admin_auth_header,
-                'expected_resp': 500
             }
         ]
         tests.extend([
@@ -253,7 +238,6 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
                         'policy': policy
                     }
                     self.assertEqual(expected_body, json.loads(resp.body))
-
 
     def test_put_role_id_policy(self):
         role_id = 'test_put_role_id_policy'

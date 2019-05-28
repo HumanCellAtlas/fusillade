@@ -143,16 +143,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
 
             )
             self.assertEqual(201, resp.status_code)
-        url = furl('/v1/groups', query_params={'per_page': 5})
-        resp = self.app.get(url.url, headers=headers)
-        self.assertEqual(206, resp.status_code)
-        self.assertTrue("Link" in resp.headers)
-        self.assertEqual(len(json.loads(resp.body)), 5)
-        next_url = resp.headers['Link'].split(';')[0][3:-1]
-        resp = self.app.get(next_url, headers=headers)
-        self.assertEqual(200, resp.status_code)
-        self.assertFalse("Link" in resp.headers)
-        self.assertEqual(len(json.loads(resp.body)), 5)
+        self._test_paging('/v1/groups', headers, 5)
 
     def test_put_group_roles(self):
         tests = [
@@ -201,10 +192,11 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
         group = Group.create(directory,name)
         resp = self.app.get(f'/v1/groups/{name}/roles', headers=headers)
         group_role_names = [Role(directory, None, role).name for role in group.roles]
-        self.assertEqual(0, len(json.loads(resp.body)['roles']))
-        group.add_roles([Role.create(directory, "role_1").name, Role.create(directory, "role_2").name])
-        resp = self.app.get(f'/v1/groups/{name}/roles', headers=headers)
-        self.assertEqual(2, len(json.loads(resp.body)['roles']))
+        self.assertEqual(0, len(json.loads(resp.body)))
+        roles = [Role.create(directory, f"role_{i}").name for i in range(10)]
+        group.add_roles(roles)
+        self._test_paging(f'/v1/groups/{name}/roles', headers, 5)
+
 
     @unittest.skip("Incomplete - need to add the paging for groups")
     def test_get_group_users(self):
@@ -215,9 +207,9 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
         resp = self.app.get(f'/v1/groups/{name}/users', headers=headers)
         group_user_names = [User(directory,user).name for user in group.get_users()]
         self.assertEqual(0, len(json.loads(resp.body)['users']))
-        group.add_users([User.create(directory, "user_1").name, User.create(directory, "user_2").name])
-        resp = self.app.get(f'/v1/groups/{name}/users', headers=headers)
-        self.assertEqual(2, len(json.loads(resp.body)['users']))
+        users = [User.provision_user(directory, f"user_{i}",groups=[name]).name for i in range(10)]
+        group.add_roles(users)
+        self._test_paging(f'/v1/groups/{name}/users', headers, 5)
 
 if __name__ == '__main__':
     unittest.main()

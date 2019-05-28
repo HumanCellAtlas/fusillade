@@ -1,7 +1,7 @@
 from flask import request, make_response, jsonify
 from fusillade import User, directory
 from fusillade.utils.authorize import assert_authorized
-from fusillade.utils.paging import build_next_url, build_link_header, get_next_token
+from fusillade.api.paging import build_next_url, build_link_header, get_next_token, get_page
 
 
 def put_new_user(token_info: dict):
@@ -20,13 +20,7 @@ def get_users(token_info: dict):
                       ['fus:GetUser'],
                       [f'arn:hca:fus:*:*:user'])
     next_token, per_page = get_next_token(request.args)
-    result, next_token = User.list_all(directory, next_token, per_page)
-    if next_token:
-        next_url = build_next_url(request.host, request.path, next_token, per_page)
-        headers = {'Link': build_link_header({next_url: {"rel": "next"}})}
-        return make_response(jsonify(result), 206, headers)
-    else:
-        return make_response(jsonify(result), 200)
+    get_page(User.list_all, next_token, per_page, directory)
 
 
 def get_user(token_info: dict, user_id: str):
@@ -67,8 +61,9 @@ def get_users_groups(token_info: dict, user_id: str):
     assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
                       ['fus:GetGroup'],
                       [f'arn:hca:fus:*:*:user/{user_id}/groups'])
+    next_token, per_page = get_next_token(request.args)
     user = User(directory, user_id)
-    return make_response(jsonify(groups=user.groups), 200)
+    return get_page(user.get_groups, next_token, per_page)
 
 
 def put_users_groups(token_info: dict, user_id: str):
@@ -88,8 +83,9 @@ def get_users_roles(token_info: dict, user_id: str):
     assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
                       ['fus:GetRole'],
                       [f'arn:hca:fus:*:*:user/{user_id}/roles'])
+    next_token, per_page = get_next_token(request.args)
     user = User(directory, user_id)
-    return make_response(jsonify(roles=user.roles), 200)
+    return get_page(user.get_roles, next_token, per_page)
 
 
 def put_users_roles(token_info: dict, user_id: str):

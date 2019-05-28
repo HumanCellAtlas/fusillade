@@ -2,7 +2,7 @@ from flask import request, make_response, jsonify
 
 from fusillade import Role, directory
 from fusillade.utils.authorize import assert_authorized
-from fusillade.utils.paging import get_next_token, build_next_url, build_link_header
+from fusillade.api.paging import get_next_token, build_next_url, build_link_header, get_page
 
 
 def put_new_role(token_info: dict):
@@ -19,14 +19,7 @@ def get_roles(token_info: dict):
                       ['fus:GetRole'],
                       [f'arn:hca:fus:*:*:role'])
     next_token, per_page = get_next_token(request.args)
-    result, next_token = Role.list_all(directory, next_token, per_page)
-    if next_token:
-        next_url = build_next_url(request.host, request.path, next_token, per_page)
-        headers = {'Link': build_link_header({next_url: {"rel": "next"}})}
-        return make_response(jsonify(result), 206, headers)
-    else:
-        return make_response(jsonify(result), 200)
-
+    return get_page(Role.list_all, next_token, per_page, directory)
 
 def get_role(token_info: dict, role_id: str):
     assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
