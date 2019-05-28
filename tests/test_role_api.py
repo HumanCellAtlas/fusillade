@@ -76,6 +76,29 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         }
         self.assertEqual(expected_body, json.loads(resp.body))
 
+    def test_get_roles(self):
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(service_accounts['admin']))
+        for i in range(10):
+            resp = self.app.put(
+                '/v1/roles',
+                headers=headers,
+                data=json.dumps({"role_id": f"test_put_role{i}",
+                                 'policy': create_test_statement("test_role")})
+
+            )
+            self.assertEqual(201, resp.status_code)
+        url = furl('/v1/roles', query_params={'per_page': 6})
+        resp = self.app.get(url.url, headers=headers)
+        self.assertEqual(206, resp.status_code)
+        self.assertTrue("Link" in resp.headers)
+        self.assertEqual(len(json.loads(resp.body)), 6)
+        next_url = resp.headers['Link'].split(';')[0][3:-1]
+        resp = self.app.get(next_url, headers=headers)
+        self.assertEqual(200, resp.status_code)
+        self.assertFalse("Link" in resp.headers)
+        self.assertEqual(len(json.loads(resp.body)), 6)
+
     def test_put_role(self):
         url = furl('/v1/roles')
         data = json.dumps({

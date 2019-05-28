@@ -1,6 +1,7 @@
 from flask import request, make_response, jsonify
 from fusillade import User, directory
 from fusillade.utils.authorize import assert_authorized
+from fusillade.utils.paging import build_next_url, build_link_header, get_next_token
 
 
 def put_new_user(token_info: dict):
@@ -13,12 +14,28 @@ def put_new_user(token_info: dict):
     user.add_groups(json_body.get('groups', []))
     return make_response('', 201)
 
+
+def get_users(token_info: dict):
+    assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
+                      ['fus:GetUser'],
+                      [f'arn:hca:fus:*:*:user'])
+    next_token, per_page = get_next_token(request.args)
+    result, next_token = User.list_all(directory, next_token, per_page)
+    if next_token:
+        next_url = build_next_url(request.host, request.path, next_token, per_page)
+        headers = {'Link': build_link_header({next_url: {"rel": "next"}})}
+        return make_response(jsonify(result), 206, headers)
+    else:
+        return make_response(jsonify(result), 200)
+
+
 def get_user(token_info: dict, user_id: str):
     assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
                       ['fus:GetUser'],
                       [f'arn:hca:fus:*:*:user/{user_id}/'])
     user = User(directory, user_id)
     return make_response(jsonify(name=user.name, status=user.status, policy=user.statement), 200)
+
 
 def put_user(token_info: dict, user_id: str):
     assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],

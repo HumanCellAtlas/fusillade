@@ -131,6 +131,29 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
         resp = self.app.get(f'/v1/groups/{name}/', headers=headers)
         self.assertEqual(name, json.loads(resp.body)['name'])
 
+    def test_get_groups(self):
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(service_accounts['admin']))
+        for i in range(10):
+            resp = self.app.put(
+                '/v1/groups',
+                headers=headers,
+                data=json.dumps({"group_id": f"test_put_group{i}",
+                                 'policy': create_test_statement("test_group")})
+
+            )
+            self.assertEqual(201, resp.status_code)
+        url = furl('/v1/groups', query_params={'per_page': 5})
+        resp = self.app.get(url.url, headers=headers)
+        self.assertEqual(206, resp.status_code)
+        self.assertTrue("Link" in resp.headers)
+        self.assertEqual(len(json.loads(resp.body)), 5)
+        next_url = resp.headers['Link'].split(';')[0][3:-1]
+        resp = self.app.get(next_url, headers=headers)
+        self.assertEqual(200, resp.status_code)
+        self.assertFalse("Link" in resp.headers)
+        self.assertEqual(len(json.loads(resp.body)), 5)
+
     def test_put_group_roles(self):
         tests = [
             {

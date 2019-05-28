@@ -191,9 +191,34 @@ class CloudDirectory:
             self._schema = cd_client.list_applied_schema_arns(DirectoryArn=self._dir_arn)['SchemaArns'][0]
         return self._schema
 
-    def list_object_children(self, object_ref: str) -> typing.Iterator[typing.Tuple[str, str]]:
+    def list_object_children_paged(self, object_ref: str,
+                                   next_token: typing.Optional[str] = None,
+                                   per_page=None) -> typing.Tuple[typing.List[str], typing.Optional[str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children with paging
+
+        :param object_ref:
+        :param next_token:
+        :param per_page:
+        :return:
+        """
+        per_page = min(per_page, self._page_limit) if per_page else self._page_limit
+        if next_token:
+            return cd_client.list_object_children(DirectoryArn=self._dir_arn,
+                                                  ObjectReference={'Selector': object_ref},
+                                                  ConsistencyLevel='EVENTUAL',
+                                                  MaxResults=per_page,
+                                                  NextToken=next_token)
+        else:
+            return cd_client.list_object_children(DirectoryArn=self._dir_arn,
+                                                  ObjectReference={'Selector': object_ref},
+                                                  ConsistencyLevel='EVENTUAL',
+                                                  MaxResults=per_page,
+                                                  )
+
+    def list_object_children(self, object_ref: str) -> typing.Iterator[typing.Tuple[str, str]]:
+        """
+        a wrapper around CloudDirectory.Client.list_object_children
         """
         resp = cd_client.list_object_children(DirectoryArn=self._dir_arn,
                                               ObjectReference={'Selector': object_ref},
@@ -814,8 +839,8 @@ class CloudNode:
     Contains shared code across the different types of nodes stored in Fusillade CloudDirectory
     """
     _attributes = ["name"]  # the different attributes of a node stored
+    _facet = 'LeafNode'
     object_type = 'node'
-
     def __init__(self,
                  cloud_directory: CloudDirectory,
                  name: str = None,
@@ -1118,6 +1143,23 @@ class CloudNode:
                                        ResourceArns=["arn:aws:iam::123456789012:user/Bob"])
         except iam.exceptions.InvalidInputException:
             raise FusilladeHTTPException(status=400, title="Bad Request", detail="Invalid policy format.")
+
+    @classmethod
+    def list_all(cls, directory: CloudDirectory, next_token: str, per_page):
+        resp = directory.list_object_children_paged(f'/{cls.__name__.lower()}/', next_token, per_page)
+        operations = [directory.batch_get_attributes(
+            f'${obj_ref}',
+            cls._facet,
+            ['name'])
+            for obj_ref in resp["Children"].values()]
+        results = []
+        for r in directory.batch_read(operations)['Responses']:
+            if r.get('SuccessfulResponse'):
+                results.append(
+                    r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
+            else:
+                logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
+        return results, resp.get('NextToken')
 
 
 class User(CloudNode):

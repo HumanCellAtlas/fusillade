@@ -2,6 +2,8 @@ from flask import request, make_response, jsonify
 
 from fusillade import directory, Group
 from fusillade.utils.authorize import assert_authorized
+from fusillade.utils.paging import get_next_token, build_next_url, build_link_header
+
 
 def put_new_group(token_info: dict):
     json_body = request.json
@@ -13,8 +15,18 @@ def put_new_group(token_info: dict):
     return make_response(f"New role {json_body['group_id']} created.", 201)
 
 
-def get_groups():
-    pass
+def get_groups(token_info: dict):
+    assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
+                      ['fus:GetRole'],
+                      [f'arn:hca:fus:*:*:group'])
+    next_token, per_page = get_next_token(request.args)
+    result, next_token = Group.list_all(directory, next_token, per_page)
+    if next_token:
+        next_url = build_next_url(request.host, request.path, next_token, per_page)
+        headers = {'Link': build_link_header({next_url: {"rel": "next"}})}
+        return make_response(jsonify(result), 206, headers)
+    else:
+        return make_response(jsonify(result), 200)
 
 
 def get_group(token_info: dict, group_id: str):
@@ -32,6 +44,7 @@ def put_group_policy(token_info: dict, group_id: str):
     group = Group(directory, group_id)
     group.statement = request.json['policy']
     return make_response(f"{group_id} policy modified.", 200)
+
 
 def get_group_users(token_info: dict, group_id: str):
     assert_authorized(token_info['https://auth.data.humancellatlas.org/email'],
