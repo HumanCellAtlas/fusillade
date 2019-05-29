@@ -898,8 +898,7 @@ class CloudNode:
         return self.hash_name(parent_path + child_path)
         # links names must be unique between two objects
 
-    def _get_links(self, node: 'CloudNode',
-                   filter_attribute_range: typing.Optional[typing.List[dict]] = None,
+    def _get_links(self, node: typing.Type['CloudNode'],
                    paged=False,
                    NextToken=None,
                    per_page=None,
@@ -1454,11 +1453,8 @@ class Group(CloudNode):
         Retrieves the object_refs for all user in this group.
         :return: (user name, user object reference)
         """
-        filter_attribute_ranges = [
-        ]
         return self._get_links(
             User,
-            [],
             incoming=False, )
 
     def get_users_page(self, NextToken=None, per_page=None) -> typing.Tuple[typing.Dict, str]:
