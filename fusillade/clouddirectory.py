@@ -11,7 +11,7 @@ import os
 from dcplib.aws import clients as aws_clients
 import functools
 import json
-import typing
+from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, Type
 from collections import namedtuple
 from threading import Thread
 from concurrent.futures import Future
@@ -87,7 +87,7 @@ def publish_schema(name: str, version: str) -> str:
     return pub_schema_arn
 
 
-def create_directory(name: str, schema: str, admins: typing.List[str]) -> 'CloudDirectory':
+def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirectory':
     """
     Retrieve the fusillade cloud directory or do a one time setup of cloud directory to be used with fusillade.
 
@@ -130,7 +130,7 @@ def create_directory(name: str, schema: str, admins: typing.List[str]) -> 'Cloud
     return directory
 
 
-def _paging_loop(fn: typing.Callable, key: str, upack_response: typing.Callable, **kwarg):
+def _paging_loop(fn: Callable, key: str, upack_response: Callable, **kwarg):
     while True:
         resp = fn(**kwarg)
         for i in resp[key]:
@@ -140,7 +140,7 @@ def _paging_loop(fn: typing.Callable, key: str, upack_response: typing.Callable,
             break
 
 
-def list_directories(state: str = 'ENABLED') -> typing.Iterator:
+def list_directories(state: str = 'ENABLED') -> Iterator:
     def unpack_response(i):
         return i
 
@@ -193,31 +193,28 @@ class CloudDirectory:
         return self._schema
 
     def list_object_children_paged(self, object_ref: str,
-                                   NextToken: typing.Optional[str] = None,
-                                   per_page=None) -> typing.Tuple[typing.List[str], typing.Optional[str]]:
+                                   next_token: Optional[str] = None,
+                                   per_page=None) -> Tuple[dict, Optional[str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children with paging
 
         :param object_ref:
-        :param NextToken:
+        :param next_token:
         :param per_page:
         :return:
         """
-        per_page = min(per_page, self._page_limit) if per_page else self._page_limit
-        if NextToken:
-            return cd_client.list_object_children(DirectoryArn=self._dir_arn,
-                                                  ObjectReference={'Selector': object_ref},
-                                                  ConsistencyLevel='EVENTUAL',
-                                                  MaxResults=per_page,
-                                                  NextToken=NextToken)
-        else:
-            return cd_client.list_object_children(DirectoryArn=self._dir_arn,
-                                                  ObjectReference={'Selector': object_ref},
-                                                  ConsistencyLevel='EVENTUAL',
-                                                  MaxResults=per_page,
-                                                  )
+        kwargs = dict(
+            DirectoryArn=self._dir_arn,
+            ObjectReference={'Selector': object_ref},
+            ConsistencyLevel='EVENTUAL',
+            MaxResults=min(per_page, self._page_limit) if per_page else self._page_limit,
+        )
+        if next_token:
+            kwargs['NextToken'] = next_token
+        result = cd_client.list_object_children(**kwargs)
+        return result['Children'], result.get("NextToken")
 
-    def list_object_children(self, object_ref: str) -> typing.Iterator[typing.Tuple[str, str]]:
+    def list_object_children(self, object_ref: str) -> Iterator[Tuple[str, str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children
         """
@@ -228,22 +225,22 @@ class CloudDirectory:
         while True:
             for name, ref in resp['Children'].items():
                 yield name, '$' + ref
-            NextToken = resp.get('NextToken')
-            if NextToken:
+            next_token = resp.get('NextToken')
+            if next_token:
                 resp = cd_client.list_object_children(DirectoryArn=self._dir_arn,
                                                       ObjectReference={'Selector': object_ref},
-                                                      NextToken=NextToken,
+                                                      NextToken=next_token,
                                                       MaxResults=self._page_limit)
             else:
                 break
 
     def list_object_parents(self,
                             object_ref: str,
-                            IncludeAllLinksToEachParent: bool = True) -> typing.Iterator:
+                            include_all_links_to_each_parent: bool = True) -> Iterator:
         """
         a wrapper around CloudDirectory.Client.list_object_parents with paging
         """
-        if IncludeAllLinksToEachParent:
+        if include_all_links_to_each_parent:
             def unpack_response(i):
                 return '$' + i['ObjectIdentifier'], i['LinkName']
 
@@ -253,7 +250,7 @@ class CloudDirectory:
                                 DirectoryArn=self._dir_arn,
                                 ObjectReference={'Selector': object_ref},
                                 ConsistencyLevel='EVENTUAL',
-                                IncludeAllLinksToEachParent=IncludeAllLinksToEachParent,
+                                IncludeAllLinksToEachParent=include_all_links_to_each_parent,
                                 MaxResults=self._page_limit
                                 )
         else:
@@ -263,11 +260,11 @@ class CloudDirectory:
                                 DirectoryArn=self._dir_arn,
                                 ObjectReference={'Selector': object_ref},
                                 ConsistencyLevel='EVENTUAL',
-                                IncludeAllLinksToEachParent=IncludeAllLinksToEachParent,
+                                IncludeAllLinksToEachParent=include_all_links_to_each_parent,
                                 MaxResults=self._page_limit
                                 )
 
-    def list_object_policies(self, object_ref: str) -> typing.Iterator[str]:
+    def list_object_policies(self, object_ref: str) -> Iterator[str]:
         """
         a wrapper around CloudDirectory.Client.list_object_policies with paging
         """
@@ -279,7 +276,7 @@ class CloudDirectory:
                             MaxResults=self._page_limit
                             )
 
-    def list_policy_attachments(self, policy: str) -> typing.Iterator[str]:
+    def list_policy_attachments(self, policy: str) -> Iterator[str]:
         """
         a wrapper around CloudDirectory.Client.list_policy_attachments with paging
         """
@@ -292,15 +289,15 @@ class CloudDirectory:
                             )
 
     def _list_typed_links(self,
-                          func: typing.Callable,
+                          func: Callable,
                           key: str,
                           object_ref: str,
-                          filter_attribute_ranges: typing.Optional[typing.List],
-                          filter_typed_link: typing.Optional[str],
+                          filter_attribute_ranges: Optional[List],
+                          filter_typed_link: Optional[str],
                           paged=False,
                           per_page=None,
-                          NextToken=None,
-                          **kwargs) -> typing.Union[typing.Iterator[dict], typing.Tuple[typing.List[typing.Dict], str]]:
+                          next_token=None,
+                          **kwargs) -> Union[Iterator[dict], Tuple[List[Dict], str]]:
         def unpack_response(i):
             return i
 
@@ -316,8 +313,8 @@ class CloudDirectory:
                 'SchemaArn': self.schema,
                 'TypedLinkName': filter_typed_link
             }
-        if NextToken:
-            kwargs["NextToken"] = NextToken
+        if next_token:
+            kwargs["NextToken"] = next_token
         if paged:
             resp = func(**kwargs)
             return [i for i in resp[key]], resp.get("NextToken")
@@ -326,9 +323,9 @@ class CloudDirectory:
 
     def list_outgoing_typed_links(self,
                                   object_ref: str,
-                                  filter_attribute_ranges: typing.List = None,
+                                  filter_attribute_ranges: List = None,
                                   filter_typed_link: str = None,
-                                  **kwargs):
+                                  **kwargs) -> Iterator[dict]:
         """
         a wrapper around CloudDirectory.Client.list_outgoing_typed_links
 
@@ -344,9 +341,9 @@ class CloudDirectory:
     def list_incoming_typed_links(
             self,
             object_ref: str,
-            filter_attribute_ranges: typing.List = None,
+            filter_attribute_ranges: List = None,
             filter_typed_link: str = None,
-            **kwargs):
+            **kwargs) -> Iterator[dict]:
         """
         a wrapper around CloudDirectory.Client.list_incoming_typed_links
 
@@ -383,8 +380,8 @@ class CloudDirectory:
         object_ref = parent_path + link_name
         return object_ref
 
-    def get_object_attributes(self, obj_ref: str, facet: str, attributes: typing.List[str],
-                              schema=None) -> typing.Dict[str, str]:
+    def get_object_attributes(self, obj_ref: str, facet: str, attributes: List[str],
+                              schema=None) -> Dict[str, Any]:
         """
         a wrapper around CloudDirectory.Client.get_object_attributes
         """
@@ -399,14 +396,14 @@ class CloudDirectory:
                                                AttributeNames=attributes
                                                )
 
-    def get_object_attribute_list(self, facet="LeafFacet", **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
+    def get_object_attribute_list(self, facet="LeafFacet", **kwargs) -> List[Dict[str, Any]]:
         return [dict(Key=dict(SchemaArn=self.schema, FacetName=facet, Name=k), Value=dict(StringValue=v))
                 for k, v in kwargs.items()]
 
     def get_policy_attribute_list(self,
                                   policy_type: str,
                                   statement: str,
-                                  **kwargs) -> typing.List[typing.Dict[str, typing.Any]]:
+                                  **kwargs) -> List[Dict[str, Any]]:
         """
         policy_type and policy_document are required field for a policy object. See the section on Policies for more
         info https://docs.aws.amazon.com/clouddirectory/latest/developerguide/key_concepts_directory.html
@@ -432,13 +429,14 @@ class CloudDirectory:
 
     def update_object_attribute(self,
                                 object_ref: str,
-                                update_params: typing.List[UpdateObjectParams],
-                                schema=None) -> typing.Dict[str, typing.Any]:
+                                update_params: List[UpdateObjectParams],
+                                schema=None) -> Dict[str, Any]:
         """
         a wrapper around CloudDirectory.Client.update_object_attributes
 
         :param object_ref: The reference that identifies the object.
         :param update_params: a list of attributes to modify.
+        :param schema:
         :return:
         """
         if not schema:
@@ -484,7 +482,7 @@ class CloudDirectory:
             source: str,
             target: str,
             typed_link_facet: str,
-            attributes: typing.Dict[str, typing.Any]):
+            attributes: Dict[str, Any]):
         """
         a wrapper around CloudDirectory.Client.attach_typed_link
         """
@@ -503,7 +501,7 @@ class CloudDirectory:
             Attributes=attributes
         )
 
-    def detach_typed_link(self, typed_link_specifier: typing.Dict):
+    def detach_typed_link(self, typed_link_specifier: Dict[str, Any]):
         """
         a wrapper around CloudDirectory.Client.detach_typed_link
 
@@ -516,7 +514,7 @@ class CloudDirectory:
         )
 
     @staticmethod
-    def make_attributes(kwargs: typing.Dict) -> typing.List:
+    def make_attributes(kwargs: Dict[str, Any]) -> List:
         """
         A helper function used to create
         :param kwargs:
@@ -547,7 +545,7 @@ class CloudDirectory:
             source_object_ref: str,
             target_object_ref: str,
             typed_link_facet_name: str,
-            attributes: typing.Dict):
+            attributes: Dict[str, Any]):
         return {
             'SourceObjectReference': {
                 'Selector': source_object_ref
@@ -562,9 +560,9 @@ class CloudDirectory:
             'IdentityAttributeValues': self.make_attributes(attributes)
         }
 
-    def clear(self, users: typing.List[str] = None,
-              groups: typing.List[str] = None,
-              roles: typing.List[str] = None) -> None:
+    def clear(self, users: List[str] = None,
+              groups: List[str] = None,
+              roles: List[str] = None) -> None:
         """
 
         :param users: a list of users to keep
@@ -627,7 +625,7 @@ class CloudDirectory:
     def batch_create_object(self, parent: str,
                             name: str,
                             facet_name: str,
-                            object_attribute_list: typing.List[str]) -> typing.Dict[str, typing.Any]:
+                            object_attribute_list: List[str]) -> Dict[str, Any]:
         """
         A helper function to format a batch create_object operation
         """
@@ -646,7 +644,7 @@ class CloudDirectory:
         }
         }
 
-    def batch_get_attributes(self, obj_ref, facet, attributes: typing.List[str]) -> typing.Dict[str, typing.Any]:
+    def batch_get_attributes(self, obj_ref, facet, attributes: List[str]) -> Dict[str, Any]:
         """
         A helper function to format a batch get_attributes operation
         """
@@ -664,7 +662,7 @@ class CloudDirectory:
         }
 
     @staticmethod
-    def batch_attach_object(parent: str, child: str, name: str) -> typing.Dict[str, typing.Any]:
+    def batch_attach_object(parent: str, child: str, name: str) -> Dict[str, Any]:
         """
         A helper function to format a batch attach_object operation
         """
@@ -681,7 +679,7 @@ class CloudDirectory:
         }
 
     @staticmethod
-    def batch_detach_object(parent: str, link_name: str) -> typing.Dict[str, typing.Any]:
+    def batch_detach_object(parent: str, link_name: str) -> Dict[str, Any]:
         """
         A helper function to format a batch detach_object operation
         """
@@ -693,7 +691,7 @@ class CloudDirectory:
         }}
 
     @staticmethod
-    def batch_attach_policy(policy: str, object_ref: str) -> typing.Dict[str, typing.Any]:
+    def batch_attach_policy(policy: str, object_ref: str) -> Dict[str, Any]:
         """
         A helper function to format a batch attach_policy operation
         """
@@ -712,7 +710,7 @@ class CloudDirectory:
                                 parent: str,
                                 child: str,
                                 facet_name: str,
-                                attributes: typing.Dict) -> typing.Dict[str, typing.Any]:
+                                attributes: Dict[str, Any]) -> Dict[str, Any]:
         return {
             'AttachTypedLink': {
                 'SourceObjectReference': {
@@ -730,14 +728,14 @@ class CloudDirectory:
         }
 
     @staticmethod
-    def batch_detach_typed_link(typed_link_specifier) -> typing.Dict[str, typing.Any]:
+    def batch_detach_typed_link(typed_link_specifier) -> Dict[str, Any]:
         return {
             'DetachTypedLink': {
                 'TypedLinkSpecifier': typed_link_specifier
             },
         }
 
-    def batch_write(self, operations: list) -> typing.List[typing.Any]:
+    def batch_write(self, operations: list) -> List[dict]:
         """
         A wrapper around CloudDirectory.Client.batch_write
         """
@@ -749,7 +747,7 @@ class CloudDirectory:
                     Operations=operations[i:i + self._batch_write_max])['Responses'])
         return responses
 
-    def batch_read(self, operations: typing.List[typing.Dict[str, typing.Any]]) -> typing.Dict[str, typing.Any]:
+    def batch_read(self, operations: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         A wrapper around CloudDirectory.Client.batch_read
         """
@@ -765,7 +763,7 @@ class CloudDirectory:
                      role='/role/')
         return paths[obj_type]
 
-    def lookup_policy(self, object_id: str) -> typing.List[str]:
+    def lookup_policy(self, object_id: str) -> List[Dict[str, Any]]:
         # retrieve all of the policies attached to an object and its parents.
         policies_paths = [
             path
@@ -778,7 +776,7 @@ class CloudDirectory:
         ]
         return policies_paths
 
-    def get_policies(self, policy_paths: typing.List[str]) -> typing.List[str]:
+    def get_policies(self, policy_paths: List[Dict[str, Any]]) -> List[str]:
         # Parse the policyIds from the policies path. Only keep the unique ids
         policy_ids = set(
             [
@@ -812,7 +810,7 @@ class CloudDirectory:
         ]
         return policies
 
-    def get_object_information(self, obj_ref: str) -> typing.Dict[str, typing.Any]:
+    def get_object_information(self, obj_ref: str) -> Dict[str, Any]:
         """
         A wrapper around CloudDirectory.Client.get_object_information
         """
@@ -872,7 +870,7 @@ class CloudNode:
 
         :param cloud_directory:
         :param name:
-        :param object_reference:
+        :param object_ref:
         """
         self.log = logging.getLogger('.'.join([__name__, self.__class__.__name__]))
         if name and object_ref:
@@ -886,8 +884,8 @@ class CloudNode:
             self._path_name: str = None
             self.object_ref: str = object_ref
         self.cd: CloudDirectory = cloud_directory
-        self._policy: typing.Optional[str] = None
-        self._statement: typing.Optional[str] = None
+        self._policy: Optional[str] = None
+        self._statement: Optional[str] = None
 
     @staticmethod
     def hash_name(name):
@@ -898,9 +896,9 @@ class CloudNode:
         return self.hash_name(parent_path + child_path)
         # links names must be unique between two objects
 
-    def _get_links(self, node: typing.Type['CloudNode'],
+    def _get_links(self, node: Type['CloudNode'],
                    paged=False,
-                   NextToken=None,
+                   next_token=None,
                    per_page=None,
                    incoming=True):
         """
@@ -909,7 +907,7 @@ class CloudNode:
         """
         get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
         object_type = node.object_type
-        obj_ref = 'SourceObjectReference' if incoming else 'TargetObjectReference'
+        object_selection = 'SourceObjectReference' if incoming else 'TargetObjectReference'
         filter_attribute_ranges = [
             {
                 'AttributeName': 'parent_type',
@@ -941,11 +939,11 @@ class CloudNode:
             },
         ]
         if paged:
-            result, NextToken = get_links(self.object_ref, filter_attribute_ranges, 'association',
-                                          NextToken=NextToken, paged=paged, per_page=per_page)
+            result, next_token = get_links(self.object_ref, filter_attribute_ranges, 'association',
+                                           next_token=next_token, paged=paged, per_page=per_page)
             if result:
                 operations = [self.cd.batch_get_attributes(
-                    obj_ref[obj_ref]['Selector'],
+                    obj_ref[object_selection]['Selector'],
                     node._facet,
                     ['name'])
                     for obj_ref in result]
@@ -956,15 +954,15 @@ class CloudNode:
                             r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
                     else:
                         logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
-            return {f'{object_type}s': result}, NextToken
+            return {f'{object_type}s': result}, next_token
         else:
             return [
-                type_link[obj_ref]['Selector']
+                type_link[object_selection]['Selector']
                 for type_link in
                 get_links(self.object_ref, filter_attribute_ranges, 'association')
             ]
 
-    def _add_links_batch(self, links: typing.List[str], link_type: str):
+    def _add_links_batch(self, links: List[str], link_type: str):
         """
         Attaches links to this object in CloudDirectory.
         """
@@ -984,7 +982,7 @@ class CloudNode:
             )
         return operations
 
-    def _add_typed_links_batch(self, links: typing.List[str], link_type: str):
+    def _add_typed_links_batch(self, links: List[str], link_type: str):
         """
         Attaches links to this object in CloudDirectory.
         """
@@ -1009,7 +1007,7 @@ class CloudNode:
             )
         return operations
 
-    def _remove_links_batch(self, links: typing.List[str], link_type: str):
+    def _remove_links_batch(self, links: List[str], link_type: str):
         """
         Removes links from this object in CloudDirectory.
         """
@@ -1028,7 +1026,7 @@ class CloudNode:
             )
         return operations
 
-    def _remove_typed_links_batch(self, links: typing.List[str], link_type: str):
+    def _remove_typed_links_batch(self, links: List[str], link_type: str):
         """
         Removes links from this object in CloudDirectory.
         """
@@ -1049,7 +1047,7 @@ class CloudNode:
             operations.append(batch_detach_typed_link(typed_link_specifier))
         return operations
 
-    def lookup_policies(self) -> typing.List[str]:
+    def lookup_policies(self) -> List[str]:
         policy_paths = self.cd.lookup_policy(self.object_ref)
         return self.cd.get_policies(policy_paths)
 
@@ -1174,7 +1172,7 @@ class CloudNode:
 
         self._statement = None
 
-    def _get_attributes(self, attributes: typing.List[str]):
+    def _get_attributes(self, attributes: List[str]):
         """
         retrieve attributes for this from CloudDirectory and sets local private variables.
         """
@@ -1185,7 +1183,7 @@ class CloudNode:
         for attr in resp['Attributes']:
             self.__setattr__('_' + attr['Key']['Name'], attr['Value'].popitem()[1])
 
-    def get_attributes(self, attributes: typing.List[str]):
+    def get_attributes(self, attributes: List[str]):
         attrs = dict()
         if not attributes:
             return attrs
@@ -1212,13 +1210,10 @@ class CloudNode:
             raise FusilladeHTTPException(status=400, title="Bad Request", detail="Invalid policy format.")
 
     @classmethod
-    def list_all(cls, directory: CloudDirectory, NextToken: str, per_page):
-        resp = directory.list_object_children_paged(f'/{cls.object_type}/', NextToken, per_page)
-        operations = [directory.batch_get_attributes(
-            f'${obj_ref}',
-            cls._facet,
-            ['name'])
-            for obj_ref in resp["Children"].values()]
+    def list_all(cls, directory: CloudDirectory, next_token: str, per_page: int):
+        resp, next_token = directory.list_object_children_paged(f'/{cls.object_type}/', next_token, per_page)
+        operations = [directory.batch_get_attributes(f'${obj_ref}', cls._facet, ['name'])
+                      for obj_ref in resp.values()]
         results = []
         for r in directory.batch_read(operations)['Responses']:
             if r.get('SuccessfulResponse'):
@@ -1226,7 +1221,7 @@ class CloudNode:
                     r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
             else:
                 logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
-        return {f"{cls.object_type}s": results}, resp.get('NextToken')
+        return {f"{cls.object_type}s": results}, next_token
 
 
 class User(CloudNode):
@@ -1249,10 +1244,10 @@ class User(CloudNode):
                                    name=name,
                                    object_ref=object_ref)
         self._status = None
-        self._groups: typing.Optional[typing.List[str]] = None
-        self._roles: typing.Optional[typing.List[str]] = None
+        self._groups: Optional[List[str]] = None
+        self._roles: Optional[List[str]] = None
 
-    def lookup_policies(self) -> typing.List[str]:
+    def lookup_policies(self) -> List[str]:
         try:
             if self.groups:
                 policy_paths = self._lookup_policies_threaded()
@@ -1321,16 +1316,18 @@ class User(CloudNode):
             cls,
             cloud_directory: CloudDirectory,
             name: str,
-            statement: typing.Optional[str] = None,
-            roles: typing.List[str] = None,
-            groups: typing.List[str] = None,
+            statement: Optional[str] = None,
+            roles: List[str] = None,
+            groups: List[str] = None,
     ) -> 'User':
         """
         Creates a user in cloud directory if the users does not already exists.
 
-        :param statement: A policy to apply to the user.
-        :param roles: a list of roles to add to user
-        :param groups: a list of groups to add the user to.
+        :param cloud_directory:
+        :param name:
+        :param statement:
+        :param roles:
+        :param groups:
         :return:
         """
         user = cls(cloud_directory, name)
@@ -1361,15 +1358,15 @@ class User(CloudNode):
         return user
 
     @property
-    def groups(self) -> typing.List[str]:
+    def groups(self) -> List[str]:
         if not self._groups:
             self._groups = self._get_links(Group)
         return self._groups
 
-    def get_groups(self, NextToken=None, per_page=None):
-        return self._get_links(Group, paged=True, NextToken=NextToken, per_page=per_page)
+    def get_groups(self, next_token: str = None, per_page: int = None):
+        return self._get_links(Group, paged=True, next_token=next_token, per_page=per_page)
 
-    def add_groups(self, groups: typing.List[str]):
+    def add_groups(self, groups: List[str]):
         operations = []
         operations.extend(self._add_typed_links_batch(groups, Group.object_type))
         self.cd.batch_write(operations)
@@ -1378,7 +1375,7 @@ class User(CloudNode):
                            object=dict(type=self.object_type, path_name=self._path_name),
                            groups=groups))
 
-    def remove_groups(self, groups: typing.List[str]):
+    def remove_groups(self, groups: List[str]):
         operations = []
         operations.extend(self._remove_typed_links_batch(groups, Group.object_type))
         self.cd.batch_write(operations)
@@ -1388,15 +1385,15 @@ class User(CloudNode):
                            groups=groups))
 
     @property
-    def roles(self) -> typing.List[str]:
+    def roles(self) -> List[str]:
         if not self._roles:
             self._roles = self._get_links(Role)
         return self._roles
 
-    def get_roles(self, NextToken=None, per_page=None):
-        return self._get_links(Role, paged=True, NextToken=NextToken, per_page=per_page)
+    def get_roles(self, next_token: str = None, per_page: str = None):
+        return self._get_links(Role, paged=True, next_token=next_token, per_page=per_page)
 
-    def add_roles(self, roles: typing.List[str]):
+    def add_roles(self, roles: List[str]):
         operations = []
         operations.extend(self._add_links_batch(roles, Role.object_type))
         operations.extend(self._add_typed_links_batch(roles, Role.object_type))
@@ -1406,7 +1403,7 @@ class User(CloudNode):
                            object=dict(type=self.object_type, path_name=self._path_name),
                            roles=roles))
 
-    def remove_roles(self, roles: typing.List[str]):
+    def remove_roles(self, roles: List[str]):
         operations = []
         operations.extend(self._remove_links_batch(roles, Role.object_type))
         operations.extend(self._remove_typed_links_batch(roles, Role.object_type))
@@ -1438,7 +1435,7 @@ class Group(CloudNode):
     def create(cls,
                cloud_directory: CloudDirectory,
                name: str,
-               statement: typing.Optional[str] = None) -> 'Group':
+               statement: Optional[str] = None) -> 'Group':
         if not statement:
             statement = get_json_file(default_group_policy_path)
         cls._verify_statement(statement)
@@ -1449,16 +1446,16 @@ class Group(CloudNode):
         new_node._set_statement(statement)
         return new_node
 
-    def get_users_iter(self) -> typing.List[str]:
+    def get_users_iter(self) -> List[str]:
         """
         Retrieves the object_refs for all user in this group.
         :return: (user name, user object reference)
         """
         return self._get_links(
             User,
-            incoming=False, )
+            incoming=False)
 
-    def get_users_page(self, NextToken=None, per_page=None) -> typing.Tuple[typing.Dict, str]:
+    def get_users_page(self, next_token=None, per_page=None) -> Tuple[Dict, str]:
         """
         Retrieves the object_refs for all user in this group.
         :return: (user name, user object reference)
@@ -1468,7 +1465,7 @@ class Group(CloudNode):
             paged=True,
             per_page=per_page,
             incoming=False,
-            NextToken=NextToken)
+            next_token=next_token)
 
     @property
     def roles(self):
@@ -1476,10 +1473,10 @@ class Group(CloudNode):
             self._roles = self._get_links(Role)
         return self._roles
 
-    def get_roles(self, NextToken=None, per_page=None):
-        return self._get_links(Role, paged=True, NextToken=NextToken, per_page=per_page)
+    def get_roles(self, next_token: str = None, per_page: int = None):
+        return self._get_links(Role, paged=True, next_token=next_token, per_page=per_page)
 
-    def add_roles(self, roles: typing.List[str]):
+    def add_roles(self, roles: List[str]):
         operations = []
         operations.extend(self._add_links_batch(roles, Role.object_type))
         operations.extend(self._add_typed_links_batch(roles, Role.object_type))
@@ -1489,7 +1486,7 @@ class Group(CloudNode):
                            object=dict(type=self.object_type, path_name=self._path_name),
                            roles=roles))
 
-    def remove_roles(self, roles: typing.List[str]):
+    def remove_roles(self, roles: List[str]):
         operations = []
         operations.extend(self._remove_links_batch(roles, Role.object_type))
         operations.extend(self._remove_typed_links_batch(roles, Role.object_type))
@@ -1499,7 +1496,7 @@ class Group(CloudNode):
                            object=dict(type=self.object_type, path_name=self._path_name),
                            roles=roles))
 
-    def add_users(self, users: typing.List[User]) -> None:
+    def add_users(self, users: List[User]) -> None:
         if users:
             operations = [
                 self.cd.batch_attach_typed_link(
@@ -1517,7 +1514,7 @@ class Group(CloudNode):
                                object=dict(type=self.object_type, path_name=self._path_name),
                                users=[user._path_name for user in users]))
 
-    def remove_users(self, users: typing.List[str]) -> None:
+    def remove_users(self, users: List[str]) -> None:
         """
         Removes users from this group.
 
@@ -1545,7 +1542,7 @@ class Role(CloudNode):
     def create(cls,
                cloud_directory: CloudDirectory,
                name: str,
-               statement: typing.Optional[str] = None) -> 'Role':
+               statement: Optional[str] = None) -> 'Role':
         if not statement:
             statement = get_json_file(default_role_path)
         cls._verify_statement(statement)
