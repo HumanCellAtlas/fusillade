@@ -896,7 +896,7 @@ class CloudNode:
         based on the link name
         """
         get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
-        object_type=node.object_type
+        object_type = node.object_type
         filter_attribute_ranges = [
             {
                 'AttributeName': 'parent_type' if incoming else 'child_type',
