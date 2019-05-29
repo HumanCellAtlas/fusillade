@@ -815,6 +815,7 @@ class CloudNode:
     """
     _attributes = ["name"]  # the different attributes of a node stored
     object_type = 'node'
+
     def __init__(self,
                  cloud_directory: CloudDirectory,
                  name: str = None,
@@ -1128,6 +1129,7 @@ class User(CloudNode):
     default_groups = []  # TODO: make configurable
     _facet = 'LeafFacet'
     object_type = 'user'
+
     def __init__(self, cloud_directory: CloudDirectory, name: str = None, object_ref: str = None):
         """
 
@@ -1306,6 +1308,7 @@ class Group(CloudNode):
     """
     _facet = 'LeafFacet'
     object_type = 'group'
+
     def __init__(self, cloud_directory: CloudDirectory, name: str = None, object_ref: str = None):
         """
 
@@ -1405,6 +1408,7 @@ class Role(CloudNode):
     """
     _facet = 'NodeFacet'
     object_type = 'role'
+
     def __init__(self, cloud_directory: CloudDirectory, name: str = None, object_ref: str = None):
         super(Role, self).__init__(cloud_directory, name=name, object_ref=object_ref)
 
