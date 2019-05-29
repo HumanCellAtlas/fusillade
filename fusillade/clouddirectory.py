@@ -909,6 +909,7 @@ class CloudNode:
         """
         get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
         object_type = node.object_type
+        obj_ref = 'SourceObjectReference' if incoming else 'TargetObjectReference'
         filter_attribute_ranges = [
             {
                 'AttributeName': 'parent_type',
@@ -944,7 +945,7 @@ class CloudNode:
                                           NextToken=NextToken, paged=paged, per_page=per_page)
             if result:
                 operations = [self.cd.batch_get_attributes(
-                    obj_ref['SourceObjectReference' if incoming else 'TargetObjectReference']['Selector'],
+                    obj_ref[obj_ref]['Selector'],
                     node._facet,
                     ['name'])
                     for obj_ref in result]
@@ -958,7 +959,7 @@ class CloudNode:
             return {f'{object_type}s': result}, NextToken
         else:
             return [
-                type_link['SourceObjectReference']['Selector']
+                type_link[obj_ref]['Selector']
                 for type_link in
                 get_links(self.object_ref, filter_attribute_ranges, 'association')
             ]
