@@ -2,7 +2,7 @@
 # coding: utf-8
 
 """
-Functional Test of the API
+Functional Test of the Authn
 """
 import base64
 import json
