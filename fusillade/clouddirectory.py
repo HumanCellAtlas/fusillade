@@ -61,7 +61,7 @@ def cleanup_schema(sch_arn: str) -> None:
     logger.warning({"message": "Deleted schema", "schema_arn": sch_arn})
 
 
-def publish_schema(name: str, Version: str, MinorVersion: str) -> str:
+def publish_schema(name: str, Version: str, MinorVersion: str = '0') -> str:
     """
     More info about schemas
     https://docs.aws.amazon.com/clouddirectory/latest/developerguide/schemas.html
@@ -78,7 +78,8 @@ def publish_schema(name: str, Version: str, MinorVersion: str) -> str:
     cd_client.put_schema_from_json(SchemaArn=dev_schema_arn, Document=schema)
     try:
         pub_schema_arn = cd_client.publish_schema(DevelopmentSchemaArn=dev_schema_arn,
-                                                  Version=Version)['PublishedSchemaArn']
+                                                  Version=Version,
+                                                  MinorVersion=MinorVersion)['PublishedSchemaArn']
         logger.info({"message": "Published development schema",
                      "developement_schema_arn": dev_schema_arn,
                      "published_schema_arn": pub_schema_arn})
