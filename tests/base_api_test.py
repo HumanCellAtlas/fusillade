@@ -42,9 +42,11 @@ class BaseAPITest():
     @classmethod
     def tearDownClass(cls):
         cls.clear_directory()
-        if not integration and old_directory_name:
+
+        if not integration:
             cleanup_directory(directory._dir_arn)
-            os.environ["FUSILLADE_DIR"] = old_directory_name
+            if old_directory_name:
+                os.environ["FUSILLADE_DIR"] = old_directory_name
 
     def _test_paging(self, url, headers, per_page, key):
         url = furl(url, query_params={'per_page': per_page})
