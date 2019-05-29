@@ -84,7 +84,7 @@ def publish_schema(name: str, Version: str, MinorVersion: str = '0') -> str:
                      "developement_schema_arn": dev_schema_arn,
                      "published_schema_arn": pub_schema_arn})
     except cd_client.exceptions.SchemaAlreadyPublishedException:
-        pub_schema_arn = f"{project_arn}schema/published/{name}/{Version}"
+        pub_schema_arn = f"{project_arn}schema/published/{name}/{Version}/{MinorVersion}"
     return pub_schema_arn
 
 
