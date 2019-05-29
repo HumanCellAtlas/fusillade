@@ -1464,7 +1464,6 @@ class Group(CloudNode):
         """
         return self._get_links(
             User,
-            [],
             paged=True,
             per_page=per_page,
             incoming=False,
