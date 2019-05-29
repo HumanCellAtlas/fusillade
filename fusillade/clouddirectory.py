@@ -130,7 +130,7 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
     return directory
 
 
-def _paging_loop(fn: Callable, key: str, upack_response: Optional[Callable]=None, **kwarg):
+def _paging_loop(fn: Callable, key: str, upack_response: Optional[Callable] = None, **kwarg):
     while True:
         resp = fn(**kwarg)
         for i in resp[key]:
