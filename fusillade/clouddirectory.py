@@ -921,25 +921,25 @@ class CloudNode:
                 }
             }
         ] if incoming else [
-        {
-            'AttributeName': 'parent_type',
-            'Range': {
-                'StartMode': 'INCLUSIVE',
-                'StartValue': {'StringValue': self.object_type},
-                'EndMode': 'INCLUSIVE',
-                'EndValue': {'StringValue': self.object_type}
-            }
-        },
-        {
-            'AttributeName': 'child_type',
-            'Range': {
-                'StartMode': 'INCLUSIVE',
-                'StartValue': {'StringValue': object_type},
-                'EndMode': 'INCLUSIVE',
-                'EndValue': {'StringValue': object_type}
-            }
-        },
-    ]
+            {
+                'AttributeName': 'parent_type',
+                'Range': {
+                    'StartMode': 'INCLUSIVE',
+                    'StartValue': {'StringValue': self.object_type},
+                    'EndMode': 'INCLUSIVE',
+                    'EndValue': {'StringValue': self.object_type}
+                }
+            },
+            {
+                'AttributeName': 'child_type',
+                'Range': {
+                    'StartMode': 'INCLUSIVE',
+                    'StartValue': {'StringValue': object_type},
+                    'EndMode': 'INCLUSIVE',
+                    'EndValue': {'StringValue': object_type}
+                }
+            },
+        ]
         if paged:
             result, NextToken = get_links(self.object_ref, filter_attribute_ranges, 'association',
                                           NextToken=NextToken, paged=paged, per_page=per_page)
@@ -1459,7 +1459,7 @@ class Group(CloudNode):
         return self._get_links(
             User,
             [],
-            incoming=False,)
+            incoming=False, )
 
     def get_users_page(self, NextToken=None, per_page=None) -> typing.Tuple[typing.Dict, str]:
         """

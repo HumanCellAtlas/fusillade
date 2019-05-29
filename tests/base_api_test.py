@@ -57,6 +57,7 @@ class BaseAPITest():
         resp = self.app.get(next_url, headers=headers)
         self.assertEqual(200, resp.status_code)
         self.assertFalse("Link" in resp.headers)
-        self.assertEqual(len(json.loads(resp.body)[key]), per_page)
-        result.extend(json.loads(resp.body)[key])
+        next_results = json.loads(resp.body)[key]
+        self.assertEqual(len(next_results), per_page)
+        result.extend(next_results)
         return result
