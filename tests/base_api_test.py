@@ -46,17 +46,17 @@ class BaseAPITest():
             cleanup_directory(directory._dir_arn)
             os.environ["FUSILLADE_DIR"] = old_directory_name
 
-    def _test_paging(self, url, headers, per_page):
+    def _test_paging(self, url, headers, per_page, key):
         url = furl(url, query_params={'per_page': per_page})
         resp = self.app.get(url.url, headers=headers)
         self.assertEqual(206, resp.status_code)
-        self.assertEqual(per_page, len(json.loads(resp.body)))
+        self.assertEqual(per_page, len(json.loads(resp.body)[key]))
         self.assertTrue("Link" in resp.headers)
-        result = json.loads(resp.body)
+        result = json.loads(resp.body)[key]
         next_url = resp.headers['Link'].split(';')[0][1:-1]
         resp = self.app.get(next_url, headers=headers)
         self.assertEqual(200, resp.status_code)
         self.assertFalse("Link" in resp.headers)
-        self.assertEqual(len(json.loads(resp.body)), per_page)
-        result.extend(json.loads(resp.body))
+        self.assertEqual(len(json.loads(resp.body)[key]), per_page)
+        result.extend(json.loads(resp.body)[key])
         return result

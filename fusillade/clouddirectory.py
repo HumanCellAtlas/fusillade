@@ -896,14 +896,15 @@ class CloudNode:
         based on the link name
         """
         get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
+        object_type=node.object_type
         filter_attribute_ranges = [
             {
-                'AttributeName': 'parent_type',
+                'AttributeName': 'parent_type' if incoming else 'child_type',
                 'Range': {
                     'StartMode': 'INCLUSIVE',
-                    'StartValue': {'StringValue': node.object_type},
+                    'StartValue': {'StringValue': object_type},
                     'EndMode': 'INCLUSIVE',
-                    'EndValue': {'StringValue': node.object_type}
+                    'EndValue': {'StringValue': object_type}
                 }
             }
         ]
@@ -923,7 +924,7 @@ class CloudNode:
                             r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
                     else:
                         logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
-            return result, next_token
+            return {f'{object_type}s': result}, next_token
         else:
             return [
                 type_link['SourceObjectReference']['Selector']
@@ -1193,7 +1194,7 @@ class CloudNode:
                     r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
             else:
                 logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
-        return results, resp.get('NextToken')
+        return {f"{cls.object_type}s": results}, resp.get('NextToken')
 
 
 class User(CloudNode):

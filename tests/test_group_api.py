@@ -143,7 +143,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
 
             )
             self.assertEqual(201, resp.status_code)
-        self._test_paging('/v1/groups', headers, 5)
+        self._test_paging('/v1/groups', headers, 5, 'groups')
 
     def test_put_group_roles(self):
         tests = [
@@ -189,27 +189,27 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         name = "Group1"
+        key = 'roles'
         group = Group.create(directory,name)
         resp = self.app.get(f'/v1/groups/{name}/roles', headers=headers)
         group_role_names = [Role(directory, None, role).name for role in group.roles]
-        self.assertEqual(0, len(json.loads(resp.body)))
+        self.assertEqual(0, len(json.loads(resp.body)[key]))
         roles = [Role.create(directory, f"role_{i}").name for i in range(10)]
         group.add_roles(roles)
-        self._test_paging(f'/v1/groups/{name}/roles', headers, 5)
+        self._test_paging(f'/v1/groups/{name}/roles', headers, 5, key)
 
-
-    @unittest.skip("Incomplete - need to add the paging for groups")
     def test_get_group_users(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         name = "Group1"
+        key = 'users'
         group = Group.create(directory,name)
         resp = self.app.get(f'/v1/groups/{name}/users', headers=headers)
         group_user_names = [User(directory,user).name for user in group.get_users()]
-        self.assertEqual(0, len(json.loads(resp.body)['users']))
+        self.assertEqual(0, len(json.loads(resp.body)[key]))
         users = [User.provision_user(directory, f"user_{i}",groups=[name]).name for i in range(10)]
         group.add_roles(users)
-        self._test_paging(f'/v1/groups/{name}/users', headers, 5)
+        self._test_paging(f'/v1/groups/{name}/users', headers, 5, key)
 
 if __name__ == '__main__':
     unittest.main()

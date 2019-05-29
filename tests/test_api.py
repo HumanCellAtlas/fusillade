@@ -109,7 +109,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
             with self.subTest("Error return when invalid host is provided in header."):
                 host = 'localhost:8080'
                 resp = self.app.get('/.well-known/openid-configuration', headers={'host': host})
-                self.assertEqual(403, resp.status_code)
+                self.assertEqual(400, resp.status_code)
 
     def test_serve_jwks_json(self):
         resp = self.app.get('/.well-known/jwks.json')

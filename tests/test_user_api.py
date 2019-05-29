@@ -143,7 +143,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 data=json.dumps({"user_id": f"test_put_user{i}@email.com"})
             )
             self.assertEqual(201, resp.status_code)
-        self._test_paging(f'/v1/users', headers, 6)
+        self._test_paging(f'/v1/users', headers, 6, 'users')
 
     def test_get_user(self):
         headers = {'Content-Type': "application/json"}
@@ -231,12 +231,13 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         name = "test_user_group_api@email.com"
+        key = 'groups'
         user = User.provision_user(directory, name)
         resp = self.app.get(f'/v1/users/{name}/groups', headers=headers)
-        self.assertEqual(0, len(json.loads(resp.body)))
+        self.assertEqual(0, len(json.loads(resp.body)[key]))
         groups = [Group.create(directory, f"group_{i}").name for i in range(10)]
         user.add_groups(groups)
-        self._test_paging(f'/v1/users/{name}/groups', headers, 5)
+        self._test_paging(f'/v1/users/{name}/groups', headers, 5, key)
 
     def test_put_username_roles(self):
         tests = [
@@ -282,14 +283,15 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         name = "test_user_role_api@email.com"
+        key = 'roles'
         user = User.provision_user(directory, name)
         resp = self.app.get(f'/v1/users/{name}/roles', headers=headers)
         user_role_names = [Role(directory, None, role).name for role in user.roles]
-        self.assertEqual(1, len(json.loads(resp.body)))
+        self.assertEqual(1, len(json.loads(resp.body)[key]))
         self.assertEqual(user_role_names, ['default_user'])
         roles = [Role.create(directory, f"role_{i}").name for i in range(11)]
         user.add_roles(roles)
-        self._test_paging(f'/v1/users/{name}/roles', headers, 6)
+        self._test_paging(f'/v1/users/{name}/roles', headers, 6, key)
 
 if __name__ == '__main__':
     unittest.main()

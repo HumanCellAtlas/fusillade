@@ -88,7 +88,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
 
             )
             self.assertEqual(201, resp.status_code)
-        self._test_paging(f'/v1/roles', headers, 6)
+        self._test_paging(f'/v1/roles', headers, 6, 'roles')
 
     def test_put_role(self):
         url = furl('/v1/roles')
