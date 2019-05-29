@@ -61,7 +61,7 @@ def cleanup_schema(sch_arn: str) -> None:
     logger.warning({"message": "Deleted schema", "schema_arn": sch_arn})
 
 
-def publish_schema(name: str, Version: str , MinorVersion: str) -> str:
+def publish_schema(name: str, Version: str, MinorVersion: str) -> str:
     """
     More info about schemas
     https://docs.aws.amazon.com/clouddirectory/latest/developerguide/schemas.html
