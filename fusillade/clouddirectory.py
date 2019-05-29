@@ -463,7 +463,7 @@ class CloudDirectory:
             Attributes=attributes
         )
 
-    def detach_typed_link(self, typed_link_specifier: Dict):
+    def detach_typed_link(self, typed_link_specifier: Dict[str, Any]):
         """
         a wrapper around CloudDirectory.Client.detach_typed_link
 
@@ -476,7 +476,7 @@ class CloudDirectory:
         )
 
     @staticmethod
-    def make_attributes(kwargs: Dict) -> List:
+    def make_attributes(kwargs: Dict[str, Any]) -> List:
         """
         A helper function used to create
         :param kwargs:
@@ -507,7 +507,7 @@ class CloudDirectory:
             source_object_ref: str,
             target_object_ref: str,
             typed_link_facet_name: str,
-            attributes: Dict):
+            attributes: Dict[str, Any]):
         return {
             'SourceObjectReference': {
                 'Selector': source_object_ref
@@ -672,7 +672,7 @@ class CloudDirectory:
                                 parent: str,
                                 child: str,
                                 facet_name: str,
-                                attributes: Dict) -> Dict[str, Any]:
+                                attributes: Dict[str, Any]) -> Dict[str, Any]:
         return {
             'AttachTypedLink': {
                 'SourceObjectReference': {
@@ -719,7 +719,7 @@ class CloudDirectory:
                      role='/role/')
         return paths[obj_type]
 
-    def lookup_policy(self, object_id: str) -> List[Dict]:
+    def lookup_policy(self, object_id: str) -> List[Dict[str, Any]]:
         # retrieve all of the policies attached to an object and its parents.
         policies_paths = [
             path
@@ -732,7 +732,7 @@ class CloudDirectory:
         ]
         return policies_paths
 
-    def get_policies(self, policy_paths: List[Dict[Any]]) -> List[str]:
+    def get_policies(self, policy_paths: List[Dict[str, Any]]) -> List[str]:
         # Parse the policyIds from the policies path. Only keep the unique ids
         policy_ids = set(
             [
