@@ -205,10 +205,9 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
         key = 'users'
         group = Group.create(directory,name)
         resp = self.app.get(f'/v1/groups/{name}/users', headers=headers)
-        group_user_names = [User(directory,user).name for user in group.get_users()]
+        group_user_names = [User(directory,user).name for user in group.get_users_iter()]
         self.assertEqual(0, len(json.loads(resp.body)[key]))
         users = [User.provision_user(directory, f"user_{i}",groups=[name]).name for i in range(10)]
-        group.add_roles(users)
         self._test_paging(f'/v1/groups/{name}/users', headers, 5, key)
 
 if __name__ == '__main__':

@@ -46,7 +46,7 @@ def get_group_users(token_info: dict, group_id: str):
                       [f'arn:hca:fus:*:*:group/{group_id}/users'])
     next_token, per_page = get_next_token(request.args)
     group = Group(directory, group_id)
-    return get_page(group.get_users, next_token, per_page)
+    return get_page(group.get_users_page, next_token, per_page)
 
 
 def get_groups_roles(token_info: dict, group_id: str):

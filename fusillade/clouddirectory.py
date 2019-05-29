@@ -166,6 +166,7 @@ class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute',
 
 class CloudDirectory:
     _page_limit = 30  # This is the max allowed by AWS
+    _batch_write_max = 20  # This is the max allowed by AWS
 
     def __init__(self, directory_arn: str):
         self._dir_arn = directory_arn
@@ -192,23 +193,23 @@ class CloudDirectory:
         return self._schema
 
     def list_object_children_paged(self, object_ref: str,
-                                   next_token: typing.Optional[str] = None,
+                                   NextToken: typing.Optional[str] = None,
                                    per_page=None) -> typing.Tuple[typing.List[str], typing.Optional[str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children with paging
 
         :param object_ref:
-        :param next_token:
+        :param NextToken:
         :param per_page:
         :return:
         """
         per_page = min(per_page, self._page_limit) if per_page else self._page_limit
-        if next_token:
+        if NextToken:
             return cd_client.list_object_children(DirectoryArn=self._dir_arn,
                                                   ObjectReference={'Selector': object_ref},
                                                   ConsistencyLevel='EVENTUAL',
                                                   MaxResults=per_page,
-                                                  NextToken=next_token)
+                                                  NextToken=NextToken)
         else:
             return cd_client.list_object_children(DirectoryArn=self._dir_arn,
                                                   ObjectReference={'Selector': object_ref},
@@ -227,11 +228,11 @@ class CloudDirectory:
         while True:
             for name, ref in resp['Children'].items():
                 yield name, '$' + ref
-            next_token = resp.get('NextToken')
-            if next_token:
+            NextToken = resp.get('NextToken')
+            if NextToken:
                 resp = cd_client.list_object_children(DirectoryArn=self._dir_arn,
                                                       ObjectReference={'Selector': object_ref},
-                                                      NextToken=next_token,
+                                                      NextToken=NextToken,
                                                       MaxResults=self._page_limit)
             else:
                 break
@@ -298,6 +299,7 @@ class CloudDirectory:
                           filter_typed_link: typing.Optional[str],
                           paged=False,
                           per_page=None,
+                          NextToken=None,
                           **kwargs) -> typing.Union[typing.Iterator[dict], typing.Tuple[typing.List[typing.Dict], str]]:
         def unpack_response(i):
             return i
@@ -314,9 +316,9 @@ class CloudDirectory:
                 'SchemaArn': self.schema,
                 'TypedLinkName': filter_typed_link
             }
+        if NextToken:
+            kwargs["NextToken"] = NextToken
         if paged:
-            if not kwargs["NextToken"]:
-                kwargs.pop("NextToken")
             resp = func(**kwargs)
             return [i for i in resp[key]], resp.get("NextToken")
         else:
@@ -735,11 +737,17 @@ class CloudDirectory:
             },
         }
 
-    def batch_write(self, operations: list) -> typing.Dict[str, typing.Any]:
+    def batch_write(self, operations: list) -> typing.List[typing.Any]:
         """
         A wrapper around CloudDirectory.Client.batch_write
         """
-        return cd_client.batch_write(DirectoryArn=self._dir_arn, Operations=operations)
+        responses = []
+        for i in range(0, len(operations), self._batch_write_max):
+            responses.extend(
+                cd_client.batch_write(
+                    DirectoryArn=self._dir_arn,
+                    Operations=operations[i:i + self._batch_write_max])['Responses'])
+        return responses
 
     def batch_read(self, operations: typing.List[typing.Dict[str, typing.Any]]) -> typing.Dict[str, typing.Any]:
         """
@@ -890,7 +898,12 @@ class CloudNode:
         return self.hash_name(parent_path + child_path)
         # links names must be unique between two objects
 
-    def _get_links(self, node: 'CloudNode', paged=False, NextToken=None, per_page=None, incoming=True):
+    def _get_links(self, node: 'CloudNode',
+                   filter_attribute_range: typing.Optional[typing.List[dict]] = None,
+                   paged=False,
+                   NextToken=None,
+                   per_page=None,
+                   incoming=True):
         """
         Retrieves the links attached to this object from CloudDirectory and separates them into groups and roles
         based on the link name
@@ -899,7 +912,7 @@ class CloudNode:
         object_type = node.object_type
         filter_attribute_ranges = [
             {
-                'AttributeName': 'parent_type' if incoming else 'child_type',
+                'AttributeName': 'parent_type',
                 'Range': {
                     'StartMode': 'INCLUSIVE',
                     'StartValue': {'StringValue': object_type},
@@ -907,13 +920,32 @@ class CloudNode:
                     'EndValue': {'StringValue': object_type}
                 }
             }
-        ]
+        ] if incoming else [
+        {
+            'AttributeName': 'parent_type',
+            'Range': {
+                'StartMode': 'INCLUSIVE',
+                'StartValue': {'StringValue': self.object_type},
+                'EndMode': 'INCLUSIVE',
+                'EndValue': {'StringValue': self.object_type}
+            }
+        },
+        {
+            'AttributeName': 'child_type',
+            'Range': {
+                'StartMode': 'INCLUSIVE',
+                'StartValue': {'StringValue': object_type},
+                'EndMode': 'INCLUSIVE',
+                'EndValue': {'StringValue': object_type}
+            }
+        },
+    ]
         if paged:
-            result, next_token = get_links(self.object_ref, filter_attribute_ranges, 'association',
-                                           NextToken=NextToken, paged=paged, per_page=per_page)
+            result, NextToken = get_links(self.object_ref, filter_attribute_ranges, 'association',
+                                          NextToken=NextToken, paged=paged, per_page=per_page)
             if result:
                 operations = [self.cd.batch_get_attributes(
-                    obj_ref['SourceObjectReference']['Selector'],
+                    obj_ref['SourceObjectReference' if incoming else 'TargetObjectReference']['Selector'],
                     node._facet,
                     ['name'])
                     for obj_ref in result]
@@ -924,7 +956,7 @@ class CloudNode:
                             r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
                     else:
                         logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
-            return {f'{object_type}s': result}, next_token
+            return {f'{object_type}s': result}, NextToken
         else:
             return [
                 type_link['SourceObjectReference']['Selector']
@@ -1180,8 +1212,8 @@ class CloudNode:
             raise FusilladeHTTPException(status=400, title="Bad Request", detail="Invalid policy format.")
 
     @classmethod
-    def list_all(cls, directory: CloudDirectory, next_token: str, per_page):
-        resp = directory.list_object_children_paged(f'/{cls.__name__.lower()}/', next_token, per_page)
+    def list_all(cls, directory: CloudDirectory, NextToken: str, per_page):
+        resp = directory.list_object_children_paged(f'/{cls.__name__.lower()}/', NextToken, per_page)
         operations = [directory.batch_get_attributes(
             f'${obj_ref}',
             cls._facet,
@@ -1362,7 +1394,7 @@ class User(CloudNode):
         return self._roles
 
     def get_roles(self, NextToken=None, per_page=None):
-        return self._get_links(Role, paged=True, NextToken=NextToken, per_page=per_page, incoming=False)
+        return self._get_links(Role, paged=True, NextToken=NextToken, per_page=per_page)
 
     def add_roles(self, roles: typing.List[str]):
         operations = []
@@ -1417,20 +1449,30 @@ class Group(CloudNode):
         new_node._set_statement(statement)
         return new_node
 
-    def get_users(self, NextToken=None) -> typing.Tuple[typing.List[dict], str]:
+    def get_users_iter(self) -> typing.List[str]:
         """
         Retrieves the object_refs for all user in this group.
         :return: (user name, user object reference)
         """
         filter_attribute_ranges = [
         ]
-        return self.cd.list_outgoing_typed_links(
-            self.object_ref,
-            filter_attribute_ranges,
-            'association',
+        return self._get_links(
+            User,
+            [],
+            incoming=False,)
+
+    def get_users_page(self, NextToken=None, per_page=None) -> typing.Tuple[typing.Dict, str]:
+        """
+        Retrieves the object_refs for all user in this group.
+        :return: (user name, user object reference)
+        """
+        return self._get_links(
+            User,
+            [],
             paged=True,
-            NextToken=NextToken
-        )
+            per_page=per_page,
+            incoming=False,
+            NextToken=NextToken)
 
     @property
     def roles(self):
