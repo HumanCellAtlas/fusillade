@@ -8,7 +8,7 @@ def get_page(func, next_token, per_page, *args):
     else:
         result, next_token = func(next_token, per_page)
     if next_token:
-        next_url = build_next_url(request.host, request.path, next_token, per_page)
+        next_url = build_next_url(next_token, per_page)
         headers = {'Link': build_link_header({next_url: {"rel": "next"}})}
         return make_response(jsonify(result), 206, headers)
     else:
@@ -21,9 +21,14 @@ def get_next_token(query_params: dict):
     return next_token, per_page
 
 
-def build_next_url(host, path, next_token: str, per_page: int) -> str:
-    return furl(host=host, path=path, query_params={'next_token': next_token,
-                                                    'per_page': per_page}).url
+def build_next_url(next_token: str, per_page: int) -> str:
+    url = furl(request.host_url, path=request.path, query_params={'next_token': next_token, 'per_page': per_page})
+    if not url.scheme:
+        if 'localhost' == url.host:
+            url.scheme = 'http'
+        else:
+            url.scheme = 'https'
+    return url.url
 
 
 def build_link_header(links):

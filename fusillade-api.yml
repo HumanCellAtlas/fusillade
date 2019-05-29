@@ -256,9 +256,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/paged_results'
+                type: object
+                properties:
+                  users:
+                    $ref: '#/components/schemas/paged_results'
         206:
           $ref: '#/components/responses/206'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
@@ -355,9 +365,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/paged_results'
+                type: object
+                properties:
+                  groups:
+                    $ref: '#/components/schemas/paged_results'
         206:
           $ref: '#/components/responses/206'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groups:
+                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
@@ -409,9 +429,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/paged_results'
+                type: object
+                properties:
+                  roles:
+                    $ref: '#/components/schemas/paged_results'
         206:
           $ref: '#/components/responses/206'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
@@ -485,9 +515,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/paged_results'
+                type: object
+                properties:
+                  groups:
+                    $ref: '#/components/schemas/paged_results'
         206:
           $ref: '#/components/responses/206'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groups:
+                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
@@ -577,9 +617,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/paged_results'
+                type: object
+                properties:
+                  roles:
+                    $ref: '#/components/schemas/paged_results'
         206:
           $ref: '#/components/responses/206'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
@@ -631,9 +681,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/paged_results'
+                type: object
+                properties:
+                  users:
+                    $ref: '#/components/schemas/paged_results'
         206:
           $ref: '#/components/responses/206'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
@@ -680,9 +740,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/paged_results'
+                type: object
+                properties:
+                  roles:
+                    $ref: '#/components/schemas/paged_results'
         206:
           $ref: '#/components/responses/206'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
@@ -863,10 +933,6 @@ components:
   responses:
     206:
       description: A single page of results was retrieved.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/paged_results'
       headers:
         Link:
           description: URL to retrieve the next page of results.

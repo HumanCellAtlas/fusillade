@@ -1,7 +1,7 @@
 from flask import request, make_response, jsonify
 from fusillade import User, directory
 from fusillade.utils.authorize import assert_authorized
-from fusillade.api.paging import build_next_url, build_link_header, get_next_token, get_page
+from fusillade.api.paging import get_next_token, get_page
 
 
 def put_new_user(token_info: dict):
@@ -20,7 +20,7 @@ def get_users(token_info: dict):
                       ['fus:GetUser'],
                       [f'arn:hca:fus:*:*:user'])
     next_token, per_page = get_next_token(request.args)
-    get_page(User.list_all, next_token, per_page, directory)
+    return get_page(User.list_all, next_token, per_page, directory)
 
 
 def get_user(token_info: dict, user_id: str):

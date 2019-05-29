@@ -2,7 +2,7 @@ from flask import request, make_response, jsonify
 
 from fusillade import directory, Group
 from fusillade.utils.authorize import assert_authorized
-from fusillade.api.paging import get_next_token, build_next_url, build_link_header, get_page
+from fusillade.api.paging import get_next_token, get_page
 
 
 def put_new_group(token_info: dict):

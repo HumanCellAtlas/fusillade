@@ -908,9 +908,8 @@ class CloudNode:
             }
         ]
         if paged:
-            result, next_token = get_links(self.object_ref, filter_attribute_ranges,
-                                                                 'association',
-                                                     NextToken=NextToken, paged=paged, per_page=per_page)
+            result, next_token = get_links(self.object_ref, filter_attribute_ranges, 'association',
+                                           NextToken=NextToken, paged=paged, per_page=per_page)
             if result:
                 operations = [self.cd.batch_get_attributes(
                     obj_ref['SourceObjectReference']['Selector'],
