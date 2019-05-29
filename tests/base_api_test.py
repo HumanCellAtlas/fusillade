@@ -39,6 +39,7 @@ class BaseAPITest():
     @classmethod
     def tearDownClass(cls):
         cls.clear_directory()
-        if not integration and old_directory_name:
+        if not integration:
             cleanup_directory(directory._dir_arn)
+        if old_directory_name:
             os.environ["FUSILLADE_DIR"] = old_directory_name
