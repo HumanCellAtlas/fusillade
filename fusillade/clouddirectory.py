@@ -1212,7 +1212,7 @@ class CloudNode:
 
     @classmethod
     def list_all(cls, directory: CloudDirectory, NextToken: str, per_page):
-        resp = directory.list_object_children_paged(f'/{cls.__name__.lower()}/', NextToken, per_page)
+        resp = directory.list_object_children_paged(f'/{cls.object_type}/', NextToken, per_page)
         operations = [directory.batch_get_attributes(
             f'${obj_ref}',
             cls._facet,

@@ -4,7 +4,7 @@ from furl import furl
 
 def get_page(func, next_token, per_page, *args):
     if args:
-        result, next_token = func(*args, next_token=next_token, per_page=per_page)
+        result, next_token = func(*args, NextToken=next_token, per_page=per_page)
     else:
         result, next_token = func(next_token, per_page)
     if next_token:
