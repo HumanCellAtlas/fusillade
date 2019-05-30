@@ -43,6 +43,7 @@ def evaluate_policy(
 
 def assert_authorized(user, actions, resources):
     """
+    Asserts a user has permission to perform actions on resources.
 
     :param user:
     :param actions:
