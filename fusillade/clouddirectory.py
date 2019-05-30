@@ -19,6 +19,7 @@ from enum import Enum, auto
 import logging
 
 from fusillade.errors import FusilladeException, FusilladeHTTPException
+from fusillade.utils.retry import retry
 
 logger = logging.getLogger(__name__)
 
@@ -1080,6 +1081,17 @@ class CloudNode:
 
         self._statement = None
 
+    @retry(timeout=0.5, delay=0.1)
+    def _set_statement_with_retry(self, statement):
+        """
+        Its possible for self._set_statement to fail with resource not found when the node is first created due to
+        race conditions in creating new nodes in cloud directory. Retries give the cloud directory time to finish
+        creating node before adding a new policy statement.
+        :param statement:
+        :return:
+        """
+        self._set_statement(statement)
+
     def _get_attributes(self, attributes: List[str]):
         """
         retrieve attributes for this from CloudDirectory and sets local private variables.
@@ -1248,7 +1260,8 @@ class User(CloudNode):
             user.add_groups(cls.default_groups)
 
         if statement:  # TODO make using user default configurable
-            user.statement = statement
+            user._verify_statement(statement)
+            user._set_statement_with_retry(statement)
         return user
 
     @property
@@ -1331,7 +1344,7 @@ class Group(CloudNode):
         new_node = cls(cloud_directory, name)
         new_node.log.info(dict(message="Group created",
                                object=dict(type=new_node.object_type, path_name=new_node._path_name)))
-        new_node._set_statement(statement)
+        new_node._set_statement_with_retry(statement)
         return new_node
 
     def get_users(self) -> Iterator[Tuple[str, str]]:
@@ -1427,5 +1440,5 @@ class Role(CloudNode):
         new_node = cls(cloud_directory, name)
         new_node.log.info(dict(message="Role created",
                                object=dict(type=new_node.object_type, path_name=new_node._path_name)))
-        new_node._set_statement(statement)
+        new_node._set_statement_with_retry(statement)
         return new_node
