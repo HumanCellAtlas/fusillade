@@ -2,6 +2,8 @@ import unittest
 import os, sys
 from unittest import mock
 
+from tests.infra.testmode import standalone
+
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
@@ -15,6 +17,7 @@ from fusillade.clouddirectory import cd_client, cleanup_directory, cleanup_schem
 admin_email = "test_email1@domain.com,test_email2@domain.com, test_email3@domain.com "
 
 
+@standalone
 class TestCloudDirectory(unittest.TestCase):
 
     def test_cd(self):
