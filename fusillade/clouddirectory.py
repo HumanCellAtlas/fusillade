@@ -1081,7 +1081,7 @@ class CloudNode:
 
         self._statement = None
 
-    @retry(timeout=0.5, delay=0.1)
+    @retry(timeout=1, delay=0.1)
     def _set_statement_with_retry(self, statement):
         """
         Its possible for self._set_statement to fail with resource not found when the node is first created due to
