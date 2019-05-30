@@ -1,11 +1,11 @@
-import os
-import time
-from pythonjsonlogger import jsonlogger
 import logging
-from logging import LogRecord
+import os
 import sys
+import time
+from logging import LogRecord
 from typing import List
 
+from pythonjsonlogger import jsonlogger
 from pythonjsonlogger.jsonlogger import merge_record_extra
 
 from fusillade import Config
@@ -92,6 +92,7 @@ silence_debug_loggers = ["botocore"]
 _logging_configured = False
 _debug = True
 _json_logs = bool(os.getenv('JSON_LOGS', False))
+
 
 def _configure_logging(**kwargs):
     root_logger = logging.root
