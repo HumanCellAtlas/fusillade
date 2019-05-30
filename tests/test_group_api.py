@@ -80,12 +80,12 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
                 }
             },
             {
-                'name': f'500 returned when creating a group that already exists',
+                'name': f'409 returned when creating a group that already exists',
                 'json_request_body': {
                     "group_id": "Group3"
                 },
                 'response': {
-                    'code': 500
+                    'code': 409
                 }
             }
         ]
