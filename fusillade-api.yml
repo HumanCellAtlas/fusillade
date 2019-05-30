@@ -887,6 +887,7 @@ components:
         type: integer
         minimum: 5
         maximum: 30
+        default: 15
   schemas:
     paged_results:
       type: array
