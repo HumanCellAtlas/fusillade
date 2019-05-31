@@ -535,9 +535,10 @@ paths:
           description: Unexpected error
       tags:
         - group
-    put:
+  /v1/group:
+    post:
       summary: Create a new group
-      operationId: fusillade.api.groups.put_new_group
+      operationId: fusillade.api.groups.post_group
       security:
         - BearerAuth: []
       requestBody:
@@ -565,7 +566,7 @@ paths:
           description: Unexpected error
       tags:
         - group
-  /v1/groups/{group_id}:
+  /v1/group/{group_id}:
     get:
       summary: Get properties of a group
       operationId: fusillade.api.groups.get_group
@@ -602,7 +603,7 @@ paths:
           description: Unexpected error
       tags:
         - group
-  /v1/groups/{group_id}/roles:
+  /v1/group/{group_id}/roles:
     get:
       summary: Retrieve role(s) a group is in.
       operationId: fusillade.api.groups.get_groups_roles
@@ -666,7 +667,7 @@ paths:
           description: Unexpected error
       tags:
         - group
-  /v1/groups/{group_id}/users:
+  /v1/group/{group_id}/users:
     get:
       summary: Retrieve user in a group.
       operationId: fusillade.api.groups.get_group_users
@@ -701,7 +702,7 @@ paths:
           description: Unexpected error
       tags:
         - group
-  /v1/groups/{group_id}/policy:
+  /v1/group/{group_id}/policy:
     put:
       summary: Modify policy
       operationId: fusillade.api.groups.put_group_policy
