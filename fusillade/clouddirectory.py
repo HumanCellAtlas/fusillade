@@ -166,8 +166,9 @@ class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute',
 
 
 cd_retry_parameters = dict(timeout=.5,
-                         delay=0.1,
-                         retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
+                           delay=0.1,
+                           retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
+
 
 class CloudDirectory:
     _page_limit = 30  # This is the max allowed by AWS
