@@ -299,7 +299,9 @@ paths:
                   items:
                     $ref: '#/components/schemas/custom_identifier'
                 policy:
-                  type: string
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Policy'
       tags:
         - user
       responses:
@@ -475,7 +477,81 @@ paths:
           description: The user is already apart of the role
         default:
           description: Unexpected error
+  /v1/users/{user_id}/policies:
+    get:
+      summary: Retrieve policies attached to user.
+      operationId: fusillade.api.users.get_users_policies
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/user_id'
+        - $ref: '#/components/parameters/next_token'
+        - $ref: '#/components/parameters/per_page'
+      tags:
+        - user
+      responses:
+        200:
+          description: all policies have been returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policies:
+                    $ref: '#/components/schemas/paged_results'
+        206:
+          $ref: '#/components/responses/206'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policies:
+                    $ref: '#/components/schemas/paged_results'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error
   /v1/users/{user_id}/policy:
+    post:
+      summary: attach a policy to the user. This can either be a new policy, or an existing policy
+      operationId: fusillade.api.users.post_policy
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/user_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policy:
+                  type: string
+  /v1/users/{user_id}/policy/{policy_id}:
+    get:
+      summary: get attached policy.
+      operationId: fusillade.api.users.get_user_policy
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/user_id'
+        - $ref: '#/components/parameters/policy_id'
+      responses:
+        200:
+          description: return attached policy
+          content:
+            application/json:
+              schema:
+                - $ref: '#/components/schemas/Policy'
+        404:
+          $ref: '#/components/responses/404'
+        401:
+          $ref: '#/components/responses/401'
+        default:
+          description: Unexpected error
+      tags:
+        - user
     put:
       summary: Modify policy
       operationId: fusillade.api.users.put_user_policy
@@ -906,8 +982,8 @@ components:
           $ref: '#/components/schemas/custom_identifier'
         status:
           type: string
-        policy:
-          type: string
+        policies:
+          type: int
           nullable: true
     Group:
       type: object
@@ -931,6 +1007,17 @@ components:
           $ref: '#/components/schemas/custom_identifier'
         policy:
           type: string
+    Policy:
+      type: object
+      properties:
+        policy_name:
+          type: string
+        policy:
+          type: string
+        policy_type:
+          type: string
+      required:
+        - policy_name
   responses:
     206:
       description: A single page of results was retrieved.
