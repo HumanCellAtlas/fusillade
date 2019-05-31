@@ -275,9 +275,10 @@ paths:
           description: Unexpected error
       tags:
         - user
-    put:
+  /v1/user:
+    post:
       summary: Create a new user
-      operationId: fusillade.api.users.put_new_user
+      operationId: fusillade.api.users.post_user
       security:
         - BearerAuth: []
       requestBody:
@@ -309,7 +310,7 @@ paths:
           $ref: '#/components/responses/401'
         default:
           description: Unexpected error
-  /v1/users/{user_id}:
+  /v1/user/{user_id}:
     get:
       summary: Retrieve information about a user's status
       operationId: fusillade.api.users.get_user
@@ -347,7 +348,7 @@ paths:
           $ref: '#/components/responses/401'
         default:
           description: Unexpected error
-  /v1/users/{user_id}/groups:
+  /v1/user/{user_id}/groups:
     get:
       summary: Retrieve group(s) a user is in.
       operationId: fusillade.api.users.get_users_groups
@@ -411,7 +412,7 @@ paths:
           description: The user is already a part of the group
         default:
           description: Unexpected error
-  /v1/users/{user_id}/roles:
+  /v1/user/{user_id}/roles:
     get:
       summary: Retrieve roles a user is in.
       operationId: fusillade.api.users.get_users_roles
@@ -475,7 +476,7 @@ paths:
           description: The user is already apart of the role
         default:
           description: Unexpected error
-  /v1/users/{user_id}/policy:
+  /v1/user/{user_id}/policy:
     put:
       summary: Modify policy
       operationId: fusillade.api.users.put_user_policy
