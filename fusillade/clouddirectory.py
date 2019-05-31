@@ -19,6 +19,7 @@ from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, 
 
 from dcplib.aws import clients as aws_clients
 
+from fusillade import Config
 from fusillade.errors import FusilladeException, FusilladeHTTPException
 from fusillade.utils.retry import retry
 
@@ -124,12 +125,12 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
             directory.create_folder('/', folder_name)
 
         # create roles
-        Role.create(directory, "default_user", statement=get_json_file(default_user_role_path))
-        Role.create(directory, "admin", statement=get_json_file(default_admin_role_path))
+        Role.create(directory, "default_fusillade_user", statement=get_json_file(default_user_role_path))
+        Role.create(directory, "fusillade_admin", statement=get_json_file(default_admin_role_path))
 
         # create admins
         for admin in admins:
-            User.provision_user(directory, admin, roles=['admin'])
+            User.provision_user(directory, admin, roles=['fusillade_admin'])
     finally:
         return directory
 
@@ -573,7 +574,7 @@ class CloudDirectory:
         roles = roles if roles else []
         protected_users = [CloudNode.hash_name(name) for name in users]
         protected_groups = [CloudNode.hash_name(name) for name in groups]
-        protected_roles = [CloudNode.hash_name(name) for name in ["admin", "default_user"] + roles]
+        protected_roles = [CloudNode.hash_name(name) for name in ["fusillade_admin", "default_user"] + roles]
 
         for name, obj_ref in self.list_object_children('/user/'):
             if name not in protected_users:
@@ -1287,8 +1288,8 @@ class User(CloudNode, RolesMixin):
     Represents a user in CloudDirectory
     """
     _attributes = ['status'] + CloudNode._attributes
-    default_roles = ['default_user']  # TODO: make configurable
-    default_groups = []  # TODO: make configurable
+    default_roles = Config.get_default_user_roles()
+    default_groups = Config.get_default_user_groups()
     _facet = 'LeafFacet'
     object_type = 'user'
 
