@@ -761,9 +761,10 @@ paths:
           description: Unexpected error
       tags:
         - role
-    put:
+  /v1/role:
+    post:
       summary: Create a new role
-      operationId: fusillade.api.roles.put_new_role
+      operationId: fusillade.api.roles.post_role
       security:
         - BearerAuth: []
       requestBody:
@@ -792,7 +793,7 @@ paths:
           description: Unexpected error
       tags:
         - role
-  /v1/roles/{role_id}:
+  /v1/role/{role_id}:
     get:
       summary: Get properties of a role
       operationId: fusillade.api.roles.get_role
@@ -813,7 +814,7 @@ paths:
           description: Unexpected error
       tags:
         - role
-  /v1/roles/{role_id}/policy:
+  /v1/role/{role_id}/policy:
     put:
       summary: Modify policy
       operationId: fusillade.api.roles.put_role_policy
