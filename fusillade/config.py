@@ -15,6 +15,7 @@ class Config:
     version = "unversioned"
     _default_user_roles = None
     _default_user_groups = None
+
     # TODO make configurable
 
     @classmethod
@@ -59,14 +60,13 @@ class Config:
     @classmethod
     def get_default_user_roles(cls):
         if not cls._default_user_roles:
-            roles = os.environ.get('DEFAULT_USER_ROLES','').split(',')
-            cls._default_user_roles= [role.strip() for role in roles if role.strip()]
+            roles = os.environ.get('DEFAULT_USER_ROLES', '').split(',')
+            cls._default_user_roles = [role.strip() for role in roles if role.strip()]
         return cls._default_user_roles
 
     @classmethod
     def get_default_user_groups(cls):
         if not cls._default_user_groups:
-            groups = os.environ.get('DEFAULT_USER_GROUPS','').split(',')
-            cls._default_user_groups= [group.strip() for group in groups if group.strip()]
+            groups = os.environ.get('DEFAULT_USER_GROUPS', '').split(',')
+            cls._default_user_groups = [group.strip() for group in groups if group.strip()]
         return cls._default_user_groups
-
