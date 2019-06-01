@@ -1405,8 +1405,8 @@ class User(CloudNode, RolesMixin):
                                   obj_type=cls.object_type
                                   )
         except cd_client.exceptions.LinkNameAlreadyInUseException:
-            raise FusilladeHTTPException(status=409, title="Conflict", detail=f"The {cls.object_type} named {name} "
-            f"already exists.")
+            raise FusilladeHTTPException(
+                status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists.")
         else:
             user.log.info(dict(message="User created",
                                object=dict(type=user.object_type, path_name=user._path_name)))
