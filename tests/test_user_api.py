@@ -92,12 +92,12 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 }
             },
             {
-                'name': f'500 returned when creating a user that already exists',
+                'name': f'409 returned when creating a user that already exists',
                 'json_request_body': {
                     "user_id": "test_post_user4@email.com"
                 },
                 'response': {
-                    'code': 500  # TODO: this should be a 409
+                    'code': 409
                 }
             }
         ]
@@ -125,8 +125,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
             with self.subTest(test['name']):
                 headers = {'Content-Type': "application/json"}
                 headers.update(get_auth_header(service_accounts['admin']))
-                if test['name'] == "500 returned when creating a user that already exists":
-                    # TODO: this should be a 409
+                if test['name'] == "409 returned when creating a user that already exists":
                     self.app.post('/v1/user', headers=headers, data=json.dumps(test['json_request_body']))
                 resp = self.app.post('/v1/user', headers=headers, data=json.dumps(test['json_request_body']))
                 self.assertEqual(test['response']['code'], resp.status_code)
