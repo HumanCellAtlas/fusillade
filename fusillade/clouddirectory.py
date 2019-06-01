@@ -563,6 +563,7 @@ class CloudDirectory:
             'IdentityAttributeValues': self.make_attributes(attributes)
         }
 
+    @retry(**cd_retry_parameters)
     def clear(self, users: List[str] = None,
               groups: List[str] = None,
               roles: List[str] = None) -> None:
