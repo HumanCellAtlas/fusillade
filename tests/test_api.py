@@ -9,18 +9,17 @@ import unittest
 import os
 import sys
 
-from tests import eventually
-
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
+from tests import eventually
 from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts
 
 
 class TestApi(BaseAPITest, unittest.TestCase):
 
-    @eventually(1, 0.1)
+    @eventually(10, 0.5)
     def test_evaluate_policy(self):
         email = "test_evaluate_api@email.com"
         tests = [

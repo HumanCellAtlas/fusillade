@@ -54,7 +54,7 @@ class Config:
         return cls._openid_provider
 
     @classmethod
-    def debug_level(cls):
+    def log_level(cls):
         return int(os.environ.get("DEBUG", "1"))
 
     @classmethod
