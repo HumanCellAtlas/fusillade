@@ -5,11 +5,12 @@
       "Sid": "fusGroupMember",
       "Effect": "Allow",
       "Action": [
-        "fus:GetGroup"
+        "fus:GetGroup",
+        "fus:GetRole"
       ],
       "Resource": [
-        "arn:hca:fus:*:*:group/${fus:group_name}/policy",
-        "arn:hca:fus:*:*:group/${fus:group_name}/groups"
+        "arn:hca:fus:*:*:group/${fus:group_id}/*",
+        "arn:hca:fus:*:*:group/${fus:group_id}"
       ]
     }
   ]
