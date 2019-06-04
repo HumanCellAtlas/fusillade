@@ -126,11 +126,13 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         # create roles
         Role.create(directory, "default_user", statement=get_json_file(default_user_role_path))
         Role.create(directory, "admin", statement=get_json_file(default_admin_role_path))
+        Group.create(directory, "public").add_roles(['default_user'])
+
 
         # create admins
         for admin in admins:
             User.provision_user(directory, admin, roles=['admin'])
-        User.provision_user(directory, 'public', roles=['default_user'])
+        User.provision_user(directory, 'public')
     finally:
         return directory
 
@@ -580,7 +582,7 @@ class CloudDirectory:
         groups = groups if groups else []
         roles = roles if roles else []
         protected_users = [CloudNode.hash_name(name) for name in ['public'] + users]
-        protected_groups = [CloudNode.hash_name(name) for name in groups]
+        protected_groups = [CloudNode.hash_name(name) for name in ['public'] + groups]
         protected_roles = [CloudNode.hash_name(name) for name in ["admin", "default_user"] + roles]
 
         for name, obj_ref in self.list_object_children('/user/'):
@@ -1304,14 +1306,13 @@ class RolesMixin:
                            roles=roles))
 
 
-public_user = f"/user/{CloudNode.hash_name('public')}"
-
-
 class User(CloudNode, RolesMixin):
     """
     Represents a user in CloudDirectory
     """
     _attributes = ['status'] + CloudNode._attributes
+    default_roles = []  # TODO: make configurable
+    default_groups = ['public']  # TODO: make configurable
     _facet = 'LeafFacet'
     object_type = 'user'
 
@@ -1331,17 +1332,13 @@ class User(CloudNode, RolesMixin):
     def lookup_policies(self) -> List[str]:
         try:
             policy_paths = self._lookup_policies_threaded()
-            # if self.groups:
-            #     policy_paths = self._lookup_policies_threaded()
-            # else:
-            #     policy_paths = self.cd.lookup_policy(self.object_ref)
         except cd_client.exceptions.ResourceNotFoundException:
             self.provision_user(self.cd, self.name)
             policy_paths = self._lookup_policies_threaded()
         return self.cd.get_policies(policy_paths)
 
     def lookup_policies_batched(self):
-        object_refs = self.groups + [self.object_ref, public_user]
+        object_refs = self.groups + [self.object_ref]
         operations = [self.cd.batch_lookup_policy(object_ref) for object_ref in object_refs]
         all_results = []
         while True:
@@ -1355,7 +1352,7 @@ class User(CloudNode, RolesMixin):
                 break
 
     def _lookup_policies_threaded(self):
-        object_refs = self.groups + [self.object_ref, public_user]
+        object_refs = self.groups + [self.object_ref]
 
         def _call_with_future(fn, _future, args):
             """
@@ -1441,9 +1438,14 @@ class User(CloudNode, RolesMixin):
             user.log.info(dict(message="User created",
                                object=dict(type=user.object_type, path_name=user._path_name)))
         if roles:
-            user.add_roles(roles)
+            user.add_roles(roles + cls.default_roles)
+        else:
+            user.add_roles(cls.default_roles)
+
         if groups:
-            user.add_groups(groups)
+            user.add_groups(groups + cls.default_groups)
+        else:
+            user.add_groups(cls.default_groups)
 
         if statement:  # TODO make using user default configurable
             user._verify_statement(statement)

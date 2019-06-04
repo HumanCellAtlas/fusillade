@@ -78,9 +78,14 @@ class TestCloudDirectory(unittest.TestCase):
                 resp = directory.get_object_information(user)
                 self.assertTrue(resp['ObjectIdentifier'])
 
-        with self.subTest(f"Public user created when the directory is created"):
-            user = '/user/' + CloudNode.hash_name('public')
-            resp = directory.get_object_information(user)
+        with self.subTest(f"Public User created when the directory is created"):
+            group = '/user/' + CloudNode.hash_name('public')
+            resp = directory.get_object_information(group)
+            self.assertTrue(resp['ObjectIdentifier'])
+
+        with self.subTest(f"Public Group created when the directory is created"):
+            group = '/group/' + CloudNode.hash_name('public')
+            resp = directory.get_object_information(group)
             self.assertTrue(resp['ObjectIdentifier'])
 
             expected_tags = [
