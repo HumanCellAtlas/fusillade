@@ -59,7 +59,7 @@ class TestUser(unittest.TestCase):
 
         user = User.provision_user(self.directory, name)
         with self.subTest("A user is in the public group when user is first created."):
-            self.assertEqual(Group(self.directory, object_ref=user.groups[0]).name, 'public')
+            self.assertEqual(Group(self.directory, object_ref=user.groups[0]).name, 'user_default')
 
         user.add_groups([])
         with self.subTest("A user is added to no groups when add_groups is called with no groups"):
@@ -151,7 +151,6 @@ class TestUser(unittest.TestCase):
         with self.subTest("a user has the default_user roles when created."):
             self.assertEqual(user_role_names, [])
 
-        # user.remove_roles(['default_user'])
         role_name, role_statement = test_roles[0]
         with self.subTest("A user has one role when a role is added."):
             user.add_roles([role_name])
@@ -220,7 +219,7 @@ class TestUser(unittest.TestCase):
         user_group_names = [Group(self.directory, object_ref=group).name for group in user.groups]
 
         self.assertListEqual(sorted(user_role_names), role_names)
-        self.assertEqual(sorted(user_group_names), group_names + ['public'])
+        self.assertEqual(sorted(user_group_names), group_names + ['user_default'])
         self.assertSequenceEqual(sorted(user.lookup_policies()), sorted(
             [user.statement, *self.default_user_policies] + group_statements + role_statements)
                              )

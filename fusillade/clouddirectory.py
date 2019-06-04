@@ -126,7 +126,7 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         # create roles
         Role.create(directory, "default_user", statement=get_json_file(default_user_role_path))
         Role.create(directory, "admin", statement=get_json_file(default_admin_role_path))
-        Group.create(directory, "public").add_roles(['default_user'])
+        Group.create(directory, "user_default").add_roles(['default_user'])
 
         # create admins
         for admin in admins:
@@ -581,7 +581,7 @@ class CloudDirectory:
         groups = groups if groups else []
         roles = roles if roles else []
         protected_users = [CloudNode.hash_name(name) for name in ['public'] + users]
-        protected_groups = [CloudNode.hash_name(name) for name in ['public'] + groups]
+        protected_groups = [CloudNode.hash_name(name) for name in ['user_default'] + groups]
         protected_roles = [CloudNode.hash_name(name) for name in ["admin", "default_user"] + roles]
 
         for name, obj_ref in self.list_object_children('/user/'):
@@ -1311,7 +1311,7 @@ class User(CloudNode, RolesMixin):
     """
     _attributes = ['status'] + CloudNode._attributes
     default_roles = []  # TODO: make configurable
-    default_groups = ['public']  # TODO: make configurable
+    default_groups = ['user_default']  # TODO: make configurable
     _facet = 'LeafFacet'
     object_type = 'user'
 
