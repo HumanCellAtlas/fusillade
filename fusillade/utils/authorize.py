@@ -2,6 +2,7 @@ import functools
 import json
 import logging
 from typing import List, Dict, Optional, Any
+
 from dcplib.aws import clients as aws_clients
 
 from fusillade import User, directory
@@ -55,9 +56,9 @@ def assert_authorized(user, actions, resources, context_entries):
     policies = u.lookup_policies()
     _ce = [
         {
-                'ContextKeyName': key,
-                'ContextKeyValues': value if isinstance(value, list) else [value],
-                'ContextKeyType': 'string'
+            'ContextKeyName': key,
+            'ContextKeyValues': value if isinstance(value, list) else [value],
+            'ContextKeyType': 'string'
         } for key, value in context_entries.items()]
     if not evaluate_policy(user, actions, resources, policies, _ce):
         logger.info(dict(message="User not authorized.", user=u._path_name, action=actions, resources=resources))
@@ -118,7 +119,7 @@ def format_context_entries(context_entries, kwargs):
 def authorize(actions: List[str],
               resources: List[str],
               resource_params: Optional[List[str]] = None,
-              context_entries:  Optional[List[str]] = None
+              context_entries: Optional[List[str]] = None
               ):
     """
     A decorator for assert_authorized
