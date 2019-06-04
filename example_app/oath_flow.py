@@ -36,7 +36,6 @@ def demo():
 
 
 # Step 2: User authorization, this happens on the provider.
-
 @app.route("/callback", methods=["GET"])
 def callback():
     # At this point you can fetch protected resources but lets save
@@ -48,13 +47,6 @@ def callback():
     return redirect(url_for('.profile'))
 
 
-@app.route("/userinfo", methods=["GET"])
-def userinfo():
-    """Fetching a protected resource using an OAuth 2 token.
-    """
-    github = OAuth2Session(token=session['oauth_token'])
-    return jsonify(github.get(userinfo_url).json())
-
 @app.route("/profile", methods=["GET"])
 def profile():
     """Fetching a protected resource using an OAuth 2 token.
@@ -62,6 +54,10 @@ def profile():
     url = furl(f"{domain}/v1/user/{session['username']}").url
     return jsonify(requests.get(url, headers=get_auth_header()).json())
 
+
+@app.route("/data", methods=["GET"])
+def get_data():
+    reqeu
 if __name__ == "__main__":
     # This allows us to use a plain HTTP callback
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1"
