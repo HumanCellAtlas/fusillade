@@ -78,6 +78,10 @@ class TestCloudDirectory(unittest.TestCase):
                 resp = directory.get_object_information(user)
                 self.assertTrue(resp['ObjectIdentifier'])
 
+        with self.subTest(f"Public user created when the directory is created"):
+            user = '/user/' + CloudNode.hash_name('public')
+            resp = directory.get_object_information(user)
+            self.assertTrue(resp['ObjectIdentifier'])
 
             expected_tags = [
                 {'Key': 'project', "Value": os.getenv("FUS_PROJECT_TAG", '')},

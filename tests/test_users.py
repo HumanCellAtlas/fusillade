@@ -148,9 +148,9 @@ class TestUser(unittest.TestCase):
         user = User.provision_user(self.directory, name)
         user_role_names = [Role(self.directory,None,role).name for role in user.roles]
         with self.subTest("a user has the default_user roles when created."):
-            self.assertEqual(user_role_names, ['default_user'])
+            self.assertEqual(user_role_names, [])
 
-        user.remove_roles(['default_user'])
+        # user.remove_roles(['default_user'])
         role_name, role_statement = test_roles[0]
         with self.subTest("A user has one role when a role is added."):
             user.add_roles([role_name])
@@ -171,7 +171,8 @@ class TestUser(unittest.TestCase):
 
         user.statement = self.default_policy
         with self.subTest("A user inherits a roles policies when a role is added to a user."):
-            self.assertListEqual(sorted(user.lookup_policies()), sorted([user.statement, role_statement]))
+            self.assertListEqual(sorted(user.lookup_policies()),
+                                 sorted([user.statement, role_statement, self.default_user_role_policy]))
 
         with self.subTest("A role is removed from user when remove role is called."):
             user.remove_roles([role_name])
@@ -184,7 +185,7 @@ class TestUser(unittest.TestCase):
 
         with self.subTest("A user inherits multiple role policies when the user has multiple roles."):
             self.assertListEqual(sorted(user.lookup_policies()),
-                                 sorted([user.statement] + role_statements))
+                                 sorted([user.statement, self.default_user_role_policy] + role_statements))
 
         with self.subTest("A user's roles are listed when a listing a users roles."):
             user_role_names = [Role(self.directory, None, role).name for role in user.roles]
@@ -217,7 +218,7 @@ class TestUser(unittest.TestCase):
         user_role_names = [Role(self.directory, object_ref=role).name for role in user.roles]
         user_group_names = [Group(self.directory, object_ref=group).name for group in user.groups]
 
-        self.assertListEqual(sorted(user_role_names), ['default_user'] + role_names)
+        self.assertListEqual(sorted(user_role_names), role_names)
         self.assertEqual(sorted(user_group_names), group_names)
         self.assertSequenceEqual(sorted(user.lookup_policies()), sorted(
             [user.statement, self.default_user_role_policy] + group_statements + role_statements)
