@@ -54,13 +54,12 @@ def assert_authorized(user, actions, resources, context_entries):
     """
     u = User(directory, user)
     policies = u.lookup_policies()
-    if context_entries:
-        _ce = [
-            {
-                'ContextKeyName': key,
-                'ContextKeyValues': value if isinstance(value, list) else [value],
-                'ContextKeyType': 'string'
-            } for key, value in context_entries.items()]
+    _ce = [
+        {
+            'ContextKeyName': key,
+            'ContextKeyValues': value if isinstance(value, list) else [value],
+            'ContextKeyType': 'string'
+        } for key, value in context_entries.items()]
     if not evaluate_policy(user, actions, resources, policies, _ce):
         logger.info(dict(message="User not authorized.", user=u._path_name, action=actions, resources=resources))
         raise FusilladeForbiddenException()
@@ -135,7 +134,7 @@ def authorize(actions: List[str],
         @functools.wraps(func)
         def call(*args, **kwargs):
             sub_resource = format_resources(resources, resource_params, kwargs) if resource_params else resources
-            sub_context_entries = format_context_entries(context_entries, kwargs) if context_entries else []
+            sub_context_entries = format_context_entries(context_entries, kwargs) if context_entries else dict()
             assert_authorized(kwargs['token_info']['https://auth.data.humancellatlas.org/email'],
                               actions,
                               sub_resource,
