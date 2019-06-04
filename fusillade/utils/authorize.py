@@ -54,13 +54,13 @@ def assert_authorized(user, actions, resources, context_entries=None):
     """
     u = User(directory, user)
     policies = u.lookup_policies()
-    _ce = [
+    _context_entries = [
         {
             'ContextKeyName': key,
             'ContextKeyValues': value if isinstance(value, list) else [value],
             'ContextKeyType': 'string'
         } for key, value in context_entries.items()] if context_entries else []
-    if not evaluate_policy(user, actions, resources, policies, _ce):
+    if not evaluate_policy(user, actions, resources, policies, _context_entries):
         logger.info(dict(message="User not authorized.", user=u._path_name, action=actions, resources=resources))
         raise FusilladeForbiddenException()
     else:
