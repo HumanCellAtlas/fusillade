@@ -84,7 +84,7 @@ class TestCloudDirectory(unittest.TestCase):
             self.assertTrue(resp['ObjectIdentifier'])
 
         with self.subTest(f"Public Group created when the directory is created"):
-            group = '/group/' + CloudNode.hash_name('public')
+            group = '/group/' + CloudNode.hash_name('user_default')
             resp = directory.get_object_information(group)
             self.assertTrue(resp['ObjectIdentifier'])
 
