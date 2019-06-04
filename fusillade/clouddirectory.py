@@ -128,7 +128,6 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         Role.create(directory, "admin", statement=get_json_file(default_admin_role_path))
         Group.create(directory, "public").add_roles(['default_user'])
 
-
         # create admins
         for admin in admins:
             User.provision_user(directory, admin, roles=['admin'])
