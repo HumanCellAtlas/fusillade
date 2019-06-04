@@ -50,7 +50,7 @@ class TestUser(unittest.TestCase):
             self.assertRaises(FusilladeHTTPException, user.provision_user, self.directory, name)
         with self.subTest("an existing users info is retrieved when instantiating User class for an existing user"):
             user = User(self.directory, name)
-            self.assertEqual(user.lookup_policies(), self.default_user_policies)
+            self.assertEqual(sorted(user.lookup_policies()), self.default_user_policies)
 
     def test_get_groups(self):
         name = "test_get_groups@test.com"
