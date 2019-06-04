@@ -288,7 +288,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         user = User.provision_user(directory, name)
         resp = self.app.get(f'/v1/user/{name}/roles', headers=headers)
         user_role_names = [Role(directory, None, role).name for role in user.roles]
-        self.assertEqual(0, len(json.loads(resp.body)[key]))
+        self.assertEqual(1, len(json.loads(resp.body)[key]))
         self.assertEqual(user_role_names, ['default_user'])
         roles = [Role.create(directory, f"role_{i}").name for i in range(11)]
         user.add_roles(roles)
