@@ -72,12 +72,10 @@ authenticate users. This file is uploaded to AWS secrets manager using `make set
   more admins are required assign a user the admin role.
 - Environment variables can be set in `environment.local` for convenience.
 - **Optionally** Before deploying fusillade you can modify the [default policies and roles](../blob/master/policies) 
- to suite your 
- needs. The `default_admin_role.json` is policy attached to the fusillade_admin role created during deployment. The 
- `default_group_policy.json` is assigned to all new group when they are created. The `default_user_role.json` is the 
- role
- assigned to the group `default_user` which is created during deployment. All of these policies and role can be 
- modified after deployment using the fusillade API.
+ to suite your needs. The `default_admin_role.json` is policy attached to the fusillade_admin role created during 
+ deployment. The `default_group_policy.json` is assigned to all new group when they are created. The 
+ `default_user_role.json` is the role assigned to the group `default_user` which is created during deployment. All of 
+ these policies and role can be modified after deployment using the fusillade API.
 
 ## Set secrets
 Fusillade uses AWS Secret Store for its secrets. Use ./scripts/set_secrets to set the following secrets:
