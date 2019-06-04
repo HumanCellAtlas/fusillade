@@ -66,7 +66,7 @@ class TestCloudDirectory(unittest.TestCase):
                 resp = directory.get_object_information(f'/{folder}')
                 self.assertTrue(resp['ObjectIdentifier'])
 
-        roles = [f"/role/{CloudNode.hash_name(name)}" for name in ['admin', 'default_user']]
+        roles = [f"/role/{CloudNode.hash_name(name)}" for name in ['fusillade_admin', 'default_user']]
         for role in roles:
             with self.subTest(f"{role} roles is created when directory is created"):
                 resp = directory.get_object_information(role)

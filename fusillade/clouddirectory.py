@@ -125,12 +125,12 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
 
         # create roles
         Role.create(directory, "default_user", statement=get_json_file(default_user_role_path))
-        Role.create(directory, "admin", statement=get_json_file(default_admin_role_path))
+        Role.create(directory, "fusillade_admin", statement=get_json_file(default_admin_role_path))
         Group.create(directory, "user_default").add_roles(['default_user'])
 
         # create admins
         for admin in admins:
-            User.provision_user(directory, admin, roles=['admin'])
+            User.provision_user(directory, admin, roles=['fusillade_admin'])
         User.provision_user(directory, 'public')
     finally:
         return directory
@@ -582,7 +582,7 @@ class CloudDirectory:
         roles = roles if roles else []
         protected_users = [CloudNode.hash_name(name) for name in ['public'] + users]
         protected_groups = [CloudNode.hash_name(name) for name in ['user_default'] + groups]
-        protected_roles = [CloudNode.hash_name(name) for name in ["admin", "default_user"] + roles]
+        protected_roles = [CloudNode.hash_name(name) for name in ["fusillade_admin", "default_user"] + roles]
 
         for name, obj_ref in self.list_object_children('/user/'):
             if name not in protected_users:

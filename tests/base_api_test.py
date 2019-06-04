@@ -20,7 +20,7 @@ class BaseAPITest():
     @classmethod
     def setUpClass(cls):
         try:
-            User.provision_user(directory, service_accounts['admin']['client_email'], roles=['admin'])
+            User.provision_user(directory, service_accounts['admin']['client_email'], roles=['fusillade_admin'])
         except Exception:
             pass
 
