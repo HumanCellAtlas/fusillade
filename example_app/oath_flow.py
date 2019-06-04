@@ -1,9 +1,11 @@
-from requests_oauthlib import OAuth2Session
-from furl import furl
-import requests
-from flask import Flask, request, redirect, session, url_for, json
-from flask.json import jsonify
 import os
+from typing import List, Optional, Dict, Any
+
+import requests
+from flask import Flask, request, redirect, session, url_for, json, make_response
+from flask.json import jsonify
+from furl import furl
+from requests_oauthlib import OAuth2Session
 
 app = Flask(__name__)
 
@@ -13,6 +15,8 @@ authorization_base_url = f'{domain}/oauth/authorize'
 token_url = f'{domain}/oauth/token'
 userinfo_url = f"{domain}/oauth/userinfo"
 scopes = 'openid email profile'
+
+slots = [0 for i in range(16)]
 
 
 def get_auth_header():
@@ -55,9 +59,23 @@ def profile():
     return jsonify(requests.get(url, headers=get_auth_header()).json())
 
 
-@app.route("/data", methods=["GET"])
-def get_data():
-    reqeu
+@app.route("/data/<slot>", methods=["GET"])
+def get_data(slot):
+    resp = requests.post(
+        f"{domain}/v1/policies/evaluate",
+        headers=get_auth_header(),
+        data=json.dumps({
+            "action": ["SP:GetData"],
+            "resource": [f"arn:hca:dss:*:*:data/{slot}"],
+            "principal": session['username']
+        })).json()['result']
+    if result:
+        return jsonify(slot=slots[slot])
+    else:
+        return make_response("Unauthorize", 403)
+
+requests.Response
+
 if __name__ == "__main__":
     # This allows us to use a plain HTTP callback
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1"
