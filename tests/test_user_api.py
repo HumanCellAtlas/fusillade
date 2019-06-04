@@ -238,7 +238,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         self.assertEqual(1, len(json.loads(resp.body)[key]))
         groups = [Group.create(directory, f"group_{i}").name for i in range(10)]
         user.add_groups(groups)
-        self._test_paging(f'/v1/user/{name}/groups', headers, 5, key)
+        self._test_paging(f'/v1/user/{name}/groups', headers, 6, key)
 
     def test_put_username_roles(self):
         tests = [
@@ -288,8 +288,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         user = User.provision_user(directory, name)
         resp = self.app.get(f'/v1/user/{name}/roles', headers=headers)
         user_role_names = [Role(directory, None, role).name for role in user.roles]
-        self.assertEqual(1, len(json.loads(resp.body)[key]))
-        self.assertEqual(user_role_names, ['default_user'])
+        self.assertEqual(0, len(json.loads(resp.body)[key]))
         roles = [Role.create(directory, f"role_{i}").name for i in range(11)]
         user.add_roles(roles)
         self._test_paging(f'/v1/user/{name}/roles', headers, 6, key)
