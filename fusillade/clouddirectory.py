@@ -1330,10 +1330,10 @@ class User(CloudNode, RolesMixin):
 
     def lookup_policies(self) -> List[str]:
         try:
-            policy_paths = self._lookup_policies_threaded()
+            policy_paths = self.lookup_policies_batched()
         except cd_client.exceptions.ResourceNotFoundException:
             self.provision_user(self.cd, self.name)
-            policy_paths = self._lookup_policies_threaded()
+            policy_paths = self.lookup_policies_batched()
         return self.cd.get_policies(policy_paths)
 
     def lookup_policies_batched(self):
@@ -1341,35 +1341,15 @@ class User(CloudNode, RolesMixin):
         operations = [self.cd.batch_lookup_policy(object_ref) for object_ref in object_refs]
         all_results = []
         while True:
-            results = self.cd.batch_read(operations)['SuccessfulResponse']
+            results = self.cd.batch_read(operations)['Responses']
             operations = []
             for result in results:
-                all_results.extend(result['PolicyToPathList'])  # get results
+                all_results.extend(result['SuccessfulResponse']['LookupPolicy']['PolicyToPathList'])  # get results
                 if result.get('NextToken'):
                     operations.append(self.cd.batch_lookup_policy(result['Path'], result['NextToken']))
             if not operations:
                 break
-
-    def _lookup_policies_threaded(self):
-        object_refs = self.groups + [self.object_ref]
-
-        def _call_with_future(fn, _future, args):
-            """
-            Returns the result of the wrapped threaded function.
-            """
-            try:
-                result = fn(*args)
-                _future.set_result(result)
-            except Exception as exc:
-                _future.set_exception(exc)
-
-        futures = []
-        for object_ref in object_refs:
-            future = Future()
-            Thread(target=_call_with_future, args=(self.cd.lookup_policy, future, [object_ref])).start()
-            futures.append(future)
-        results = [i for future in futures for i in future.result()]
-        return results
+        return all_results
 
     @property
     def status(self):
