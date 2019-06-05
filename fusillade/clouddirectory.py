@@ -802,7 +802,7 @@ class CloudDirectory:
                 for p in policy_paths
                 for o in p['Policies']
                 if o.get('PolicyId') and o['PolicyType'] == policy_type
-                   ]
+            ]
         )
 
         # retrieve the policies in a single request
