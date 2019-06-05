@@ -1,10 +1,12 @@
 import os
-from typing import List, Optional, Dict, Any
+import time
 
+import jwt
 import requests
 from flask import Flask, request, redirect, session, url_for, json, make_response
 from flask.json import jsonify
 from furl import furl
+from requests import HTTPError
 from requests_oauthlib import OAuth2Session
 
 """
@@ -146,10 +148,6 @@ scopes = 'openid email profile'
 slots = [0 for i in range(16)]
 
 
-def get_auth_header():
-    return dict(Authorization=f"Bearer {session['access_token']}")
-
-
 @app.route("/")
 def demo():
     """Step 1: User Authorization.
@@ -191,41 +189,168 @@ def get_data(slot):
     slot = int(slot)
     headers = {'Content-Type': "application/json"}
     headers.update(get_auth_header())
-    result = requests.post(
-        f"{domain}/v1/policies/evaluate",
-        headers=headers,
-        data=json.dumps({
-            "action": ["SP:GetData"],
-            "resource": [f"arn:hca:SP:*:*:data/{slot}"],
-            "principal": session['username']
-        })).json()['result']
-    if result:
-        return jsonify(slot=slots[slot])
-    else:
+    try:
+        response = requests.post(
+            f"{domain}/v1/policies/evaluate",
+            headers=headers,
+            data=json.dumps({
+                "action": ["SP:GetData"],
+                "resource": [f"arn:hca:SP:*:*:data/{slot}"],
+                "principal": session['username']
+            }))
+        response.raise_for_status()
+        assert response.json()['result']
+    except KeyError or HTTPError or AssertionError:
         return make_response("Unauthorize", 403)
+    else:
+        return jsonify(slot=slots[slot])
 
 
 @app.route("/data/<slot>", methods=["PUT"])
 def put_data(slot):
     slot = int(slot)
-    result = requests.post(
-        f"{domain}/v1/policies/evaluate",
-        headers=get_auth_header(),
-        data=json.dumps({
-            "action": ["SP:PutData"],
-            "resource": [f"arn:hca:SP:*:*:data/{slot}"],
-            "principal": session['username']
-        })).json()['result']
-    if result:
+    try:
+        response = requests.post(
+            f"{domain}/v1/policies/evaluate",
+            headers=get_auth_header(),
+            data=json.dumps({
+                "action": ["SP:PutData"],
+                "resource": [f"arn:hca:SP:*:*:data/{slot}"],
+                "principal": session['username']
+            }))
+        response.raise_for_status()
+        assert response.json()['result']
+    except KeyError or HTTPError or AssertionError:
+        return make_response("Unauthorize", 403)
+    else:
         slots[slot] = request.data
         return make_response(f"slot {slot} modified", 200)
-    else:
-        return make_response("Unauthorize", 403)
 
+# supply google service account credentials and register them in fusillade.
+# This will allow the server to configure the application to run using fusillade
+google_service_account_credentials = {
+    "type": "service_account",
+    "project_id": "",
+    "private_key_id": "",
+    "private_key": "",
+    "client_email": "",
+    "client_id": "",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": ""
+}
+
+
+def get_service_jwt(audience=None):
+    iat = time.time()
+    exp = iat + 3600
+    payload = {'iss': google_service_account_credentials["client_email"],
+               'sub': google_service_account_credentials["client_email"],
+               'aud': audience or "https://dev.data.humancellatlas.org/",
+               'iat': iat,
+               'exp': exp,
+               'scope': ['email', 'openid', 'offline_access'],
+               'https://auth.data.humancellatlas.org/email': google_service_account_credentials["client_email"]
+               }
+    additional_headers = {'kid': google_service_account_credentials["private_key_id"]}
+    signed_jwt = jwt.encode(payload, google_service_account_credentials["private_key"], headers=additional_headers,
+                            algorithm='RS256').decode()
+    return signed_jwt
+
+
+def get_auth_header(token=None):
+    if not token:
+        token = session['access_token']
+    return {"Authorization": f"Bearer {token}"}
+
+
+def setup_fusillade():
+    global fusillade_setup
+
+    def add_role(name, policy):
+        resp = requests.get(
+            f"{domain}/v1/role/{name}",
+            headers=headers
+        )
+        if resp.status_code == requests.codes.not_found:
+            print(f"adding role {name}")
+            resp = requests.post(
+                f"{domain}/v1/role/",
+                headers=headers,
+                json={
+                    "role_id": f"{name}",
+                    "policy": json.dumps(policy)
+                }
+            )
+            resp.raise_for_status()
+        elif resp.status_code != requests.codes.ok:
+            if resp.status_code == requests.codes.forbidden:
+                print(f"the service account {google_service_account_credentials['client_email']} has insufficent "
+                      f"permissions to setup fusillade.")
+            resp.raise_for_status()
+        print(f"role {name} created")
+
+    if not fusillade_setup:
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(get_service_jwt()))
+
+        add_role(
+            "SAMPLE_READER",
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "SAMPLE_READER",
+                        "Effect": "Allow",
+                        "Action": [
+                            "SP:GetData"
+                        ],
+                        "Resource": "arn:project:SP:*:*:data/*"
+                    }
+                ]
+            })
+        add_role(
+            "SAMPLE_RW",
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "SAMPLE_RW",
+                        "Effect": "Allow",
+                        "Action": [
+                            "SP:GetData",
+                            "SP:WriteData"
+                        ],
+                        "Resource": "arn:project:SP:*:*:data/*"
+                    }
+                ]
+            })
+        group_id = 'user_default'
+        roles = ['SAMPLE_READER']
+        print(f"adding {roles} to {group_id}.")
+        resp = requests.put(
+            f"{domain}/v1/group/{group_id}/roles",
+            headers=headers,
+            params={'action': 'add'},
+            json={'roles': roles}
+        )
+        if resp.status_code not in (304, 200):
+            print(f"error assigning {roles} to fusillade/{group_id}, {resp}")
+            resp.raise_for_status()
+    return fusillade_setup
+
+fusillade_setup=False
 
 if __name__ == "__main__":
     # This allows us to use a plain HTTP callback
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1"
-
+    try:
+        setup_fusillade()
+    except:
+        print("setup failed!")
+        exit(1)
+    else:
+        fusillade_setup = True
     app.secret_key = os.urandom(24)
     app.run(debug=True, port=5001)
