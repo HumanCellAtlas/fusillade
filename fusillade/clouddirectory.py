@@ -11,10 +11,8 @@ import json
 import logging
 import os
 from collections import namedtuple
-from concurrent.futures import Future
 from datetime import datetime
 from enum import Enum, auto
-from threading import Thread
 from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, Type
 
 from dcplib.aws import clients as aws_clients
