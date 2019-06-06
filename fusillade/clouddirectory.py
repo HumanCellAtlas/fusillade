@@ -1339,12 +1339,15 @@ class User(CloudNode, RolesMixin):
         operations = [self.cd.batch_lookup_policy(object_ref) for object_ref in object_refs]
         all_results = []
         while True:
-            results = self.cd.batch_read(operations)['Responses']
-            operations = []
-            for result in results:
-                all_results.extend(result['SuccessfulResponse']['LookupPolicy']['PolicyToPathList'])  # get results
-                if result.get('NextToken'):
-                    operations.append(self.cd.batch_lookup_policy(result['Path'], result['NextToken']))
+            results = [r['SuccessfulResponse']['LookupPolicy'] for r in self.cd.batch_read(operations)['Responses']]
+            ops_index_modifier = 0
+            for i in range(len(results)):
+                all_results.extend(results[i]['PolicyToPathList'])  # get results
+                if results[i].get('NextToken'):
+                    operations[i - ops_index_modifier]['LookupPolicy']['NextToken'] = results[i]['NextToken']
+                else:
+                    operations.pop(i - ops_index_modifier)
+                    ops_index_modifier += 1
             if not operations:
                 break
         return all_results
