@@ -20,7 +20,7 @@ from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_statement
 
 
-@unittest.skipIf(False, "Slow Test, enable to test performance of evaluate")
+@unittest.skipIf(True, "Slow Test, enable to test performance of evaluate")
 class TestEvaluateApi(BaseAPITest, unittest.TestCase):
 
     def _run_test(self, user, headers, repeat):
