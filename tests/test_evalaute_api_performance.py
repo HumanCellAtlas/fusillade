@@ -8,6 +8,8 @@ import json
 import unittest
 import os
 import sys
+import time
+import logging
 
 from furl import furl
 
@@ -30,22 +32,7 @@ def profileit(name):
     return inner
 
 
-import time
-import logging
-
-def profile(name, count):
-    def inner(func):
-        def wrap(*args, **kwargs):
-            started_at = time.time()
-            result = func(*args, **kwargs)
-            logging.warn(f"{name}: EXECUTION TIME:{(time.time() - started_at)/count}")
-            return result
-
-        return wrap
-    return inner
-
-
-@unittest.skipIf(True, "Manual Teset")
+@unittest.skipIf(False, "Slow Test, enble to test performance of evaluate")
 class TestEvaluateApi(BaseAPITest, unittest.TestCase):
 
     def _run_test(self, user, headers, repeat):
@@ -54,15 +41,22 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
                     "resource": [f"arn:hca:fus:*:*:user/{user}/policy"],
                     "principal": user
                 })
+        results = []
+        start_at = time.time()
         for i in range(repeat):
+            inner_start_at = time.time()
             resp = self.app.post('/v1/policies/evaluate', headers=headers, data=json_body)
+            results.append(time.time() - inner_start_at)
             resp.raise_for_status()
+        results = sorted(results)
+        logging.warning(f"{user}, Total Time:{time.time() - start_at}, Max: {max(results)},"
+                        f"Min: {min(results)}, Med: {results[repeat//2]}, Avg: {sum(results)/repeat}")
 
     def test_lookup_roles(self):
-        # this looks at how lookup policy scales
+        # this looks at how lookup policy scales as roles attached to users increases
         roles = [2,4,8,16,32]
         start = 0
-        repeat = 100
+        repeat = 10
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         role_url = furl('/v1/role')
@@ -85,15 +79,14 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
             add_roles_url=furl(f'/v1/user/{user}/roles', query_params={'action': 'add'})
             resp = self.app.put(add_roles_url.url,headers=headers, data=json.dumps({'roles':role_ids}))
             resp.raise_for_status()
-            profile(user, repeat)(self._run_test)(user, headers, repeat)
-            # profileit(user)(self._run_test)(user, headers, repeat)
+            self._run_test(user, headers, repeat)
             start = role
 
-    def test_lookup_roles(self):
-        # this looks at how lookup policy scales
+    def test_lookup_groups(self):
+        # this looks at how lookup policy scales as user groups membership increases
         groups = [2,4,8,16,32]
         start = 0
-        repeat = 10
+        repeat = 100
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         role_url = furl('/v1/role')
@@ -131,8 +124,7 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
             add_groups_url=furl(f'/v1/user/{user}/groups', query_params={'action': 'add'})
             resp = self.app.put(add_groups_url.url,headers=headers, data=json.dumps({'groups':group_ids}))
             resp.raise_for_status()
-            profile(user, repeat)(self._run_test)(user, headers, repeat)
-            # profileit(user)(self._run_test)(user, headers, repeat)
+            self._run_test(user, headers, repeat)
             start = group
 
 
