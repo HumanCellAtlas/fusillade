@@ -1264,7 +1264,7 @@ class CreateMixin:
             raise FusilladeHTTPException(
                 status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists.")
         new_node = cls(cloud_directory, name)
-        new_node.log.info(dict(message=f"{cls.object_type} created",
+        logger.info(dict(message=f"{cls.object_type} created",
                                object=dict(type=new_node.object_type, path_name=new_node._path_name)))
         new_node._set_statement_with_retry(statement)
         return new_node
@@ -1413,7 +1413,7 @@ class User(CloudNode, RolesMixin):
             raise FusilladeHTTPException(
                 status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists.")
         else:
-            user.log.info(dict(message="User created",
+            logger.info(dict(message="User created",
                                object=dict(type=user.object_type, path_name=user._path_name)))
         if roles:
             user.add_roles(roles + cls.default_roles)
