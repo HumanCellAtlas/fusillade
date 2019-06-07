@@ -1146,7 +1146,7 @@ class CloudNode:
                                         'expected': policy_type,
                                         'received': receive_policy_type
                                         })
-                    self.attached_policies[policy_type]=resp['Attributes'][1]['Value']['BinaryValue'].decode("utf-8")
+                    self.attached_policies[policy_type] = resp['Attributes'][1]['Value']['BinaryValue'].decode("utf-8")
                 except cd_client.exceptions.ResourceNotFoundException:
                     pass
             return self.attached_policies.get(policy_type, '')
