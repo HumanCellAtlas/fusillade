@@ -235,7 +235,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
                 if test['expected_resp'] == 200:
                     expected_body = {
                         'role_id': test['role_id'],
-                        'policy': policy
+                        'policies': {'IAMPolicy': policy}
                     }
                     self.assertEqual(expected_body, json.loads(resp.body))
 

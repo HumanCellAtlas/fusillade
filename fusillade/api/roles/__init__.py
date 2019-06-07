@@ -21,11 +21,7 @@ def get_roles(token_info: dict):
 @authorize(['fus:GetRole'], ['arn:hca:fus:*:*:role/{role_id}/'], ['role_id'])
 def get_role(token_info: dict, role_id: str):
     role = Role(directory, role_id)
-    resp = dict(
-        role_id=role.name,
-        policy=role.get_policy()
-    )
-    return make_response(jsonify(resp), 200)
+    return make_response(jsonify(role.get_info()), 200)
 
 
 @authorize(['fus:PutRole'], ['arn:hca:fus:*:*:role/{role_id}/'], ['role_id'])

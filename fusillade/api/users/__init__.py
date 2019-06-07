@@ -22,7 +22,7 @@ def get_users(token_info: dict):
 @authorize(['fus:GetUser'], ['arn:hca:fus:*:*:user/{user_id}/'], ['user_id'])
 def get_user(token_info: dict, user_id: str):
     user = User(directory, user_id)
-    return make_response(jsonify(name=user.name, status=user.status, policy=user.get_policy()), 200)
+    return make_response(jsonify(user.get_info()), 200)
 
 
 @authorize(['fus:PutUser'], ['arn:hca:fus:*:*:user/{user_id}/status'], ['user_id'])

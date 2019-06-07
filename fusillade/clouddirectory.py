@@ -1158,8 +1158,14 @@ class CloudNode:
 
     def set_policy(self, statement: str, policy_type: str = 'IAMPolicy'):
         if policy_type in self.allowed_policy_types:
-            self._verify_statement(statement)
-            self._set_policy(statement, policy_type)
+            try:
+                # check if this object exists
+                self.cd.get_object_information(self.object_ref)
+            except cd_client.exceptions.ResourceNotFoundException:
+                raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
+            else:
+                self._verify_statement(statement)
+                self._set_policy(statement, policy_type)
 
     def _set_policy(self, statement: str, policy_type: str):
         params = [
@@ -1258,10 +1264,12 @@ class CloudNode:
         return {f"{cls.object_type}s": results}, next_token
 
     def get_info(self) -> Dict[str, Any]:
-        return dict(
-            **self.get_attributes(['name']),
+        info = dict(
+            **self.get_attributes(self._attributes),
             policies=dict([(i, self.get_policy(i)) for i in self.allowed_policy_types if self.get_policy(i)])
         )
+        info[f'{self.object_type}_id'] = info.pop('name')
+        return info
 
 
 class CreateMixin:
