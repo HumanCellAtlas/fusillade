@@ -969,7 +969,7 @@ class CloudNode:
                         result.append(
                             r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
                     else:
-                        self.log.error({"message": "Batch Request Failed", "response": r})  # log error request failed
+                        logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
             return {f'{object_type}s': result}, next_token
         else:
             return [
@@ -1116,6 +1116,7 @@ class CloudNode:
 
 
 class PolicyMixin:
+    """Adds policy support to a cloudNode"""
     allowed_policy_types = ['IAMPolicy']
 
     def lookup_policies(self) -> List[str]:
@@ -1275,7 +1276,8 @@ class PolicyMixin:
         return {'policies': dict([(i, self.get_policy(i)) for i in self.allowed_policy_types if self.get_policy(i)])}
 
 
-class CreateMixin:
+class CreateMixin(PolicyMixin):
+    """Adds creation support to a cloudNode"""
     @classmethod
     def create(cls, cloud_directory: CloudDirectory, name: str, statement: Optional[str] = None) -> Type['CloudNode']:
         if not statement:
@@ -1294,6 +1296,7 @@ class CreateMixin:
 
 
 class RolesMixin:
+    """Adds role support to a cloudNode"""
     @property
     def roles(self) -> List[str]:
         if not self._roles:
@@ -1324,7 +1327,7 @@ class RolesMixin:
                          roles=roles))
 
 
-class User(CloudNode, RolesMixin):
+class User(CloudNode, RolesMixin, PolicyMixin):
     """
     Represents a user in CloudDirectory
     """
