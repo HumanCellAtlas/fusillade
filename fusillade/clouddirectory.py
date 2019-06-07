@@ -1144,7 +1144,7 @@ class CloudNode:
                 )['Attributes'][0]['Value'].popitem()[1].decode("utf-8")
             except cd_client.exceptions.ResourceNotFoundException:
                 pass
-        return policy.get('statement')
+        return policy.get('statement', '')
 
     def set_policy(self, statement: str, policy_type: str = 'IAMPolicy'):
         self._verify_statement(statement)
