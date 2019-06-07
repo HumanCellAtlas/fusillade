@@ -1127,14 +1127,14 @@ class CloudNode:
         operations.append(self.cd.batch_attach_policy(policy_ref, self.object_ref))
         self.cd.batch_write(operations)
         logger.info(dict(message="Policy created",
-                           object=dict(
-                               type=self.object_type,
-                               path_name=self._path_name
-                           ),
-                           policy=dict(
-                               link_name=policy_link_name,
-                               policy_type="IAMPolicy")
-                           ))
+                         object=dict(
+                             type=self.object_type,
+                             path_name=self._path_name
+                         ),
+                         policy=dict(
+                             link_name=policy_link_name,
+                             policy_type="IAMPolicy")
+                         ))
         return policy_ref
 
     def get_policy_name(self, policy_type):
@@ -1178,14 +1178,14 @@ class CloudNode:
             raise FusilladeHTTPException(ex)
         else:
             logger.info(dict(message="Policy updated",
-                               object=dict(
-                                   type=self.object_type,
-                                   path_name=self._path_name
-                               ),
-                               policy=dict(
-                                   link_name=self.get_policy_name('IAMPolicy'),
-                                   policy_type="IAMPolicy")
-                               ))
+                             object=dict(
+                                 type=self.object_type,
+                                 path_name=self._path_name
+                             ),
+                             policy=dict(
+                                 link_name=self.get_policy_name('IAMPolicy'),
+                                 policy_type="IAMPolicy")
+                             ))
 
         self._statement = None
 
@@ -1287,8 +1287,8 @@ class RolesMixin:
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         logger.info(dict(message="Roles added",
-                           object=dict(type=self.object_type, path_name=self._path_name),
-                           roles=roles))
+                         object=dict(type=self.object_type, path_name=self._path_name),
+                         roles=roles))
 
     def remove_roles(self, roles: List[str]):
         operations = []
@@ -1297,8 +1297,8 @@ class RolesMixin:
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         logger.info(dict(message="Roles removed",
-                           object=dict(type=self.object_type, path_name=self._path_name),
-                           roles=roles))
+                         object=dict(type=self.object_type, path_name=self._path_name),
+                         roles=roles))
 
 
 class User(CloudNode, RolesMixin):
@@ -1445,8 +1445,8 @@ class User(CloudNode, RolesMixin):
         self.cd.batch_write(operations)
         self._groups = None  # update groups
         logger.info(dict(message="Groups joined",
-                           object=dict(type=self.object_type, path_name=self._path_name),
-                           groups=groups))
+                         object=dict(type=self.object_type, path_name=self._path_name),
+                         groups=groups))
 
     def remove_groups(self, groups: List[str]):
         operations = []
@@ -1454,8 +1454,8 @@ class User(CloudNode, RolesMixin):
         self.cd.batch_write(operations)
         self._groups = None  # update groups
         logger.info(dict(message="Groups left",
-                           object=dict(type=self.object_type, path_name=self._path_name),
-                           groups=groups))
+                         object=dict(type=self.object_type, path_name=self._path_name),
+                         groups=groups))
 
 
 class Group(CloudNode, RolesMixin, CreateMixin):
@@ -1512,8 +1512,8 @@ class Group(CloudNode, RolesMixin, CreateMixin):
                 for i in users]
             self.cd.batch_write(operations)
             logger.info(dict(message="Adding users to group",
-                               object=dict(type=self.object_type, path_name=self._path_name),
-                               users=[user._path_name for user in users]))
+                             object=dict(type=self.object_type, path_name=self._path_name),
+                             users=[user._path_name for user in users]))
 
     def remove_users(self, users: List[str]) -> None:
         """
@@ -1525,8 +1525,8 @@ class Group(CloudNode, RolesMixin, CreateMixin):
         for user in users:
             User(self.cd, user).remove_groups([self._path_name])
         logger.info(dict(message="Removing users from group",
-                           object=dict(type=self.object_type, path_name=self._path_name),
-                           users=[user for user in users]))
+                         object=dict(type=self.object_type, path_name=self._path_name),
+                         users=[user for user in users]))
 
 
 class Role(CloudNode, CreateMixin):
