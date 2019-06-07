@@ -106,7 +106,7 @@ class TestUser(unittest.TestCase):
         name = "test_set_policy@test.com"
         user = User.provision_user(self.directory, name)
         with self.subTest("The initial user policy is None, when the user is first created"):
-            self.assertEqual(user.get_policy(), None)
+            self.assertFalse(user.get_policy())
 
         statement = create_test_statement(f"UserPolicySomethingElse")
         user.set_policy(statement)

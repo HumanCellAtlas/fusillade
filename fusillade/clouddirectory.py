@@ -1140,13 +1140,13 @@ class CloudNode:
                         ['policy_document', 'policy_type'],
                         self.cd.node_schema
                     )
-                    receive_policy_type = resp['Attributes'][0]['Value']['StringValue']
-                    if receive_policy_type != policy_type:
+                    attrs = dict([(attr['Key']['Name'], attr['Value'].popitem()[1]) for attr in resp['Attributes']])
+                    if attrs['policy_type'] != policy_type:
                         logger.warning({'message': "Retrieved policy_type does not match requested policy_type.",
                                         'expected': policy_type,
-                                        'received': receive_policy_type
+                                        'received': attrs['policy_type']
                                         })
-                    self.attached_policies[policy_type] = resp['Attributes'][1]['Value']['BinaryValue'].decode("utf-8")
+                    self.attached_policies[policy_type] = attrs['policy_document'].decode("utf-8")
                 except cd_client.exceptions.ResourceNotFoundException:
                     pass
             return self.attached_policies.get(policy_type, '')
@@ -1204,12 +1204,14 @@ class CloudNode:
         if policy_type in self.allowed_policy_types:
             self._set_policy(statement, policy_type)
 
-    def _get_attributes(self):
+    def _get_attributes(self, attributes: List[str]):
         """
         retrieve attributes for this from CloudDirectory and sets local private variables.
         """
+        if not attributes:
+            attributes = self._attributes
         try:
-            resp = self.cd.get_object_attributes(self.object_ref, self._facet, self._attributes)
+            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
         for attr in resp['Attributes']:
@@ -1221,14 +1223,11 @@ class CloudNode:
         :param attributes:
         :return:
         """
-        attrs = dict()
         try:
             resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
-        for attr in resp['Attributes']:
-            attrs[attr['Key']['Name']] = attr['Value'].popitem()[1]  # noqa
-        return attrs
+        return dict([(attr['Key']['Name'], attr['Value'].popitem()[1]) for attr in resp['Attributes']])
 
     @staticmethod
     def _verify_statement(statement):
