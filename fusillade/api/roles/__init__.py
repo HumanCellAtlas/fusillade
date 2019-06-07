@@ -23,7 +23,7 @@ def get_role(token_info: dict, role_id: str):
     role = Role(directory, role_id)
     resp = dict(
         role_id=role.name,
-        policy=role.statement
+        policy=role.get_policy()
     )
     return make_response(jsonify(resp), 200)
 
@@ -31,5 +31,5 @@ def get_role(token_info: dict, role_id: str):
 @authorize(['fus:PutRole'], ['arn:hca:fus:*:*:role/{role_id}/'], ['role_id'])
 def put_role_policy(token_info: dict, role_id: str):
     role = Role(directory, role_id)
-    role.statement = request.json['policy']
+    role.set_policy(request.json['policy'])
     return make_response('Role policy updated.', 200)
