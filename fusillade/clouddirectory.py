@@ -649,7 +649,7 @@ class CloudDirectory:
         }
         }
 
-    def batch_get_attributes(self, obj_ref, facet, attributes: List[str]) -> Dict[str, Any]:
+    def batch_get_attributes(self, obj_ref, facet, attributes: List[str], schema=None) -> Dict[str, Any]:
         """
         A helper function to format a batch get_attributes operation
         """
@@ -659,7 +659,7 @@ class CloudDirectory:
                     'Selector': obj_ref
                 },
                 'SchemaFacet': {
-                    'SchemaArn': self.schema,
+                    'SchemaArn': schema if schema else self.schema,
                     'FacetName': facet
                 },
                 'AttributeNames': attributes
@@ -879,6 +879,7 @@ class CloudNode:
     _attributes = ["name"]  # the different attributes of a node stored
     _facet = 'LeafNode'
     object_type = 'node'
+    _allowed_policy_types = ('IAMPolicy',)
 
     def __init__(self,
                  cloud_directory: CloudDirectory,
@@ -901,8 +902,10 @@ class CloudNode:
             self._path_name: str = None
             self.object_ref: str = object_ref
         self.cd: CloudDirectory = cloud_directory
-        self._policy: Optional[str] = None
-        self._statement: Optional[str] = None
+        self.attached_policies: Dict[str, Any] = dict()
+        self.attached_policies.update(
+            [(i, {'object_ref': f"/policy/{self.get_policy_name(i)}"}) for i in self._allowed_policy_types]
+        )
 
     @staticmethod
     def hash_name(name):
@@ -970,7 +973,7 @@ class CloudNode:
                         result.append(
                             r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
                     else:
-                        logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
+                        self.log.error({"message": "Batch Request Failed", "response": r})  # log error request failed
             return {f'{object_type}s': result}, next_token
         else:
             return [
@@ -1075,22 +1078,7 @@ class CloudNode:
             self._path_name = self.hash_name(self._name)
         return self._name
 
-    @property
-    def policy(self):
-        if not self._policy:
-            try:
-                policies = [i for i in self.cd.list_object_policies(self.object_ref)]
-            except cd_client.exceptions.ResourceNotFoundException:
-                raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
-            if not policies:
-                return None
-            elif len(policies) > 1:
-                raise ValueError("Node has multiple policies attached")
-            else:
-                self._policy = policies[0]
-        return self._policy
-
-    def create_policy(self, statement: str) -> str:
+    def create_policy(self, statement: str, policy_type='IAMPolicy') -> str:
         """
         Create a policy object and attach it to the CloudNode
         :param statement: Json string that follow AWS IAM Policy Grammar.
@@ -1099,7 +1087,7 @@ class CloudNode:
         """
         operations = list()
         object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement)
-        policy_link_name = self.get_policy_name('IAMPolicy')
+        policy_link_name = self.get_policy_name(policy_type)
         parent_path = self.cd.get_obj_type_path('policy')
         operations.append(
             {
@@ -1107,7 +1095,7 @@ class CloudNode:
                     'SchemaFacet': [
                         {
                             'SchemaArn': self.cd.schema,
-                            'FacetName': 'IAMPolicy'
+                            'FacetName': policy_type
                         },
                         {
                             'SchemaArn': self.cd.node_schema,
@@ -1140,65 +1128,68 @@ class CloudNode:
     def get_policy_name(self, policy_type):
         return self.hash_name(f"{self._path_name}{self.object_type}{policy_type}")
 
-    @property
-    def statement(self):
+    def get_policy(self, policy_type: str = 'IAMPolicy'):
         """
         Policy statements follow AWS IAM Policy Grammer. See for grammar details
         https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html
         """
-        if not self._statement and self.policy:
-            self._statement = self.cd.get_object_attributes(self.policy,
-                                                            'POLICY',
-                                                            ['policy_document'],
-                                                            self.cd.node_schema
-                                                            )['Attributes'][0]['Value'].popitem()[1].decode("utf-8")
+        policy = self.attached_policies[policy_type]
+        if not policy.get('statement'):
+            try:
+                policy['statement'] = self.cd.get_object_attributes(
+                    policy['object_ref'],
+                    'POLICY',
+                    ['policy_document'],
+                    self.cd.node_schema
+                )['Attributes'][0]['Value'].popitem()[1].decode("utf-8")
+            except cd_client.exceptions.ResourceNotFoundException:
+                pass
+        return policy.get('statement')
 
-        return self._statement
-
-    @statement.setter
-    def statement(self, statement: str):
+    def set_policy(self, statement: str, policy_type: str = 'IAMPolicy'):
         self._verify_statement(statement)
-        self._set_statement(statement)
+        self._set_policy(statement, policy_type)
 
-    def _set_statement(self, statement: str):
+    def _set_policy(self, statement: str, policy_type: str):
+        params = [
+            UpdateObjectParams('POLICY',
+                               'policy_document',
+                               ValueTypes.BinaryValue,
+                               statement,
+                               UpdateActions.CREATE_OR_UPDATE,
+                               )
+        ]
         try:
-            if not self.policy:
-                self.create_policy(statement)
-            else:
-                params = [
-                    UpdateObjectParams('POLICY',
-                                       'policy_document',
-                                       ValueTypes.BinaryValue,
-                                       statement,
-                                       UpdateActions.CREATE_OR_UPDATE,
-                                       )
-                ]
-                self.cd.update_object_attribute(self.policy, params, self.cd.node_schema)
+            try:
+                self.cd.update_object_attribute(self.attached_policies[policy_type]['object_ref'], params,
+                                                self.cd.node_schema)
+            except cd_client.exceptions.ResourceNotFoundException:
+                self.create_policy(statement, policy_type)
         except cd_client.exceptions.LimitExceededException as ex:
             raise FusilladeHTTPException(ex)
         else:
             logger.info(dict(message="Policy updated",
-                             object=dict(
-                                 type=self.object_type,
-                                 path_name=self._path_name
-                             ),
-                             policy=dict(
-                                 link_name=self.get_policy_name('IAMPolicy'),
-                                 policy_type="IAMPolicy")
-                             ))
+                               object=dict(
+                                   type=self.object_type,
+                                   path_name=self._path_name
+                               ),
+                               policy=dict(
+                                   link_name=self.get_policy_name(policy_type),
+                                   policy_type=policy_type)
+                               ))
 
-        self._statement = None
+        self.attached_policies[policy_type]['statement'] = None
 
     @retry(timeout=1, delay=0.1)
-    def _set_statement_with_retry(self, statement):
+    def _set_policy_with_retry(self, statement, policy_type: str = 'IAMPolicy'):
         """
-        Its possible for self._set_statement to fail with resource not found when the node is first created due to
+        Its possible for self._set_policy to fail with resource not found when the node is first created due to
         race conditions in creating new nodes in cloud directory. Retries give the cloud directory time to finish
         creating node before adding a new policy statement.
-        :param statement:
+        :param policy:
         :return:
         """
-        self._set_statement(statement)
+        self._set_policy(statement, policy_type)
 
     def _get_attributes(self, attributes: List[str]):
         """
@@ -1266,7 +1257,7 @@ class CreateMixin:
         new_node = cls(cloud_directory, name)
         logger.info(dict(message=f"{cls.object_type} created",
                          object=dict(type=new_node.object_type, path_name=new_node._path_name)))
-        new_node._set_statement_with_retry(statement)
+        new_node._set_policy_with_retry(statement)
         return new_node
 
 
@@ -1427,7 +1418,7 @@ class User(CloudNode, RolesMixin):
 
         if statement:  # TODO make using user default configurable
             user._verify_statement(statement)
-            user._set_statement_with_retry(statement)
+            user._set_policy_with_retry(statement)
         return user
 
     @property
@@ -1473,8 +1464,8 @@ class Group(CloudNode, RolesMixin, CreateMixin):
         :param name:
         """
         super(Group, self).__init__(cloud_directory, name=name, object_ref=object_ref)
-        self._groups = None
-        self._roles = None
+        self._groups: Optional[List[str]] = None
+        self._roles: Optional[List[str]] = None
 
     def get_users_iter(self) -> List[str]:
         """
@@ -1533,9 +1524,9 @@ class Role(CloudNode, CreateMixin):
     """
     Represents a role in CloudDirectory
     """
-    _facet = 'NodeFacet'
-    object_type = 'role'
-    _default_policy_path = default_role_path
+    _facet: str = 'NodeFacet'
+    object_type: str = 'role'
+    _default_policy_path: str = default_role_path
 
     def __init__(self, cloud_directory: CloudDirectory, name: str = None, object_ref: str = None):
         super(Role, self).__init__(cloud_directory, name=name, object_ref=object_ref)
