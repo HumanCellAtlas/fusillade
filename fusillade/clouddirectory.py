@@ -879,7 +879,7 @@ class CloudNode:
     _attributes = ["name"]  # the different attributes of a node stored
     _facet = 'LeafNode'
     object_type = 'node'
-    _allowed_policy_types = ('IAMPolicy',)
+    allowed_policy_types = ('IAMPolicy',)
 
     def __init__(self,
                  cloud_directory: CloudDirectory,
@@ -902,10 +902,7 @@ class CloudNode:
             self._path_name: str = None
             self.object_ref: str = object_ref
         self.cd: CloudDirectory = cloud_directory
-        self.attached_policies: Dict[str, Any] = dict()
-        self.attached_policies.update(
-            [(i, {'object_ref': f"/policy/{self.get_policy_name(i)}"}) for i in self._allowed_policy_types]
-        )
+        self.attached_policies: Dict[str, str] = dict()
 
     @staticmethod
     def hash_name(name):
@@ -1133,22 +1130,36 @@ class CloudNode:
         Policy statements follow AWS IAM Policy Grammer. See for grammar details
         https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html
         """
-        policy = self.attached_policies[policy_type]
-        if not policy.get('statement'):
-            try:
-                policy['statement'] = self.cd.get_object_attributes(
-                    policy['object_ref'],
-                    'POLICY',
-                    ['policy_document'],
-                    self.cd.node_schema
-                )['Attributes'][0]['Value'].popitem()[1].decode("utf-8")
-            except cd_client.exceptions.ResourceNotFoundException:
-                pass
-        return policy.get('statement', '')
+        if policy_type in self.allowed_policy_types:  # check if this policy type is allowed
+            if not self.attached_policies.get(policy_type):  # check if we already have the policy
+                policy_ref = self.cd.get_obj_type_path('policy') + self.get_policy_name(policy_type)
+                try:
+                    resp = self.cd.get_object_attributes(
+                        policy_ref,
+                        'POLICY',
+                        ['policy_document', 'policy_type'],
+                        self.cd.node_schema
+                    )
+                    receive_policy_type = resp['Attributes'][0]['Value']['StringValue']
+                    if receive_policy_type != policy_type:
+                        logger.warning({'message': "Retrieved policy_type does not match requested policy_type.",
+                                        'expected': policy_type,
+                                        'received': receive_policy_type
+                                        })
+                    self.attached_policies[policy_type]=resp['Attributes'][1]['Value']['BinaryValue'].decode("utf-8")
+                except cd_client.exceptions.ResourceNotFoundException:
+                    pass
+            return self.attached_policies.get(policy_type, '')
+        else:
+            FusilladeHTTPException(
+                title='Bad Request',
+                detail=f"{self.object_type} cannot have policy type {policy_type}."
+                f" Allowed types are: {self.allowed_policy_types}")
 
     def set_policy(self, statement: str, policy_type: str = 'IAMPolicy'):
-        self._verify_statement(statement)
-        self._set_policy(statement, policy_type)
+        if policy_type in self.allowed_policy_types:
+            self._verify_statement(statement)
+            self._set_policy(statement, policy_type)
 
     def _set_policy(self, statement: str, policy_type: str):
         params = [
@@ -1161,7 +1172,8 @@ class CloudNode:
         ]
         try:
             try:
-                self.cd.update_object_attribute(self.attached_policies[policy_type]['object_ref'], params,
+                self.cd.update_object_attribute(self.cd.get_obj_type_path('policy') + self.get_policy_name(policy_type),
+                                                params,
                                                 self.cd.node_schema)
             except cd_client.exceptions.ResourceNotFoundException:
                 self.create_policy(statement, policy_type)
@@ -1178,7 +1190,7 @@ class CloudNode:
                                    policy_type=policy_type)
                                ))
 
-        self.attached_policies[policy_type]['statement'] = None
+        self.attached_policies[policy_type] = None
 
     @retry(timeout=1, delay=0.1)
     def _set_policy_with_retry(self, statement, policy_type: str = 'IAMPolicy'):
@@ -1189,23 +1201,27 @@ class CloudNode:
         :param policy:
         :return:
         """
-        self._set_policy(statement, policy_type)
+        if policy_type in self.allowed_policy_types:
+            self._set_policy(statement, policy_type)
 
-    def _get_attributes(self, attributes: List[str]):
+    def _get_attributes(self):
         """
         retrieve attributes for this from CloudDirectory and sets local private variables.
         """
         try:
-            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+            resp = self.cd.get_object_attributes(self.object_ref, self._facet, self._attributes)
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
         for attr in resp['Attributes']:
             self.__setattr__('_' + attr['Key']['Name'], attr['Value'].popitem()[1])
 
-    def get_attributes(self, attributes: List[str]):
+    def get_attributes(self, attributes: List[str]) -> Dict[str, str]:
+        """
+        retrieve the attribute values.
+        :param attributes:
+        :return:
+        """
         attrs = dict()
-        if not attributes:
-            return attrs
         try:
             resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
         except cd_client.exceptions.ResourceNotFoundException:
@@ -1241,6 +1257,12 @@ class CloudNode:
             else:
                 logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
         return {f"{cls.object_type}s": results}, next_token
+
+    def get_info(self) -> Dict[str, Any]:
+        return dict(
+            **self.get_attributes(['name']),
+            policies=dict([(i, self.get_policy(i)) for i in self.allowed_policy_types if self.get_policy(i)])
+        )
 
 
 class CreateMixin:

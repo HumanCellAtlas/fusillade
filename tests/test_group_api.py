@@ -130,6 +130,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
         Group.create(directory,name)
         resp = self.app.get(f'/v1/group/{name}/', headers=headers)
         self.assertEqual(name, json.loads(resp.body)['name'])
+        self.assertEqual(name, json.loads(resp.body)['policies'])
 
     def test_get_groups(self):
         headers = {'Content-Type': "application/json"}
