@@ -1181,14 +1181,14 @@ class CloudNode:
             raise FusilladeHTTPException(ex)
         else:
             logger.info(dict(message="Policy updated",
-                               object=dict(
-                                   type=self.object_type,
-                                   path_name=self._path_name
-                               ),
-                               policy=dict(
-                                   link_name=self.get_policy_name(policy_type),
-                                   policy_type=policy_type)
-                               ))
+                             object=dict(
+                                 type=self.object_type,
+                                 path_name=self._path_name
+                             ),
+                             policy=dict(
+                                 link_name=self.get_policy_name(policy_type),
+                                 policy_type=policy_type)
+                             ))
 
         self.attached_policies[policy_type] = None
 
