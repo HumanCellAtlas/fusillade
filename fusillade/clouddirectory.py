@@ -879,7 +879,6 @@ class CloudNode:
     _attributes = ["name"]  # the different attributes of a node stored
     _facet = 'LeafNode'
     object_type = 'node'
-    allowed_policy_types = ('IAMPolicy',)
 
     def __init__(self,
                  cloud_directory: CloudDirectory,
@@ -1064,16 +1063,64 @@ class CloudNode:
             operations.append(batch_detach_typed_link(typed_link_specifier))
         return operations
 
-    def lookup_policies(self) -> List[str]:
-        policy_paths = self.cd.lookup_policy(self.object_ref)
-        return self.cd.get_policies(policy_paths)
-
     @property
     def name(self):
         if not self._name:
             self._get_attributes(self._attributes)
             self._path_name = self.hash_name(self._name)
         return self._name
+
+    def _get_attributes(self, attributes: List[str]):
+        """
+        retrieve attributes for this from CloudDirectory and sets local private variables.
+        """
+        if not attributes:
+            attributes = self._attributes
+        try:
+            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
+        for attr in resp['Attributes']:
+            self.__setattr__('_' + attr['Key']['Name'], attr['Value'].popitem()[1])
+
+    def get_attributes(self, attributes: List[str]) -> Dict[str, str]:
+        """
+        retrieve the attribute values.
+        :param attributes:
+        :return:
+        """
+        try:
+            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
+        return dict([(attr['Key']['Name'], attr['Value'].popitem()[1]) for attr in resp['Attributes']])
+
+    @classmethod
+    def list_all(cls, directory: CloudDirectory, next_token: str, per_page: int):
+        resp, next_token = directory.list_object_children_paged(f'/{cls.object_type}/', next_token, per_page)
+        operations = [directory.batch_get_attributes(f'${obj_ref}', cls._facet, ['name'])
+                      for obj_ref in resp.values()]
+        results = []
+        for r in directory.batch_read(operations)['Responses']:
+            if r.get('SuccessfulResponse'):
+                results.append(
+                    r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
+            else:
+                logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
+        return {f"{cls.object_type}s": results}, next_token
+
+    def get_info(self) -> Dict[str, Any]:
+        info = dict(**self.get_attributes(self._attributes))
+        info[f'{self.object_type}_id'] = info.pop('name')
+        return info
+
+
+class PolicyMixin:
+    allowed_policy_types = ['IAMPolicy']
+
+    def lookup_policies(self) -> List[str]:
+        policy_paths = self.cd.lookup_policy(self.object_ref)
+        return self.cd.get_policies(policy_paths)
 
     def create_policy(self, statement: str, policy_type='IAMPolicy') -> str:
         """
@@ -1210,31 +1257,6 @@ class CloudNode:
         if policy_type in self.allowed_policy_types:
             self._set_policy(statement, policy_type)
 
-    def _get_attributes(self, attributes: List[str]):
-        """
-        retrieve attributes for this from CloudDirectory and sets local private variables.
-        """
-        if not attributes:
-            attributes = self._attributes
-        try:
-            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
-        except cd_client.exceptions.ResourceNotFoundException:
-            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
-        for attr in resp['Attributes']:
-            self.__setattr__('_' + attr['Key']['Name'], attr['Value'].popitem()[1])
-
-    def get_attributes(self, attributes: List[str]) -> Dict[str, str]:
-        """
-        retrieve the attribute values.
-        :param attributes:
-        :return:
-        """
-        try:
-            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
-        except cd_client.exceptions.ResourceNotFoundException:
-            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
-        return dict([(attr['Key']['Name'], attr['Value'].popitem()[1]) for attr in resp['Attributes']])
-
     @staticmethod
     def _verify_statement(statement):
         """
@@ -1249,27 +1271,8 @@ class CloudNode:
         except iam.exceptions.InvalidInputException:
             raise FusilladeHTTPException(status=400, title="Bad Request", detail="Invalid policy format.")
 
-    @classmethod
-    def list_all(cls, directory: CloudDirectory, next_token: str, per_page: int):
-        resp, next_token = directory.list_object_children_paged(f'/{cls.object_type}/', next_token, per_page)
-        operations = [directory.batch_get_attributes(f'${obj_ref}', cls._facet, ['name'])
-                      for obj_ref in resp.values()]
-        results = []
-        for r in directory.batch_read(operations)['Responses']:
-            if r.get('SuccessfulResponse'):
-                results.append(
-                    r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
-            else:
-                logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
-        return {f"{cls.object_type}s": results}, next_token
-
-    def get_info(self) -> Dict[str, Any]:
-        info = dict(
-            **self.get_attributes(self._attributes),
-            policies=dict([(i, self.get_policy(i)) for i in self.allowed_policy_types if self.get_policy(i)])
-        )
-        info[f'{self.object_type}_id'] = info.pop('name')
-        return info
+    def get_policy_info(self):
+        return {'policies': dict([(i, self.get_policy(i)) for i in self.allowed_policy_types if self.get_policy(i)])}
 
 
 class CreateMixin:
