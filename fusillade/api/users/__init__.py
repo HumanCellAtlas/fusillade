@@ -42,11 +42,15 @@ def put_user(token_info: dict, user_id: str):
     return resp
 
 
-@authorize(['fus:GetUser'], ['arn:hca:fus:*:*:user/{user_id}/owners'], ['user_id'])
+@authorize(['fus:GetUser'], ['arn:hca:fus:*:*:user/{user_id}/owns'], ['user_id'])
 def get_users_owns(token_info: dict, user_id: str):
     next_token, per_page = get_next_token(request.args)
     user = User(directory, user_id)
-    return get_page(user.get_owned, next_token, per_page, paged=True)
+    return get_page(user.get_owned,
+                    next_token,
+                    per_page,
+                    request.args['resource_type'],
+                    paged=True)
 
 
 @authorize(['fus:PutUser'], ['arn:hca:fus:*:*:user/{user_id}/policy'], ['user_id'])

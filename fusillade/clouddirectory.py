@@ -1378,6 +1378,13 @@ class OwnershipMixin:
                                incoming=False,
                                **kwargs)
 
+    def get_owned(self, object_type, **kwargs):
+        if object_type in self.ownable:
+            if object_type == 'group':
+                return self.list_owned(Group, **kwargs)
+            if object_type == 'role':
+                return self.list_owned(Role, **kwargs)
+
 
 class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
     """
@@ -1552,13 +1559,6 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         logger.info(dict(message="Groups left",
                          object=dict(type=self.object_type, path_name=self._path_name),
                          groups=groups))
-
-    def get_owned(self, object_type, **kwargs):
-        if object_type in self.ownable:
-            if object_type == 'group':
-                return self.list_owned(Group, **kwargs)
-            if object_type == 'role':
-                return self.list_owned(Role, **kwargs)
 
 
 class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
