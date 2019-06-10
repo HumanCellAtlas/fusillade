@@ -502,7 +502,7 @@ class CloudDirectory:
                 'SchemaArn': self.schema,
                 'TypedLinkName': typed_link_facet
             },
-            Attributes=attributes
+            Attributes=self.make_attributes(attributes)
         )
 
     def detach_typed_link(self, typed_link_specifier: Dict[str, Any]):
@@ -794,6 +794,14 @@ class CloudDirectory:
         ]
         return policies_paths
 
+    def get_link_attributes(self, TypedLinkSpecifier, AttributeNames):
+        cd_client.get_link_attributes(
+            DirectoryArn=self._dir_arn,
+            TypedLinkSpecifier=TypedLinkSpecifier,
+            AttributeNames=AttributeNames,
+            ConsistencyLevel='EVENTUAL'
+        )
+
     def get_policies(self, policy_paths: List[Dict[str, Any]], policy_type='IAMPolicy') -> List[str]:
         # Parse the policyIds from the policies path. Only keep the unique ids
         policy_ids = set(
@@ -913,49 +921,32 @@ class CloudNode:
         # links names must be unique between two objects
 
     def _get_links(self, node: Type['CloudNode'],
-                   paged=False,
+                   attribute_name,
+                   attribute_value,
+                   facet,
                    next_token=None,
                    per_page=None,
+                   paged=False,
                    incoming=True):
         """
         Retrieves the links attached to this object from CloudDirectory and separates them into groups and roles
         based on the link name
         """
         get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
-        object_type = node.object_type
         object_selection = 'SourceObjectReference' if incoming else 'TargetObjectReference'
         filter_attribute_ranges = [
             {
-                'AttributeName': 'parent_type',
+                'AttributeName': attribute_name,
                 'Range': {
                     'StartMode': 'INCLUSIVE',
-                    'StartValue': {'StringValue': object_type},
+                    'StartValue': {'StringValue': attribute_value},
                     'EndMode': 'INCLUSIVE',
-                    'EndValue': {'StringValue': object_type}
+                    'EndValue': {'StringValue': attribute_value}
                 }
             }
-        ] if incoming else [
-            {
-                'AttributeName': 'parent_type',
-                'Range': {
-                    'StartMode': 'INCLUSIVE',
-                    'StartValue': {'StringValue': self.object_type},
-                    'EndMode': 'INCLUSIVE',
-                    'EndValue': {'StringValue': self.object_type}
-                }
-            },
-            {
-                'AttributeName': 'child_type',
-                'Range': {
-                    'StartMode': 'INCLUSIVE',
-                    'StartValue': {'StringValue': object_type},
-                    'EndMode': 'INCLUSIVE',
-                    'EndValue': {'StringValue': object_type}
-                }
-            },
         ]
         if paged:
-            result, next_token = get_links(self.object_ref, filter_attribute_ranges, 'association',
+            result, next_token = get_links(self.object_ref, filter_attribute_ranges, facet,
                                            next_token=next_token, paged=paged, per_page=per_page)
             if result:
                 operations = [self.cd.batch_get_attributes(
@@ -970,21 +961,21 @@ class CloudNode:
                             r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
                     else:
                         logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
-            return {f'{object_type}s': result}, next_token
+            return {f'{attribute_value}s': result}, next_token
         else:
             return [
                 type_link[object_selection]['Selector']
                 for type_link in
-                get_links(self.object_ref, filter_attribute_ranges, 'association')
+                get_links(self.object_ref, filter_attribute_ranges, facet)
             ]
 
-    def _add_links_batch(self, links: List[str], link_type: str):
+    def _add_links_batch(self, links: List[str], object_Type: str):
         """
         Attaches links to this object in CloudDirectory.
         """
         if not links:
             return []
-        parent_path = self.cd.get_obj_type_path(link_type)
+        parent_path = self.cd.get_obj_type_path(object_Type)
         batch_attach_object = self.cd.batch_attach_object
         operations = []
         for link in links:
@@ -998,26 +989,22 @@ class CloudNode:
             )
         return operations
 
-    def _add_typed_links_batch(self, links: List[str], link_type: str):
+    def _add_typed_links_batch(self, links: List[str], object_type, link_type: str, attributes: Dict):
         """
         Attaches links to this object in CloudDirectory.
         """
         if not links:
             return []
-        parent_path = self.cd.get_obj_type_path(link_type)
+        parent_path = self.cd.get_obj_type_path(object_type)
         batch_attach_typed_link = self.cd.batch_attach_typed_link
         operations = []
         for link in links:
             parent_ref = f"{parent_path}{self.hash_name(link)}"
-            attributes = {
-                'parent_type': link_type,
-                'child_type': self.object_type,
-            }
             operations.append(
                 batch_attach_typed_link(
                     parent_ref,
                     self.object_ref,
-                    'association',
+                    link_type,
                     attributes
                 )
             )
@@ -1042,13 +1029,13 @@ class CloudNode:
             )
         return operations
 
-    def _remove_typed_links_batch(self, links: List[str], link_type: str):
+    def _remove_typed_links_batch(self, links: List[str], object_type, link_type: str, attributes: Dict):
         """
         Removes links from this object in CloudDirectory.
         """
         if not links:
             return []
-        parent_path = self.cd.get_obj_type_path(link_type)
+        parent_path = self.cd.get_obj_type_path(object_type)
         batch_detach_typed_link = self.cd.batch_detach_typed_link
         make_typed_link_specifier = self.cd.make_typed_link_specifier
         operations = []
@@ -1057,8 +1044,8 @@ class CloudNode:
             typed_link_specifier = make_typed_link_specifier(
                 parent_ref,
                 self.object_ref,
-                'association',
-                {'parent_type': link_type, 'child_type': self.object_type}
+                link_type,
+                attributes
             )
             operations.append(batch_detach_typed_link(typed_link_specifier))
         return operations
@@ -1123,7 +1110,7 @@ class PolicyMixin:
         policy_paths = self.cd.lookup_policy(self.object_ref)
         return self.cd.get_policies(policy_paths)
 
-    def create_policy(self, statement: str, policy_type='IAMPolicy') -> str:
+    def create_policy(self, statement: str, policy_type='IAMPolicy', **kwargs) -> str:
         """
         Create a policy object and attach it to the CloudNode
         :param statement: Json string that follow AWS IAM Policy Grammar.
@@ -1131,7 +1118,8 @@ class PolicyMixin:
         :return:
         """
         operations = list()
-        object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement)
+        object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement,
+                                                                  **kwargs)
         policy_link_name = self.get_policy_name(policy_type)
         parent_path = self.cd.get_obj_type_path('policy')
         operations.append(
@@ -1278,6 +1266,7 @@ class PolicyMixin:
 
 class CreateMixin(PolicyMixin):
     """Adds creation support to a cloudNode"""
+
     @classmethod
     def create(cls, cloud_directory: CloudDirectory, name: str, statement: Optional[str] = None) -> Type['CloudNode']:
         if not statement:
@@ -1297,19 +1286,32 @@ class CreateMixin(PolicyMixin):
 
 class RolesMixin:
     """Adds role support to a cloudNode"""
+
     @property
     def roles(self) -> List[str]:
         if not self._roles:
-            self._roles = self._get_links(Role)
+            self._roles = self._get_links(Role,
+                                          'member_of',
+                                          Role.object_type,
+                                          'membership_link', )
         return self._roles
 
     def get_roles(self, next_token: str = None, per_page: str = None):
-        return self._get_links(Role, paged=True, next_token=next_token, per_page=per_page)
+        return self._get_links(Role,
+                               'member_of',
+                               Role.object_type,
+                               'membership_link',
+                               paged=True,
+                               next_token=next_token,
+                               per_page=per_page)
 
     def add_roles(self, roles: List[str]):
         operations = []
         operations.extend(self._add_links_batch(roles, Role.object_type))
-        operations.extend(self._add_typed_links_batch(roles, Role.object_type))
+        operations.extend(self._add_typed_links_batch(roles,
+                                                      Role.object_type,
+                                                      'membership_link',
+                                                      {'member_of': Role.object_type}))
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         logger.info(dict(message="Roles added",
@@ -1319,7 +1321,10 @@ class RolesMixin:
     def remove_roles(self, roles: List[str]):
         operations = []
         operations.extend(self._remove_links_batch(roles, Role.object_type))
-        operations.extend(self._remove_typed_links_batch(roles, Role.object_type))
+        operations.extend(self._remove_typed_links_batch(roles,
+                                                         Role.object_type,
+                                                         'membership_link',
+                                                         {'member_of': Role.object_type}))
         self.cd.batch_write(operations)
         self._roles = None  # update roles
         logger.info(dict(message="Roles removed",
@@ -1459,15 +1464,27 @@ class User(CloudNode, RolesMixin, PolicyMixin):
     @property
     def groups(self) -> List[str]:
         if not self._groups:
-            self._groups = self._get_links(Group)
+            self._groups = self._get_links(Group,
+                                           'member_of',
+                                           Group.object_type,
+                                           'membership_link')
         return self._groups
 
     def get_groups(self, next_token: str = None, per_page: int = None):
-        return self._get_links(Group, paged=True, next_token=next_token, per_page=per_page)
+        return self._get_links(Group,
+                               'member_of',
+                               Group.object_type,
+                               'membership_link',
+                               paged=True,
+                               next_token=next_token,
+                               per_page=per_page)
 
     def add_groups(self, groups: List[str]):
         operations = []
-        operations.extend(self._add_typed_links_batch(groups, Group.object_type))
+        operations.extend(self._add_typed_links_batch(groups,
+                                                      Group.object_type,
+                                                      'membership_link',
+                                                      {'member_of': Group.object_type}))
         self.cd.batch_write(operations)
         self._groups = None  # update groups
         logger.info(dict(message="Groups joined",
@@ -1476,7 +1493,10 @@ class User(CloudNode, RolesMixin, PolicyMixin):
 
     def remove_groups(self, groups: List[str]):
         operations = []
-        operations.extend(self._remove_typed_links_batch(groups, Group.object_type))
+        operations.extend(self._remove_typed_links_batch(groups,
+                                                         Group.object_type,
+                                                         'membership_link',
+                                                         {'member_of': Group.object_type}))
         self.cd.batch_write(operations)
         self._groups = None  # update groups
         logger.info(dict(message="Groups left",
@@ -1502,14 +1522,17 @@ class Group(CloudNode, RolesMixin, CreateMixin):
         self._groups: Optional[List[str]] = None
         self._roles: Optional[List[str]] = None
 
-    def get_users_iter(self) -> List[str]:
+    def get_users_iter(self) -> Tuple[Dict[str, Union[list, Any]], Any]:
         """
         Retrieves the object_refs for all user in this group.
         :return: (user name, user object reference)
         """
         return self._get_links(
             User,
-            incoming=False)
+            'member_of',
+            self.object_type,
+            'membership_link',
+            incoming=True)
 
     def get_users_page(self, next_token=None, per_page=None) -> Tuple[Dict, str]:
         """
@@ -1518,22 +1541,22 @@ class Group(CloudNode, RolesMixin, CreateMixin):
         """
         return self._get_links(
             User,
+            'member_of',
+            self.object_type,
+            'membership_link',
             paged=True,
             per_page=per_page,
             incoming=False,
             next_token=next_token)
 
-    def add_users(self, users: List[User]) -> None:
+    def add_users(self, users: List['User']) -> None:
         if users:
             operations = [
                 self.cd.batch_attach_typed_link(
-                    self.object_ref,
                     i.object_ref,
-                    'association',
-                    {
-                        'parent_type': self.object_type,
-                        'child_type': i.object_type,
-                    }
+                    self.object_ref,
+                    'membership_link',
+                    {'member_of': 'group'}
                 )
                 for i in users]
             self.cd.batch_write(operations)
