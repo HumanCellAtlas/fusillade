@@ -1,8 +1,8 @@
 from flask import request, make_response, jsonify
 
 from fusillade import directory, Group
-from fusillade.utils.authorize import authorize
 from fusillade.api.paging import get_next_token, get_page
+from fusillade.utils.authorize import authorize
 
 
 @authorize(['fus:PostGroup'], ['arn:hca:fus:*:*:group'])

@@ -1,7 +1,8 @@
 from flask import request, make_response, jsonify
+
 from fusillade import User, directory
-from fusillade.utils.authorize import authorize
 from fusillade.api.paging import get_next_token, get_page
+from fusillade.utils.authorize import authorize
 
 
 @authorize(['fus:PostUser'], ['arn:hca:fus:*:*:user'])
@@ -39,6 +40,7 @@ def put_user(token_info: dict, user_id: str):
     else:
         resp = make_response('', 500)
     return resp
+
 
 @authorize(['fus:GetUser'], ['arn:hca:fus:*:*:user/{user_id}/owners'], ['user_id'])
 def get_users_owns(token_info: dict, user_id: str):
