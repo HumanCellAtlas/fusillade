@@ -302,9 +302,11 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         resp = self.app.get(f'/v1/user/{name}/roles', headers=headers)
         user_role_names = [Role(directory, None, role).name for role in user.roles]
         self.assertEqual(0, len(json.loads(resp.body)[key]))
-        roles = [Role.create(directory, f"role_{i}").name for i in range(11)]
-        user.add_roles(roles)
-        self._test_paging(f'/v1/user/{name}/roles', headers, 6, key)
+        roles = [Role.create(directory, f"role_{i}") for i in range(11)]
+        user.add_roles([role.name for role in roles])
+        [user.add_ownership(role) for role in roles]
+        url = furl(f"/v1/user/{name}/owns", query_params={'object_type': 'role'})
+        self._test_paging(furl.url, headers, 6, key)
 
 if __name__ == '__main__':
     unittest.main()

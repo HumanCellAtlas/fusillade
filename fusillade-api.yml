@@ -902,7 +902,7 @@ components:
       name: resource_type
       in: query
       required: false
-      shema:
+      schema:
         type: string
         enum: [group, role]
     action:
@@ -978,10 +978,6 @@ components:
           $ref: '#/components/schemas/custom_identifier'
         policies:
           type: object
-    Resource:
-      type: object
-      properties:
-
   responses:
     206:
       description: A single page of results was retrieved.

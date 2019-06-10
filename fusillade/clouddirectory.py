@@ -1555,9 +1555,9 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
 
     def get_owned(self, object_type, **kwargs):
         if object_type in self.ownable:
-            if object_type is 'group':
+            if object_type == 'group':
                 return self.list_owned(Group, **kwargs)
-            if object_type is 'role':
+            if object_type == 'role':
                 return self.list_owned(Role, **kwargs)
 
 
