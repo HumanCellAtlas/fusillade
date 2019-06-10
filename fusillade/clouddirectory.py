@@ -888,6 +888,7 @@ class CloudNode:
     _attributes = ["name"]  # the different attributes of a node stored
     _facet = 'LeafNode'
     object_type = 'node'
+    allowed_policy_types = ('IAMPolicy',)
 
     def __init__(self,
                  cloud_directory: CloudDirectory,
@@ -1119,8 +1120,7 @@ class PolicyMixin:
         :return:
         """
         operations = list()
-        object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement,
-                                                                  **kwargs)
+        object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement, **kwargs)
         policy_link_name = self.get_policy_name(policy_type)
         parent_path = self.cd.get_obj_type_path('policy')
         operations.append(
