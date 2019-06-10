@@ -348,6 +348,42 @@ paths:
           $ref: '#/components/responses/401'
         default:
           description: Unexpected error
+  /v1/user/{user_id}/owns:
+    get:
+      summary: Retrieve the resources owned by the user
+      operationId: fusillade.api.users.get_users_owns
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/user_id'
+        - $ref: '#/components/parameters/next_token'
+        - $ref: '#/components/parameters/per_page'
+        - $ref: '#/components/parameters/resource_type'
+      tags:
+        - user
+      responses:
+        200:
+          description: all owned resources have been returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groups:
+                    $ref: '#/components/schemas/paged_results'
+        206:
+          $ref: '#/components/responses/206'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groups:
+                    $ref: '#/components/schemas/paged_results'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error
   /v1/user/{user_id}/groups:
     get:
       summary: Retrieve group(s) a user is in.
@@ -862,6 +898,13 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/custom_identifier'
+    resource_type:
+      name: resource_type
+      in: query
+      required: false
+      shema:
+        type: string
+        enum: [group, role]
     action:
       name: action
       in: query
@@ -935,6 +978,10 @@ components:
           $ref: '#/components/schemas/custom_identifier'
         policies:
           type: object
+    Resource:
+      type: object
+      properties:
+
   responses:
     206:
       description: A single page of results was retrieved.

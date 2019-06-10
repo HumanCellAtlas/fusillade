@@ -470,7 +470,8 @@ class CloudDirectory:
     def create_folder(self, path: str, name: str) -> None:
         """ A folder is just a NodeFacet"""
         schema_facets = [dict(SchemaArn=self.schema, FacetName="NodeFacet")]
-        object_attribute_list = self.get_object_attribute_list(facet="NodeFacet", name=name, obj_type="folder")
+        object_attribute_list = self.get_object_attribute_list(facet="NodeFacet", name=name, obj_type="folder",
+                                                               created_by="fusillade")
         try:
             cd_client.create_object(DirectoryArn=self._dir_arn,
                                     SchemaFacets=schema_facets,
@@ -1268,17 +1269,22 @@ class CreateMixin(PolicyMixin):
     """Adds creation support to a cloudNode"""
 
     @classmethod
-    def create(cls, cloud_directory: CloudDirectory, name: str, statement: Optional[str] = None) -> Type['CloudNode']:
+    def create(cls, cloud_directory: CloudDirectory, name: str, statement: Optional[str] = None,
+               creator=None) -> Type['CloudNode']:
         if not statement:
             statement = get_json_file(cls._default_policy_path)
         cls._verify_statement(statement)
+        _creator = creator if creator else "fusillade"
         try:
-            cloud_directory.create_object(cls.hash_name(name), cls._facet, name=name, obj_type=cls.object_type)
+            cloud_directory.create_object(cls.hash_name(name), cls._facet, name=name, obj_type=cls.object_type,
+                                          created_by=_creator)
         except cd_client.exceptions.LinkNameAlreadyInUseException:
             raise FusilladeHTTPException(
                 status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists.")
         new_node = cls(cloud_directory, name)
-        logger.info(dict(message=f"{cls.object_type} created",
+        if creator:
+            User(cloud_directory, name=creator).add_ownership(new_node)
+        logger.info(dict(message=f"{cls.object_type} created by {_creator}",
                          object=dict(type=new_node.object_type, path_name=new_node._path_name)))
         new_node._set_policy_with_retry(statement)
         return new_node
@@ -1332,7 +1338,48 @@ class RolesMixin:
                          roles=roles))
 
 
-class User(CloudNode, RolesMixin, PolicyMixin):
+class OwnershipMixin:
+    ownable = ['group', 'role']
+
+    def add_ownership(self, node: Type['CloudNode']):
+        self.cd.attach_typed_link(
+            self.object_ref,
+            node.object_ref,
+            'ownership_link',
+            {'owner_of': node.object_type})
+
+    def remove_ownership(self, node: Type['CloudNode']):
+        typed_link_specifier = self.cd.make_typed_link_specifier(
+            self.object_ref,
+            node.object_ref,
+            'ownership_link',
+            {'owner_of': node.object_type}
+        )
+        self.cd.detach_typed_link(typed_link_specifier)
+
+    def is_owner(self, node: Type['CloudNode']):
+        tls = self.cd.make_typed_link_specifier(
+            self.object_ref,
+            node.object_ref,
+            'ownership_link',
+            {'owner_of': node.object_type})
+        try:
+            self.cd.get_link_attributes(tls, [])
+        except cd_client.exceptions.ResourceNotFoundException:
+            return False
+        else:
+            return True
+
+    def list_owned(self, node: Type['CloudNode'], **kwargs):
+        return self._get_links(node=node,
+                               facet='ownership_link',
+                               attribute_value=node.object_type,
+                               attribute_name='owner_of',
+                               incoming=False,
+                               **kwargs)
+
+
+class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
     """
     Represents a user in CloudDirectory
     """
@@ -1421,6 +1468,7 @@ class User(CloudNode, RolesMixin, PolicyMixin):
             statement: Optional[str] = None,
             roles: List[str] = None,
             groups: List[str] = None,
+            creator: str = None
     ) -> 'User':
         """
         Creates a user in cloud directory if the users does not already exists.
@@ -1433,18 +1481,20 @@ class User(CloudNode, RolesMixin, PolicyMixin):
         :return:
         """
         user = cls(cloud_directory, name)
+        _creator = creator if creator else "fusillade"
         try:
             user.cd.create_object(user._path_name,
                                   user._facet,
                                   name=user.name,
                                   status='Enabled',
-                                  obj_type=cls.object_type
+                                  obj_type=cls.object_type,
+                                  created_by=_creator
                                   )
         except cd_client.exceptions.LinkNameAlreadyInUseException:
             raise FusilladeHTTPException(
                 status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists.")
         else:
-            logger.info(dict(message="User created",
+            logger.info(dict(message=f"{user.object_ref} created by {_creator}",
                              object=dict(type=user.object_type, path_name=user._path_name)))
         if roles:
             user.add_roles(roles + cls.default_roles)
@@ -1503,8 +1553,15 @@ class User(CloudNode, RolesMixin, PolicyMixin):
                          object=dict(type=self.object_type, path_name=self._path_name),
                          groups=groups))
 
+    def get_owned(self, object_type, **kwargs):
+        if object_type in self.ownable:
+            if object_type is 'group':
+                return self.list_owned(Group, **kwargs)
+            if object_type is 'role':
+                return self.list_owned(Role, **kwargs)
 
-class Group(CloudNode, RolesMixin, CreateMixin):
+
+class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
     """
     Represents a group in CloudDirectory
     """
