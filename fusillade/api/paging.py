@@ -22,9 +22,7 @@ def get_next_token(query_params: dict):
 
 
 def build_next_url(next_token: str, per_page: int) -> str:
-    url = furl(request.host_url,
-               path=request.path,
-               query_params=request.args)
+    url = furl(request.host_url, path=request.path, query_params=request.args)
     url.add(query_params={'next_token': next_token, 'per_page': per_page})
     if not url.scheme:
         if 'localhost' == url.host:
