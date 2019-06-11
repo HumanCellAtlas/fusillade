@@ -236,7 +236,6 @@ class TestUser(unittest.TestCase):
             resp = user.list_owned(Group)
         user.remove_ownership(group)
         self.assertFalse(user.is_owner(group))
-        pass
 
     @unittest.skip("TODO: unfinished and low priority")
     def test_remove_user(self):
