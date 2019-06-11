@@ -1580,6 +1580,11 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
                          object=dict(type=self.object_type, path_name=self._path_name),
                          groups=groups))
 
+    def get_info(self):
+        info = super(User, self).get_info()
+        info.update(super(User, self).get_policy_info())
+        return info
+
 
 class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
     """
@@ -1655,6 +1660,11 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
                          object=dict(type=self.object_type, path_name=self._path_name),
                          users=[user for user in users]))
 
+    def get_info(self):
+        info = super(Group, self).get_info()
+        info.update(self.get_policy_info())
+        return info
+
 
 class Role(CloudNode, CreateMixin):
     """
@@ -1666,3 +1676,8 @@ class Role(CloudNode, CreateMixin):
 
     def __init__(self, cloud_directory: CloudDirectory, name: str = None, object_ref: str = None):
         super(Role, self).__init__(cloud_directory, name=name, object_ref=object_ref)
+
+    def get_info(self):
+        info = super(Role, self).get_info()
+        info.update(self.get_policy_info())
+        return info
