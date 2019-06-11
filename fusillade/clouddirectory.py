@@ -999,16 +999,12 @@ class CloudNode:
             return []
         link_path = self.cd.get_obj_type_path(object_type)
         batch_attach_typed_link = self.cd.batch_attach_typed_link
-        if incoming:
-            source, target = None, self.object_ref
-        else:
-            source, target = self.object_ref, None
         operations = []
         for link in links:
-            if source:
-                target = f"{link_path}{self.hash_name(link)}"
+            if incoming:
+                source, target = f"{link_path}{self.hash_name(link)}", self.object_ref
             else:
-                source = f"{link_path}{self.hash_name(link)}"
+                source, target = self.object_ref, f"{link_path}{self.hash_name(link)}"
             operations.append(batch_attach_typed_link(source, target, link_type, attributes))
         return operations
 
@@ -1020,16 +1016,12 @@ class CloudNode:
             return []
         link_path = self.cd.get_obj_type_path(link_type)
         batch_detach_object = self.cd.batch_detach_object
-        if incoming:
-            source, target = None, self.object_ref
-        else:
-            source, target = self.object_ref, None
         operations = []
         for link in links:
-            if source:
-                target = f"{link_path}{self.hash_name(link)}"
+            if incoming:
+                source, target = f"{link_path}{self.hash_name(link)}", self.object_ref
             else:
-                source = f"{link_path}{self.hash_name(link)}"
+                source, target = self.object_ref, f"{link_path}{self.hash_name(link)}"
             operations.append(
                 batch_detach_object(
                     target,
@@ -1045,19 +1037,15 @@ class CloudNode:
         """
         if not links:
             return []
-        if incoming:
-            source, target = None, self.object_ref
-        else:
-            source, target = self.object_ref, None
         link_path = self.cd.get_obj_type_path(object_type)
         batch_detach_typed_link = self.cd.batch_detach_typed_link
         make_typed_link_specifier = self.cd.make_typed_link_specifier
         operations = []
         for link in links:
-            if source:
-                target = f"{link_path}{self.hash_name(link)}"
+            if incoming:
+                source, target = f"{link_path}{self.hash_name(link)}", self.object_ref
             else:
-                source = f"{link_path}{self.hash_name(link)}"
+                source, target = self.object_ref, f"{link_path}{self.hash_name(link)}"
             typed_link_specifier = make_typed_link_specifier(
                 source,
                 target,
