@@ -17,7 +17,7 @@ from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, 
 
 from dcplib.aws import clients as aws_clients
 
-from fusillade.errors import FusilladeException, FusilladeHTTPException
+from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException
 from fusillade.utils.retry import retry
 
 logger = logging.getLogger(__name__)
@@ -1071,20 +1071,15 @@ class CloudNode:
         try:
             resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
         except cd_client.exceptions.ResourceNotFoundException:
-            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
+            raise FusilladeNotFoundException(detail="Resource does not exist.")
         for attr in resp['Attributes']:
             self.__setattr__('_' + attr['Key']['Name'], attr['Value'].popitem()[1])
 
     def get_attributes(self, attributes: List[str]) -> Dict[str, str]:
-        """
-        retrieve the attribute values.
-        :param attributes:
-        :return:
-        """
         try:
             resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
         except cd_client.exceptions.ResourceNotFoundException:
-            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
+            raise FusilladeNotFoundException(detail="Resource does not exist.")
         return dict([(attr['Key']['Name'], attr['Value'].popitem()[1]) for attr in resp['Attributes']])
 
     @classmethod
@@ -1202,7 +1197,7 @@ class PolicyMixin:
                 # check if this object exists
                 self.cd.get_object_information(self.object_ref)
             except cd_client.exceptions.ResourceNotFoundException:
-                raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
+                raise FusilladeNotFoundException(detail="Resource does not exist.")
             else:
                 self._verify_statement(statement)
                 self._set_policy(statement, policy_type)
