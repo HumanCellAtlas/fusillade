@@ -14,8 +14,7 @@ class Config:
     _openid_provider = None
     version = "unversioned"
     directory_schema_version = {"Version": '0', "MinorVersion": '0'}
-
-    # TODO make configurable
+    _directory = None
 
     @classmethod
     def get_admin_emails(cls):
@@ -33,6 +32,14 @@ class Config:
                     SecretId=f"{os.environ['FUS_SECRETS_STORE']}/"
                     f"{os.environ['FUS_DEPLOYMENT_STAGE']}/oauth2_config")["SecretString"])
         return cls._oauth2_config
+
+    @classmethod
+    def get_directory(cls):
+        if not cls._directory:
+            from fusillade import CloudDirectory
+            directory_name = cls.get_directory_name()
+            cls._directory = CloudDirectory.from_name(directory_name)
+        return cls._directory
 
     @classmethod
     def get_directory_name(cls):
