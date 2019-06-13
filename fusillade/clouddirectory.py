@@ -118,6 +118,7 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         )
     except cd_client.exceptions.DirectoryAlreadyExistsException:
         directory = CloudDirectory.from_name(name)
+        return directory
     else:
         # create structure
         for folder_name in ('group', 'user', 'role', 'policy'):
@@ -132,8 +133,8 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         for admin in admins:
             User.provision_user(admin, roles=['fusillade_admin'])
         User.provision_user('public')
-    finally:
         return directory
+
 
 
 def _paging_loop(fn: Callable, key: str, upack_response: Optional[Callable] = None, **kwarg):
