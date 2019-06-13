@@ -35,11 +35,8 @@ set_oauth2_config:
 check_directory_schema:
 	./scripts/upgrade_schema.py
 
-upgrade_published_schema:
-	./scripts/upgrade_schema.py --upgrade-published
-
-upgrade_directory_schema:
-	./scripts/upgrade_schema.py --upgrade-directory
+upgrade_directory_schema: check_directory_schema
+	./scripts/upgrade_schema.py --upgrade-published --upgrade-directory
 
 plan-infra:
 	$(MAKE) -C infra plan-all
