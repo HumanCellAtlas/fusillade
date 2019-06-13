@@ -15,6 +15,7 @@ class Config:
     version = "unversioned"
     directory_schema_version = {"Version": '0', "MinorVersion": '0'}
     _directory = None
+    _directory_name = None
 
     @classmethod
     def get_admin_emails(cls):
@@ -43,7 +44,9 @@ class Config:
 
     @classmethod
     def get_directory_name(cls):
-        return os.getenv("FUSILLADE_DIR", f"hca_fusillade_{os.environ['FUS_DEPLOYMENT_STAGE']}")
+        if not cls._directory_name:
+            cls._directory_name = os.getenv("FUSILLADE_DIR", f"hca_fusillade_{os.environ['FUS_DEPLOYMENT_STAGE']}")
+        return cls._directory_name
 
     @classmethod
     def get_schema_name(cls):
