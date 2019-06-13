@@ -1,5 +1,6 @@
+import os
+import sys
 import unittest
-import os, sys
 from unittest import mock
 
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
@@ -54,7 +55,7 @@ class TestCloudDirectory(unittest.TestCase):
         """Check that cloud directory is setup for fusillade"""
         schema_name = "authz"
         schema_version = random_hex_string()
-        directory_name = "test_dir_" + random_hex_string()
+        os.environ["FUSILLADE_DIR"] = directory_name = "test_dir_" + random_hex_string()
         schema_arn = publish_schema(schema_name, schema_version)
         self.addCleanup(cleanup_schema, schema_arn)
         directory = create_directory(directory_name, schema_arn, [service_accounts['admin']['client_email']])
@@ -101,9 +102,6 @@ class TestCloudDirectory(unittest.TestCase):
             for tag in expected_tags:
                 with self.subTest(f"Directory has {tag} tag when created"):
                     self.assertIn(tag, response['Tags'])
-
-
-
 
 
 if __name__ == '__main__':
