@@ -56,16 +56,17 @@ class TestCloudDirectory(unittest.TestCase):
         """Check that cloud directory is setup for fusillade"""
         schema_name = "authz"
         schema_version = random_hex_string()
-        directory_name = os.environ["FUSILLADE_DIR"]
+        directory_name = Config.get_directory_name()
         schema_arn = publish_schema(schema_name, schema_version)
         self.addCleanup(cleanup_schema, schema_arn)
-        directory = create_directory(directory_name, schema_arn, [service_accounts['admin']['client_email']])
+        Config._direcory = create_directory(directory_name, schema_arn, [service_accounts['admin']['client_email']])
+        directory = Config.get_directory()
         self.addCleanup(cleanup_directory, CloudDirectory.from_name(directory_name)._dir_arn)
 
         folders = ['user', 'role', 'group', 'policy']
         for folder in folders:
             with self.subTest(f"{folder} node is created when directory is created"):
-                resp = directory.get_object_information(f'/{folder}')
+                resp = Config.get.get_object_information(f'/{folder}')
                 self.assertTrue(resp['ObjectIdentifier'])
 
         roles = [f"/role/{CloudNode.hash_name(name)}" for name in ['fusillade_admin', 'default_user']]
