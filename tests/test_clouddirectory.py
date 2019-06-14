@@ -1,7 +1,6 @@
 import os
 import sys
 import unittest
-from unittest import mock
 from unittest.mock import patch
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
@@ -17,7 +16,7 @@ admin_email = "test_email1@domain.com,test_email2@domain.com, test_email3@domain
 @standalone
 class TestCloudDirectory(unittest.TestCase):
 
-    @patch.object(Config, '_directory_name', "test_dir_" + random_hex_string())
+    @patch.dict(os.environ, FUSILLADE_DIR="test_dir_" + random_hex_string())
     def test_cd(self):
         """ Testing the process of creating and destroying an AWS CloudDirectory"""
         schema_name = "authz"
@@ -51,8 +50,8 @@ class TestCloudDirectory(unittest.TestCase):
         with self.subTest("error returned when deleting a nonexistent schema."):
             self.assertRaises(cd_client.exceptions.ResourceNotFoundException, cleanup_schema, schema_arn_2)
 
-    @mock.patch.dict(os.environ, FUS_ADMIN_EMAILS=admin_email)
-    @patch.object(Config, '_directory_name', "test_dir_" + random_hex_string())
+    @patch.dict(os.environ, FUS_ADMIN_EMAILS=admin_email)
+    @patch.dict(os.environ, FUSILLADE_DIR="test_dir_" + random_hex_string())
     def test_structure(self):
         """Check that cloud directory is setup for fusillade"""
         schema_name = "authz"
