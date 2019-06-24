@@ -79,7 +79,7 @@ def put_users_groups(token_info: dict, user_id: str):
     action = request.args['action']
     try:
         if action == 'add':
-                user.add_groups(request.json['groups'])
+            user.add_groups(request.json['groups'])
         elif action == 'remove':
             user.remove_groups(request.json['groups'])
     except cd_client.exceptions.BatchWriteException as ex:

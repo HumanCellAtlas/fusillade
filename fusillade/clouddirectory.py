@@ -20,7 +20,7 @@ from dcplib.aws import clients as aws_clients
 
 from fusillade import Config
 from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException, \
-    AuthorizationException, FusilladeBindingException, FusilladeNotModifiedException
+    AuthorizationException, FusilladeBindingException
 from fusillade.utils.retry import retry
 
 logger = logging.getLogger(__name__)
