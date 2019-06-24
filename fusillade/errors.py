@@ -32,6 +32,11 @@ class FusilladeBadRequestException(FusilladeHTTPException):
                          **kwargs)
 
 
+class FusilladeNotModifiedException(FusilladeHTTPException):
+    def __init__(self, detail, *args, **kwargs) -> None:
+        super().__init__(status=requests.codes.not_modified, title="Not Modified", detail=detail, *args, **kwargs)
+
+
 class FusilladeBindingException(FusilladeHTTPException):
     def __init__(self, detail, *args, **kwargs) -> None:
         super().__init__(status=requests.codes.bad_request, title="illegal_arguments", detail=detail,

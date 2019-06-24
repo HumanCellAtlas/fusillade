@@ -20,7 +20,7 @@ from dcplib.aws import clients as aws_clients
 
 from fusillade import Config
 from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException, \
-    AuthorizationException, FusilladeBindingException
+    AuthorizationException, FusilladeBindingException, FusilladeNotModifiedException
 from fusillade.utils.retry import retry
 
 logger = logging.getLogger(__name__)
@@ -1332,7 +1332,10 @@ class RolesMixin:
                                                       Role.object_type,
                                                       'membership_link',
                                                       {'member_of': Role.object_type}))
-        self.cd.batch_write(operations)
+        try:
+            self.cd.batch_write(operations)
+        except cd_client.exceptions.LinkNameAlreadyInUseException as ex:
+            raise FusilladeNotModifiedException("One or more roles is already linked.")
         self._roles = None  # update roles
         logger.info(dict(message="Roles added",
                          object=dict(type=self.object_type, path_name=self._path_name),
@@ -1568,7 +1571,11 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
                                                       Group.object_type,
                                                       'membership_link',
                                                       {'member_of': Group.object_type}))
-        self.cd.batch_write(operations)
+        try:
+            self.cd.batch_write(operations)
+        except cd_client.exceptions.LinkNameAlreadyInUseException as ex:
+            raise FusilladeNotModifiedException("One or more groups is already linked.")
+
         self._groups = None  # update groups
         logger.info(dict(message="Groups joined",
                          object=dict(type=self.object_type, path_name=self._path_name),
