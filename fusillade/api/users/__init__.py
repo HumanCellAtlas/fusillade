@@ -36,10 +36,10 @@ def put_user(token_info: dict, user_id: str):
                  'msg': f"User status set to {new_status}."}
     if new_status == 'enabled':
         user.enable()
-        resp = make_response(jsonify(resp_json, 200))
+        resp = make_response(jsonify(resp_json), 200)
     elif new_status == 'disabled':
         user.disable()
-        resp = make_response(jsonify(resp_json, 200))
+        resp = make_response(jsonify(resp_json), 200)
     else:
         resp = make_response('', 500)
     return resp
@@ -61,7 +61,7 @@ def put_user_policy(token_info: dict, user_id: str):
     user = User(user_id)
     user.set_policy(request.json['policy'])
     return make_response(jsonify({'user_id': user_id,
-                                  'msg': "User's policy successfully modified."}, 200))
+                                  'msg': "User's policy successfully modified."}), 200)
 
 
 @authorize(['fus:GetGroup'], ['arn:hca:fus:*:*:user/{user_id}/groups'], ['user_id'])
@@ -82,7 +82,7 @@ def put_users_groups(token_info: dict, user_id: str):
     return make_response(jsonify({'groups': request.json['groups'],
                                   'action': action,
                                   'user_id': user_id,
-                                  'msg': "User's groups successfully modified."}, 200))
+                                  'msg': "User's groups successfully modified."}), 200)
 
 
 @authorize(['fus:GetRole'], ['arn:hca:fus:*:*:user/{user_id}/roles'], ['user_id'])
@@ -103,4 +103,4 @@ def put_users_roles(token_info: dict, user_id: str):
     return make_response(jsonify({'roles': request.json['roles'],
                                   'action': action,
                                   'user_id': user_id,
-                                  'msg': "User's roles successfully modified."}, 200))
+                                  'msg': "User's roles successfully modified."}), 200)

@@ -58,7 +58,7 @@ def put_groups_roles(token_info: dict, group_id: str):
     return make_response(jsonify({'roles': request.json['roles'],
                                   'action': action,
                                   'group_id': group_id,
-                                  'msg': "Group's roles successfully modified."}, 200))
+                                  'msg': "Group's roles successfully modified."}), 200)
 
 
 @authorize(['fus:DeleteGroup'], ['arn:hca:fus:*:*:group/{group_id}/'], ['group_id'], {'fus:group_id': 'group_id'})
