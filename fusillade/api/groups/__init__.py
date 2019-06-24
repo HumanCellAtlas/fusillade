@@ -2,6 +2,8 @@ from flask import request, make_response, jsonify
 
 from fusillade import Group
 from fusillade.api.paging import get_next_token, get_page
+from fusillade.clouddirectory import cd_client
+from fusillade.errors import FusilladeNotModifiedException
 from fusillade.utils.authorize import authorize
 
 
@@ -51,10 +53,13 @@ def get_groups_roles(token_info: dict, group_id: str):
 def put_groups_roles(token_info: dict, group_id: str):
     group = Group(group_id)
     action = request.args['action']
-    if action == 'add':
-        group.add_roles(request.json['roles'])
-    elif action == 'remove':
-        group.remove_roles(request.json['roles'])
+    try:
+        if action == 'add':
+            group.add_roles(request.json['roles'])
+        elif action == 'remove':
+            group.remove_roles(request.json['roles'])
+    except cd_client.exceptions.BatchWriteException as ex:
+        raise FusilladeNotModifiedException(ex.response['Error']['Message'])
     return make_response(jsonify({'roles': request.json['roles'],
                                   'action': action,
                                   'group_id': group_id,

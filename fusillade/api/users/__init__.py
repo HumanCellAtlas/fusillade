@@ -2,6 +2,8 @@ from flask import request, make_response, jsonify
 
 from fusillade import User
 from fusillade.api.paging import get_next_token, get_page
+from fusillade.clouddirectory import cd_client
+from fusillade.errors import FusilladeNotModifiedException
 from fusillade.utils.authorize import authorize
 
 
@@ -75,10 +77,13 @@ def get_users_groups(token_info: dict, user_id: str):
 def put_users_groups(token_info: dict, user_id: str):
     user = User(user_id)
     action = request.args['action']
-    if action == 'add':
-        user.add_groups(request.json['groups'])
-    elif action == 'remove':
-        user.remove_groups(request.json['groups'])
+    try:
+        if action == 'add':
+                user.add_groups(request.json['groups'])
+        elif action == 'remove':
+            user.remove_groups(request.json['groups'])
+    except cd_client.exceptions.BatchWriteException as ex:
+        raise FusilladeNotModifiedException(ex.response['Error']['Message'])
     return make_response(jsonify({'groups': request.json['groups'],
                                   'action': action,
                                   'user_id': user_id,
@@ -96,10 +101,13 @@ def get_users_roles(token_info: dict, user_id: str):
 def put_users_roles(token_info: dict, user_id: str):
     user = User(user_id)
     action = request.args['action']
-    if action == 'add':
-        user.add_roles(request.json['roles'])
-    elif action == 'remove':
-        user.remove_roles(request.json['roles'])
+    try:
+        if action == 'add':
+            user.add_roles(request.json['roles'])
+        elif action == 'remove':
+            user.remove_roles(request.json['roles'])
+    except cd_client.exceptions.BatchWriteException as ex:
+        raise FusilladeNotModifiedException(ex.response['Error']['Message'])
     return make_response(jsonify({'roles': request.json['roles'],
                                   'action': action,
                                   'user_id': user_id,

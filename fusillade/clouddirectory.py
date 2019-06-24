@@ -1332,10 +1332,7 @@ class RolesMixin:
                                                       Role.object_type,
                                                       'membership_link',
                                                       {'member_of': Role.object_type}))
-        try:
-            self.cd.batch_write(operations)
-        except cd_client.exceptions.LinkNameAlreadyInUseException:
-            raise FusilladeNotModifiedException("One or more roles is already linked.")
+        self.cd.batch_write(operations)
         self._roles = None  # update roles
         logger.info(dict(message="Roles added",
                          object=dict(type=self.object_type, path_name=self._path_name),
@@ -1571,11 +1568,7 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
                                                       Group.object_type,
                                                       'membership_link',
                                                       {'member_of': Group.object_type}))
-        try:
-            self.cd.batch_write(operations)
-        except cd_client.exceptions.LinkNameAlreadyInUseException:
-            raise FusilladeNotModifiedException("One or more groups is already linked.")
-
+        self.cd.batch_write(operations)
         self._groups = None  # update groups
         logger.info(dict(message="Groups joined",
                          object=dict(type=self.object_type, path_name=self._path_name),
