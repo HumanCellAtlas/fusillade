@@ -169,7 +169,7 @@ class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute',
     pass
 
 
-cd_retry_parameters = dict(timeout=.5,
+cd_retry_parameters = dict(timeout=1,
                            delay=0.1,
                            retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
 
