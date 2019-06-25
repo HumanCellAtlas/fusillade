@@ -760,12 +760,28 @@ class CloudDirectory:
         """
         A wrapper around CloudDirectory.Client.batch_write
         """
-        responses = []
-        for i in range(0, len(operations), self._batch_write_max):
-            responses.extend(
-                cd_client.batch_write(
-                    DirectoryArn=self._dir_arn,
-                    Operations=operations[i:i + self._batch_write_max])['Responses'])
+        responses = []  # contains succesful responses
+        try:
+            for i in range(0, len(operations), self._batch_write_max):
+                responses.extend(
+                    cd_client.batch_write(
+                        DirectoryArn=self._dir_arn,
+                        Operations=operations[i:i + self._batch_write_max])['Responses'])
+        except cd_client.exceptions.BatchWriteException as ex:
+            failed_batch = operations[i:i + self._batch_write_max]
+            failed_op = failed_batch[int(ex.response['Error']['Message'].split(" ")[1])]
+            logger.debug(
+                {
+                    "message": ex,
+                    "response": ex.response,
+                    "operations": {
+                        "failed": failed_op,
+                        "skipped": len(operations[i:]),
+                        "sucessful": len(operations[:i])
+                    }
+                })
+            raise ex
+
         return responses
 
     @retry(**cd_retry_parameters)
