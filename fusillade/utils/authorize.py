@@ -6,7 +6,7 @@ from typing import List, Dict, Optional, Any
 from dcplib.aws import clients as aws_clients
 
 from fusillade import User
-from fusillade.errors import FusilladeForbiddenException, UserDisabled
+from fusillade.errors import FusilladeForbiddenException, AuthorizationException
 
 logger = logging.getLogger(__name__)
 iam = aws_clients.iam
@@ -55,7 +55,7 @@ def assert_authorized(user, actions, resources, context_entries=None):
     u = User(user)
     try:
         policies = u.lookup_policies()
-    except UserDisabled:
+    except AuthorizationException:
         raise FusilladeForbiddenException(detail="User must be enabled to make authenticated requests.")
     _context_entries = [
         {

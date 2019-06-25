@@ -5,7 +5,7 @@ from threading import Thread
 from flask import make_response, jsonify
 
 from fusillade import User
-from fusillade.errors import UserDisabled
+from fusillade.errors import AuthorizationException
 from fusillade.utils.authorize import assert_authorized, evaluate_policy
 
 
@@ -15,7 +15,7 @@ def evaluate_policy_api(token_info, body):
                          ['arn:hca:fus:*:*:user']):
         try:
             policies = User(body['principal']).lookup_policies()
-        except UserDisabled:
+        except AuthorizationException:
             result = False
         else:
             result = evaluate_policy(body['principal'], body['action'], body['resource'], policies)
