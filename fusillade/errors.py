@@ -8,6 +8,10 @@ class FusilladeException(Exception):
     pass
 
 
+class UserDisabled(FusilladeException):
+    pass
+
+
 class FusilladeHTTPException(ProblemException):
     pass
 

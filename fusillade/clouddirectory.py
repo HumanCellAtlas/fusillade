@@ -18,7 +18,7 @@ from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, 
 from dcplib.aws import clients as aws_clients
 
 from fusillade import Config
-from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException
+from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException, UserDisabled
 from fusillade.utils.retry import retry
 
 logger = logging.getLogger(__name__)
@@ -1410,10 +1410,15 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
 
     def lookup_policies(self) -> List[str]:
         try:
-            policy_paths = self.lookup_policies_batched()
-        except cd_client.exceptions.ResourceNotFoundException:
+            status = self.status
+        except FusilladeNotFoundException:
             self.provision_user(self.name)
             policy_paths = self.lookup_policies_batched()
+        else:
+            if status == 'Enabled':
+                policy_paths = self.lookup_policies_batched()
+            else:
+                raise UserDisabled(f"{self.name} is {self.status}")
         return self.cd.get_policies(policy_paths)
 
     def lookup_policies_batched(self):
@@ -1562,6 +1567,7 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
     def get_info(self):
         info = super(User, self).get_info()
         info.update(super(User, self).get_policy_info())
+        info['status'] = self.status
         return info
 
 
