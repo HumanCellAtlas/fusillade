@@ -221,7 +221,6 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         resp = self.app.get(test_user_url.url, headers=user_headers)
         self.assertEqual(200, resp.status_code)
 
-
     def test_put_username_groups(self):
         tests = [
             {
