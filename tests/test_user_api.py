@@ -261,6 +261,47 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 resp = self.app.put(url.url, headers=headers, data=data)
                 self.assertEqual(test['response']['code'], resp.status_code)
 
+    def test_user_group_limit(self):
+        groups = [Group.create(f"group_{i}").name for i in range(10)]
+        name = "test_put_user_group0@email.com"
+        user = User.provision_user(name)
+        tests = [
+            {
+                'action': 'add',
+                'json_request_body': {
+                    "groups": groups[:8]
+                },
+                'response': {
+                    'code': 200
+                }
+            },
+            {
+                'action': 'add',
+                'json_request_body': {
+                    "groups": [groups[9]]
+                },
+                'response': {
+                    'code': 409
+                }
+            }
+        ]
+        for test in tests:
+            with self.subTest(test['json_request_body']):
+                data = json.dumps(test['json_request_body'])
+                headers = {'Content-Type': "application/json"}
+                headers.update(get_auth_header(service_accounts['admin']))
+                url = furl(f'/v1/user/{name}/groups/')
+                query_params = {
+                    'user_id': name,
+                    'action': test['action']
+                }
+                url.add(query_params=query_params)
+
+                if test['action'] == 'remove':
+                    user.add_groups(test['json_request_body']['groups'])
+                resp = self.app.put(url.url, headers=headers, data=data)
+                self.assertEqual(test['response']['code'], resp.status_code)
+
     def test_get_username_groups(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
