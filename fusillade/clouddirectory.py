@@ -1154,7 +1154,7 @@ class PolicyMixin:
                          ),
                          policy=dict(
                              link_name=policy_link_name,
-                             policy_type="IAMPolicy")
+                             policy_type=policy_type)
                          ))
         return policy_ref
 
@@ -1200,8 +1200,15 @@ class PolicyMixin:
             except cd_client.exceptions.ResourceNotFoundException:
                 raise FusilladeNotFoundException(detail="Resource does not exist.")
             else:
-                self._verify_statement(statement)
-                self._set_policy(statement, policy_type)
+                _statement = self._set_policy_id(statement)
+                self._verify_statement(_statement)
+                self._set_policy(_statement, policy_type)
+
+    def _set_policy_id(self, statement: str) -> str:
+        s = json.loads(statement)
+        policy_id = ':'.join([self.object_type, self.name])
+        s['Id'] = policy_id
+        return json.dumps(s)
 
     def _set_policy(self, statement: str, policy_type: str):
         params = [
