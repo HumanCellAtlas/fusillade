@@ -1551,8 +1551,9 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
     def add_groups(self, groups: List[str], run=True):
         operations = []
         if len(self.groups) + len(groups) >= Config.group_max:
-            raise FusilladeLimitException(f"Failed to add groups [{groups}]. The user belongs to {len(self.groups)} groups. "
-                                 f"Only {Config.group_max - len(self.groups)} can be added.")
+            raise FusilladeLimitException(
+                f"Failed to add groups [{groups}]. The user belongs to {len(self.groups)} groups. "
+                f"Only {Config.group_max - len(self.groups)} can be added.")
         operations.extend(self._add_typed_links_batch(groups,
                                                       Group.object_type,
                                                       'membership_link',
