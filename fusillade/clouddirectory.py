@@ -7,6 +7,7 @@ https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloud
 """
 import functools
 import hashlib
+import itertools
 import json
 import logging
 import os
@@ -1636,8 +1637,7 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
 
     def add_users(self, users: List['User']) -> None:
         if users:
-            operations = []
-            [operations.extend(user.add_groups(groups=[self.name], run=False)) for user in users]
+            operations = [i for i in itertools.chain(*[user.add_groups([self.name], False) for user in users])]
             self.cd.batch_write(operations)
             logger.info(dict(message="Adding users to group",
                              object=dict(type=self.object_type, path_name=self._path_name),
@@ -1651,8 +1651,7 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
         :return:
         """
         if users:
-            operations = []
-            [operations.extend(user.remove_groups(groups=[self.name], run=False)) for user in users]
+            operations = [i for i in itertools.chain(*[user.remove_groups([self.name], False) for user in users])]
             self.cd.batch_write(operations)
             logger.info(dict(message="Removing users from group",
                              object=dict(type=self.object_type, path_name=self._path_name),
