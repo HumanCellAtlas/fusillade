@@ -7,6 +7,7 @@ https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloud
 """
 import functools
 import hashlib
+import itertools
 import json
 import logging
 import os
