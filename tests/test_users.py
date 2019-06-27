@@ -111,19 +111,21 @@ class TestUser(unittest.TestCase):
         statement = create_test_statement(f"UserPolicySomethingElse")
         user.set_policy(statement)
         with self.subTest("The user policy is set when statement setter is used."):
-            self.assertEqual(user.get_policy(), statement)
-            self.assertIn(statement, user.lookup_policies())
+            expected_statement = user._set_policy_id(statement, user.name)
+            self.assertEqual(user.get_policy(), expected_statement)
+            self.assertIn(expected_statement, user.lookup_policies())
 
         statement = create_test_statement(f"UserPolicySomethingElse2")
         user.set_policy(statement)
         with self.subTest("The user policy changes when set_policy is used."):
-            self.assertEqual(user.get_policy(), statement)
-            self.assertIn(statement, user.lookup_policies())
+            expected_statement = user._set_policy_id(statement, user.name)
+            self.assertEqual(user.get_policy(), expected_statement)
+            self.assertIn(expected_statement, user.lookup_policies())
 
         with self.subTest("Error raised when setting policy to an invalid statement"):
             with self.assertRaises(FusilladeHTTPException):
                 user.set_policy("Something else")
-            self.assertEqual(user.get_policy(), statement)
+            self.assertEqual(user.get_policy(), expected_statement)
 
     def test_status(self):
         name = "test_set_policy@test.com"
