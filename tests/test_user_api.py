@@ -310,9 +310,9 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         user = User.provision_user(name)
         resp = self.app.get(f'/v1/user/{name}/groups', headers=headers)
         self.assertEqual(1, len(json.loads(resp.body)[key]))
-        groups = [Group.create(f"group_{i}").name for i in range(10)]
+        groups = [Group.create(f"group_{i}").name for i in range(8)]
         user.add_groups(groups)
-        self._test_paging(f'/v1/user/{name}/groups', headers, 6, key)
+        self._test_paging(f'/v1/user/{name}/groups', headers, 5, key)
 
     def test_put_username_roles(self):
         tests = [
