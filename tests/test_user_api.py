@@ -229,9 +229,10 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'json_request_body': {
                     "groups": [Group.create("group_0").name]
                 },
-                'response': {
-                    'code': 200
-                }
+                'responses': [
+                    {'code': 200},
+                    {'code': 304}
+                ]
             },
             {
                 'name': "test_put_user_group1@email.com",
@@ -239,9 +240,10 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'json_request_body': {
                     "groups": [Group.create("group_1").name]
                 },
-                'response': {
-                    'code': 200
-                }
+                'responses': [
+                    {'code': 200},
+                    {'code': 304}
+                ]
             }
         ]
         for test in tests:
@@ -259,7 +261,9 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 if test['action'] == 'remove':
                     user.add_groups(test['json_request_body']['groups'])
                 resp = self.app.put(url.url, headers=headers, data=data)
-                self.assertEqual(test['response']['code'], resp.status_code)
+                self.assertEqual(test['responses'][0]['code'], resp.status_code)
+                resp = self.app.put(url.url, headers=headers, data=data)
+                self.assertEqual(test['responses'][1]['code'], resp.status_code)
 
     def test_user_group_limit(self):
         groups = [Group.create(f"group_{i}").name for i in range(10)]
@@ -322,9 +326,10 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'json_request_body': {
                     "roles": [Role.create("role_0").name]
                 },
-                'response': {
-                    'code': 200
-                }
+                'responses': [
+                    {'code': 200},
+                    {'code': 304}
+                ]
             },
             {
                 'name': "test_put_user_role1@email.com",
@@ -332,9 +337,10 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'json_request_body': {
                     "roles": [Role.create("role_1").name]
                 },
-                'response': {
-                    'code': 200
-                }
+                'responses': [
+                    {'code': 200},
+                    {'code': 304}
+                ]
             }
         ]
         for test in tests:
@@ -352,7 +358,9 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 if test['action'] == 'remove':
                     user.add_roles(test['json_request_body']['roles'])
                 resp = self.app.put(url.url, headers=headers, data=data)
-                self.assertEqual(test['response']['code'], resp.status_code)
+                self.assertEqual(test['responses'][0]['code'], resp.status_code)
+                resp = self.app.put(url.url, headers=headers, data=data)
+                self.assertEqual(test['responses'][1]['code'], resp.status_code)
 
     def test_get_username_roles(self):
         headers = {'Content-Type': "application/json"}
