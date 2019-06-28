@@ -30,7 +30,10 @@ install: docs
 	pip install --upgrade dist/*.whl
 
 set_oauth2_config:
-	cat ./oauth2_config.json | ./scripts/set_secret.py --secret-name oauth2_config
+	cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/oauth2_config.json | ./scripts/set_secret.py --secret-name oauth2_config
+
+set_test_service_accounts:
+	cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/test_service_accounts.json | ./scripts/set_secret.py --secret-name test_service_accounts
 
 check_directory_schema:
 	./scripts/upgrade_schema.py
