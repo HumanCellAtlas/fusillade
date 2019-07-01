@@ -20,11 +20,11 @@ EXPORT_ENV_VARS_TO_LAMBDA_ARRAY=(
     DEBUG
 )
 
-if ${FUS_DEPLOYMENT}; then
-    # Used for deploying different stages from make files
-    export FUS_DEPLOYMENT_STAGE=${FUS_DEPLOYMENT}
-else
+if [[ -z "${DEPLOYMENT}" ]]; then
     export FUS_DEPLOYMENT_STAGE=dev
+else
+    # Used for deploying different stages from make files
+    export FUS_DEPLOYMENT_STAGE=${DEPLOYMENT}
 fi
 
 set -a
