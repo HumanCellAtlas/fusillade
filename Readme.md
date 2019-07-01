@@ -66,9 +66,8 @@ To do this, your application should define an access control model consisting of
 - Populate `FUS_ADMIN_EMAILS` with a list of admins to assigned upon creating the fusillade deployment. This
   is only used when fusillade is first deployed to create the first users. Afterwards this variable has no effect. If
   more admins are required assign a user the admin role.
-- Environment variables can be set in `environment.local` for convenience. If you have 
-  multiple deployments you can set `FUS_DEPLOYMENT_STAGE` in `environment.local` to the name of your deployment. This 
-  will source `./deployment/${FUS_DEPLOYMENT_STAGE}/environment.local` if it exists.
+- Environment variables can be set in `./deployment/${FUS_DEPLOYMENT_STAGE}/environment.local` for each 
+  deployment for convenience.
 - **Optionally** Before deploying fusillade you can modify the [default policies and roles](../blob/master/policies) 
  to suite your needs. The `default_admin_role.json` is policy attached to the fusillade_admin role created during 
  deployment. The `default_group_policy.json` is assigned to all new group when they are created. The 
