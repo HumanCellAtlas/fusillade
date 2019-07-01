@@ -13,7 +13,7 @@ info:
     [GitHub API](https://developer.github.com/v3/guides/traversing-with-pagination/),
     which is based on [RFC 5988](https://tools.ietf.org/html/rfc5988). When the results of an API call exceed the
     page size specified, the HTTP response will contain a `Link` header of the following form:
-    `Link: <https://dss.data.humancellatlas.org/v1/search?replica=aws&per_page=100&search_after=123>; rel="next"`.
+    `Link: <https://auth.data.humancellatlas.org/v1/users?per_page=30&next_token=123>; rel="next"`.
     The URL in the header refers to the next page of the results to be fetched; if no `Link rel="next"` URL is
     included, then all results have been fetched. The client should recognize and parse the `Link` header
     appropriately according to RFC 5988, and retrieve the next page if requested by the user, or if all results
@@ -170,10 +170,6 @@ paths:
       responses:
         200:
           description: OK
-          content:
-            application/json:
-              schema:
-                type: object
         401:
           $ref: '#/components/responses/401'
     post:
@@ -187,10 +183,6 @@ paths:
       responses:
         200:
           description: OK
-          content:
-            application/json:
-              schema:
-                type: object
         401:
           $ref: '#/components/responses/401'
   /echo:
@@ -256,28 +248,19 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  users:
-                    $ref: '#/components/schemas/paged_results'
+                $ref: '#/components/schemas/users'
         206:
           $ref: '#/components/responses/206'
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  users:
-                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
           description: Unexpected error
       tags:
         - user
-    put:
+  /v1/user:
+    post:
       summary: Create a new user
-      operationId: fusillade.api.users.put_new_user
+      operationId: fusillade.api.users.post_user
       security:
         - BearerAuth: []
       requestBody:
@@ -311,7 +294,7 @@ paths:
           $ref: '#/components/responses/401'
         default:
           description: Unexpected error
-  /v1/users/{user_id}:
+  /v1/user/{user_id}:
     get:
       summary: Retrieve information about a user's status
       operationId: fusillade.api.users.get_user
@@ -349,7 +332,35 @@ paths:
           $ref: '#/components/responses/401'
         default:
           description: Unexpected error
-  /v1/users/{user_id}/groups:
+  /v1/user/{user_id}/owns:
+    get:
+      summary: Retrieve the resources owned by the user
+      operationId: fusillade.api.users.get_users_owns
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/user_id'
+        - $ref: '#/components/parameters/next_token'
+        - $ref: '#/components/parameters/per_page'
+        - $ref: '#/components/parameters/resource_type'
+      tags:
+        - user
+      responses:
+        200:
+          description: all owned resources have been returned
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/groups'
+                  - $ref: '#/components/schemas/roles'
+        206:
+          $ref: '#/components/responses/206'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error
+  /v1/user/{user_id}/groups:
     get:
       summary: Retrieve group(s) a user is in.
       operationId: fusillade.api.users.get_users_groups
@@ -367,19 +378,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  groups:
-                    $ref: '#/components/schemas/paged_results'
+                $ref: '#/components/schemas/groups'
         206:
           $ref: '#/components/responses/206'
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  groups:
-                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
@@ -413,7 +414,7 @@ paths:
           description: The user is already a part of the group
         default:
           description: Unexpected error
-  /v1/users/{user_id}/roles:
+  /v1/user/{user_id}/roles:
     get:
       summary: Retrieve roles a user is in.
       operationId: fusillade.api.users.get_users_roles
@@ -431,19 +432,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  roles:
-                    $ref: '#/components/schemas/paged_results'
+                $ref: '#/components/schemas/roles'
         206:
           $ref: '#/components/responses/206'
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  roles:
-                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
@@ -512,46 +503,7 @@ paths:
           $ref: '#/components/responses/404'
         default:
           description: Unexpected error
-  /v1/users/{user_id}/policy:
-    post:
-      summary: attach a policy to the user. This can either be a new policy, or an existing policy
-      operationId: fusillade.api.users.post_policy
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/user_id'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                policy:
-                  type: string
-  /v1/users/{user_id}/policy/{policy_id}:
-    get:
-      summary: get attached policy.
-      operationId: fusillade.api.users.get_user_policy
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/user_id'
-        - $ref: '#/components/parameters/policy_id'
-      responses:
-        200:
-          description: return attached policy
-          content:
-            application/json:
-              schema:
-                - $ref: '#/components/schemas/Policy'
-        404:
-          $ref: '#/components/responses/404'
-        401:
-          $ref: '#/components/responses/401'
-        default:
-          description: Unexpected error
-      tags:
-        - user
+  /v1/user/{user_id}/policy:
     put:
       summary: Modify policy
       operationId: fusillade.api.users.put_user_policy
@@ -591,28 +543,19 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  groups:
-                    $ref: '#/components/schemas/paged_results'
+                $ref: '#/components/schemas/groups'
         206:
           $ref: '#/components/responses/206'
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  groups:
-                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
           description: Unexpected error
       tags:
         - group
-    put:
+  /v1/group:
+    post:
       summary: Create a new group
-      operationId: fusillade.api.groups.put_new_group
+      operationId: fusillade.api.groups.post_group
       security:
         - BearerAuth: []
       requestBody:
@@ -640,7 +583,7 @@ paths:
           description: Unexpected error
       tags:
         - group
-  /v1/groups/{group_id}:
+  /v1/group/{group_id}:
     get:
       summary: Get properties of a group
       operationId: fusillade.api.groups.get_group
@@ -677,7 +620,7 @@ paths:
           description: Unexpected error
       tags:
         - group
-  /v1/groups/{group_id}/roles:
+  /v1/group/{group_id}/roles:
     get:
       summary: Retrieve role(s) a group is in.
       operationId: fusillade.api.groups.get_groups_roles
@@ -693,19 +636,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  roles:
-                    $ref: '#/components/schemas/paged_results'
+                $ref: '#/components/schemas/roles'
         206:
           $ref: '#/components/responses/206'
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  roles:
-                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
@@ -741,7 +674,7 @@ paths:
           description: Unexpected error
       tags:
         - group
-  /v1/groups/{group_id}/users:
+  /v1/group/{group_id}/users:
     get:
       summary: Retrieve user in a group.
       operationId: fusillade.api.groups.get_group_users
@@ -757,26 +690,16 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  users:
-                    $ref: '#/components/schemas/paged_results'
+                $ref: '#/components/schemas/users'
         206:
           $ref: '#/components/responses/206'
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  users:
-                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
           description: Unexpected error
       tags:
         - group
-  /v1/groups/{group_id}/policy:
+  /v1/group/{group_id}/policy:
     put:
       summary: Modify policy
       operationId: fusillade.api.groups.put_group_policy
@@ -816,28 +739,19 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  roles:
-                    $ref: '#/components/schemas/paged_results'
+                $ref: '#/components/schemas/roles'
         206:
           $ref: '#/components/responses/206'
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  roles:
-                    $ref: '#/components/schemas/paged_results'
         404:
           $ref: '#/components/responses/404'
         default:
           description: Unexpected error
       tags:
         - role
-    put:
+  /v1/role:
+    post:
       summary: Create a new role
-      operationId: fusillade.api.roles.put_new_role
+      operationId: fusillade.api.roles.post_role
       security:
         - BearerAuth: []
       requestBody:
@@ -866,7 +780,7 @@ paths:
           description: Unexpected error
       tags:
         - role
-  /v1/roles/{role_id}:
+  /v1/role/{role_id}:
     get:
       summary: Get properties of a role
       operationId: fusillade.api.roles.get_role
@@ -887,7 +801,7 @@ paths:
           description: Unexpected error
       tags:
         - role
-  /v1/roles/{role_id}/policy:
+  /v1/role/{role_id}/policy:
     put:
       summary: Modify policy
       operationId: fusillade.api.roles.put_role_policy
@@ -935,6 +849,13 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/custom_identifier'
+    resource_type:
+      name: resource_type
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [group, role]
     action:
       name: action
       in: query
@@ -969,6 +890,21 @@ components:
       type: array
       items:
         type: string
+    groups:
+      type: object
+      properties:
+        groups:
+          $ref: '#/components/schemas/paged_results'
+    roles:
+      type: object
+      properties:
+        groups:
+          $ref: '#/components/schemas/paged_results'
+    users:
+      type: object
+      properties:
+        users:
+          $ref: '#/components/schemas/paged_results'
     custom_identifier:
       description: used to identify users, groups, and roles.
       type: string
@@ -978,20 +914,21 @@ components:
     User:
       type: object
       properties:
-        name:
+        user_id:
           $ref: '#/components/schemas/custom_identifier'
         status:
           type: string
         policies:
-          type: int
+          type: object
           nullable: true
     Group:
       type: object
       properties:
         group_id:
           $ref: '#/components/schemas/custom_identifier'
-        policy:
-          type: string
+        policies:
+          type: object
+          nullable: true
         roles:
           type: array
           items:
@@ -1003,10 +940,10 @@ components:
     Role:
       type: object
       properties:
-        name:
+        role_id:
           $ref: '#/components/schemas/custom_identifier'
-        policy:
-          type: string
+        policies:
+          type: object
     Policy:
       type: object
       properties:
@@ -1026,6 +963,13 @@ components:
           description: URL to retrieve the next page of results.
           schema:
             type: string
+      content:
+        application/json:
+          schema:
+            anyOf:
+              - $ref: '#/components/schemas/groups'
+              - $ref: '#/components/schemas/roles'
+              - $ref: '#/components/schemas/users'
     401:
       description: The users credentials failed to authenticate.
     403:

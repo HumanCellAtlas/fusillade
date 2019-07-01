@@ -5,10 +5,11 @@
 Functional Test of the Roles API
 """
 import json
-import unittest
-from furl import furl
 import os
 import sys
+import unittest
+
+from furl import furl
 
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
@@ -16,7 +17,6 @@ sys.path.insert(0, pkg_root)  # noqa
 from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_statement
 from tests.data import TEST_NAMES_NEG, TEST_NAMES_POS
-from fusillade import directory, Config
 from fusillade.clouddirectory import Role
 
 
@@ -42,24 +42,24 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
 
-        url = furl('/v1/roles')
+        url = furl('/v1/role')
         data = json.dumps({
             'role_id': role_id,
             'policy': policy
         })
-        resp = self.app.put(url.url, data=data, headers=headers)
+        resp = self.app.post(url.url, data=data, headers=headers)
         self.assertEqual(201, resp.status_code)
 
-        url = furl(f'/v1/roles/{role_id}')
+        url = furl(f'/v1/role/{role_id}')
         resp = self.app.get(url.url, headers=headers)
         self.assertEqual(200, resp.status_code)
         expected_body = {
             'role_id': role_id,
-            'policy': policy
+            'policies': {"IAMPolicy": Role(role_id)._set_policy_id(policy, role_id)}
         }
         self.assertEqual(expected_body, json.loads(resp.body))
 
-        url = furl(f'/v1/roles/{role_id}/policy')
+        url = furl(f'/v1/role/{role_id}/policy')
         policy = create_test_statement('ABCD')
         data = json.dumps({
             'policy': policy
@@ -67,12 +67,12 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         resp = self.app.put(url.url, data=data, headers=headers)
         self.assertEqual(200, resp.status_code)
 
-        url = furl(f'/v1/roles/{role_id}')
+        url = furl(f'/v1/role/{role_id}')
         resp = self.app.get(url.url, headers=headers)
         self.assertEqual(200, resp.status_code)
         expected_body = {
             'role_id': role_id,
-            'policy': policy
+            'policies': {"IAMPolicy": Role(role_id)._set_policy_id(policy, role_id)}
         }
         self.assertEqual(expected_body, json.loads(resp.body))
 
@@ -80,8 +80,8 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         for i in range(10):
-            resp = self.app.put(
-                '/v1/roles',
+            resp = self.app.post(
+                '/v1/role',
                 headers=headers,
                 data=json.dumps({"role_id": f"test_put_role{i}",
                                  'policy': create_test_statement("test_role")})
@@ -90,8 +90,8 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
             self.assertEqual(201, resp.status_code)
         self._test_paging(f'/v1/roles', headers, 6, 'roles')
 
-    def test_put_role(self):
-        url = furl('/v1/roles')
+    def test_post_role(self):
+        url = furl('/v1/role')
         data = json.dumps({
             'role_id': 'test_put_role',
             'policy': create_test_statement("test_role")
@@ -174,7 +174,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
             with self.subTest(test['name']):
                 headers = {'Content-Type': "application/json"}
                 headers.update(test['headers'])
-                resp = self.app.put(url.url, data=test['data'], headers=headers)
+                resp = self.app.post(url.url, data=test['data'], headers=headers)
                 self.assertEqual(test['expected_resp'], resp.status_code)
 
     def test_get_role_id(self):
@@ -223,11 +223,12 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
             } for role_id, description in TEST_NAMES_NEG if role_id is not ''
         ])
         policy = create_test_statement("test_role")
-        Role.create(directory, role_id, policy)
-        [Role.create(directory, role_id, policy) for role_id, _ in TEST_NAMES_POS]
+        role = Role.create(role_id, policy)
+        expected_policy = role._set_policy_id(policy, role.name)
+        [Role.create(role_id, policy) for role_id, _ in TEST_NAMES_POS]
         for test in tests:
             with self.subTest(test['name']):
-                url = furl('/v1/roles/{}'.format(test['role_id']))
+                url = furl('/v1/role/{}'.format(test['role_id']))
                 headers = {'Content-Type': "application/json"}
                 headers.update(test['headers'])
                 resp = self.app.get(url.url, headers=headers)
@@ -235,7 +236,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
                 if test['expected_resp'] == 200:
                     expected_body = {
                         'role_id': test['role_id'],
-                        'policy': policy
+                        'policies': {'IAMPolicy': expected_policy}
                     }
                     self.assertEqual(expected_body, json.loads(resp.body))
 
@@ -244,7 +245,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         policy_1 = create_test_statement(role_id)
         policy_2 = create_test_statement('ABCD')
         policy_invalid = "invalid policy"
-        Role.create(directory, role_id, policy_1)
+        Role.create(role_id, policy_1)
         admin_auth_header = get_auth_header(service_accounts['admin'])
         tests = [
             {
@@ -297,7 +298,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
             with self.subTest(test['name']):
                 headers = {'Content-Type': "application/json"}
                 headers.update(test['headers'])
-                url = furl(f"/v1/roles/{test['role_id']}/policy")
+                url = furl(f"/v1/role/{test['role_id']}/policy")
                 data = json.dumps(test['data'])
                 resp = self.app.put(url.url, data=data, headers=headers)
                 self.assertEqual(test['expected_resp'], resp.status_code)

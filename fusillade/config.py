@@ -13,8 +13,10 @@ class Config:
                 "https://auth.data.humancellatlas.org/"]
     _openid_provider = None
     version = "unversioned"
-
-    # TODO make configurable
+    directory_schema_version = {"Version": '0', "MinorVersion": '0'}
+    _directory = None
+    _directory_name = None
+    group_max = 10
 
     @classmethod
     def get_admin_emails(cls):
@@ -34,8 +36,18 @@ class Config:
         return cls._oauth2_config
 
     @classmethod
+    def get_directory(cls):
+        if not cls._directory:
+            from fusillade import CloudDirectory
+            directory_name = cls.get_directory_name()
+            cls._directory = CloudDirectory.from_name(directory_name)
+        return cls._directory
+
+    @classmethod
     def get_directory_name(cls):
-        return os.getenv("FUSILLADE_DIR", f"hca_fusillade_{os.environ['FUS_DEPLOYMENT_STAGE']}")
+        if not cls._directory_name:
+            cls._directory_name = os.getenv("FUSILLADE_DIR", f"hca_fusillade_{os.environ['FUS_DEPLOYMENT_STAGE']}")
+        return cls._directory_name
 
     @classmethod
     def get_schema_name(cls):

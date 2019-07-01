@@ -7,19 +7,21 @@ https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloud
 """
 import functools
 import hashlib
+import itertools
 import json
 import logging
 import os
 from collections import namedtuple
-from concurrent.futures import Future
 from datetime import datetime
 from enum import Enum, auto
-from threading import Thread
+from json import JSONDecodeError
 from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, Type
 
 from dcplib.aws import clients as aws_clients
 
-from fusillade.errors import FusilladeException, FusilladeHTTPException
+from fusillade import Config
+from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException, \
+    AuthorizationException, FusilladeLimitException, FusilladeBindingException
 from fusillade.utils.retry import retry
 
 logger = logging.getLogger(__name__)
@@ -63,7 +65,7 @@ def cleanup_schema(sch_arn: str) -> None:
     logger.warning({"message": "Deleted schema", "schema_arn": sch_arn})
 
 
-def publish_schema(name: str, version: str) -> str:
+def publish_schema(name: str, Version: str, MinorVersion: str = '0') -> str:
     """
     More info about schemas
     https://docs.aws.amazon.com/clouddirectory/latest/developerguide/schemas.html
@@ -80,12 +82,13 @@ def publish_schema(name: str, version: str) -> str:
     cd_client.put_schema_from_json(SchemaArn=dev_schema_arn, Document=schema)
     try:
         pub_schema_arn = cd_client.publish_schema(DevelopmentSchemaArn=dev_schema_arn,
-                                                  Version=version)['PublishedSchemaArn']
+                                                  Version=Version,
+                                                  MinorVersion=MinorVersion)['PublishedSchemaArn']
         logger.info({"message": "Published development schema",
                      "developement_schema_arn": dev_schema_arn,
                      "published_schema_arn": pub_schema_arn})
     except cd_client.exceptions.SchemaAlreadyPublishedException:
-        pub_schema_arn = f"{project_arn}schema/published/{name}/{version}"
+        pub_schema_arn = f"{project_arn}schema/published/{name}/{Version}/{MinorVersion}"
     return pub_schema_arn
 
 
@@ -118,19 +121,21 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         )
     except cd_client.exceptions.DirectoryAlreadyExistsException:
         directory = CloudDirectory.from_name(name)
+        return directory
     else:
         # create structure
         for folder_name in ('group', 'user', 'role', 'policy'):
             directory.create_folder('/', folder_name)
 
         # create roles
-        Role.create(directory, "default_user", statement=get_json_file(default_user_role_path))
-        Role.create(directory, "admin", statement=get_json_file(default_admin_role_path))
+        Role.create("default_user", statement=get_json_file(default_user_role_path))
+        Role.create("fusillade_admin", statement=get_json_file(default_admin_role_path))
+        Group.create("user_default").add_roles(['default_user'])
 
         # create admins
         for admin in admins:
-            User.provision_user(directory, admin, roles=['admin'])
-    finally:
+            User.provision_user(admin, roles=['fusillade_admin'])
+        User.provision_user('public')
         return directory
 
 
@@ -165,7 +170,7 @@ class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute',
     pass
 
 
-cd_retry_parameters = dict(timeout=.5,
+cd_retry_parameters = dict(timeout=1,
                            delay=0.1,
                            retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
 
@@ -173,6 +178,7 @@ cd_retry_parameters = dict(timeout=.5,
 class CloudDirectory:
     _page_limit = 30  # This is the max allowed by AWS
     _batch_write_max = 20  # This is the max allowed by AWS
+    _lookup_policy_max = 3  # Max recommended by AWS Support
 
     def __init__(self, directory_arn: str):
         self._dir_arn = directory_arn
@@ -368,7 +374,7 @@ class CloudDirectory:
         """
         Create an object and store in cloud directory.
         """
-        object_attribute_list = self.get_object_attribute_list(facet=facet_type, obj_type=obj_type, **kwargs)
+        object_attribute_list = self.get_object_attribute_list(facet=facet_type, **kwargs)
         parent_path = self.get_obj_type_path(obj_type)
         cd_client.create_object(DirectoryArn=self._dir_arn,
                                 SchemaFacets=[
@@ -469,7 +475,7 @@ class CloudDirectory:
     def create_folder(self, path: str, name: str) -> None:
         """ A folder is just a NodeFacet"""
         schema_facets = [dict(SchemaArn=self.schema, FacetName="NodeFacet")]
-        object_attribute_list = self.get_object_attribute_list(facet="NodeFacet", name=name, obj_type="folder")
+        object_attribute_list = self.get_object_attribute_list(facet="NodeFacet", name=name, created_by="fusillade")
         try:
             cd_client.create_object(DirectoryArn=self._dir_arn,
                                     SchemaFacets=schema_facets,
@@ -501,7 +507,7 @@ class CloudDirectory:
                 'SchemaArn': self.schema,
                 'TypedLinkName': typed_link_facet
             },
-            Attributes=attributes
+            Attributes=self.make_attributes(attributes)
         )
 
     def detach_typed_link(self, typed_link_specifier: Dict[str, Any]):
@@ -563,6 +569,7 @@ class CloudDirectory:
             'IdentityAttributeValues': self.make_attributes(attributes)
         }
 
+    @retry(**cd_retry_parameters)
     def clear(self, users: List[str] = None,
               groups: List[str] = None,
               roles: List[str] = None) -> None:
@@ -576,9 +583,9 @@ class CloudDirectory:
         users = users if users else []
         groups = groups if groups else []
         roles = roles if roles else []
-        protected_users = [CloudNode.hash_name(name) for name in users]
-        protected_groups = [CloudNode.hash_name(name) for name in groups]
-        protected_roles = [CloudNode.hash_name(name) for name in ["admin", "default_user"] + roles]
+        protected_users = [CloudNode.hash_name(name) for name in ['public'] + users]
+        protected_groups = [CloudNode.hash_name(name) for name in ['user_default'] + groups]
+        protected_roles = [CloudNode.hash_name(name) for name in ["fusillade_admin", "default_user"] + roles]
 
         for name, obj_ref in self.list_object_children('/user/'):
             if name not in protected_users:
@@ -647,7 +654,7 @@ class CloudDirectory:
         }
         }
 
-    def batch_get_attributes(self, obj_ref, facet, attributes: List[str]) -> Dict[str, Any]:
+    def batch_get_attributes(self, obj_ref, facet, attributes: List[str], schema=None) -> Dict[str, Any]:
         """
         A helper function to format a batch get_attributes operation
         """
@@ -657,7 +664,7 @@ class CloudDirectory:
                     'Selector': obj_ref
                 },
                 'SchemaFacet': {
-                    'SchemaArn': self.schema,
+                    'SchemaArn': schema if schema else self.schema,
                     'FacetName': facet
                 },
                 'AttributeNames': attributes
@@ -738,17 +745,44 @@ class CloudDirectory:
             },
         }
 
+    def batch_lookup_policy(self, obj_ref: str, next_token: str = None) -> Dict[str, Any]:
+        temp = {
+            'ObjectReference': {
+                'Selector': obj_ref
+            },
+            'MaxResults': self._lookup_policy_max
+        }
+        if next_token:
+            temp['NextToken'] = next_token
+        return {'LookupPolicy': temp}
+
     @retry(**cd_retry_parameters)
     def batch_write(self, operations: list) -> List[dict]:
         """
         A wrapper around CloudDirectory.Client.batch_write
         """
-        responses = []
-        for i in range(0, len(operations), self._batch_write_max):
-            responses.extend(
-                cd_client.batch_write(
-                    DirectoryArn=self._dir_arn,
-                    Operations=operations[i:i + self._batch_write_max])['Responses'])
+        responses = []  # contains succesful responses
+        try:
+            for i in range(0, len(operations), self._batch_write_max):
+                responses.extend(
+                    cd_client.batch_write(
+                        DirectoryArn=self._dir_arn,
+                        Operations=operations[i:i + self._batch_write_max])['Responses'])
+        except cd_client.exceptions.BatchWriteException as ex:
+            failed_batch = operations[i:i + self._batch_write_max]
+            failed_op = failed_batch[int(ex.response['Error']['Message'].split(" ")[1])]
+            logger.debug(
+                {
+                    "message": ex,
+                    "response": ex.response,
+                    "operations": {
+                        "failed": failed_op,
+                        "skipped": len(operations[i:]),
+                        "sucessful": len(operations[:i])
+                    }
+                })
+            raise ex
+
         return responses
 
     @retry(**cd_retry_parameters)
@@ -775,20 +809,28 @@ class CloudDirectory:
             for response in cd_client.get_paginator('lookup_policy').paginate(
                 DirectoryArn=self._dir_arn,
                 ObjectReference={'Selector': object_id},
-                PaginationConfig={'PageSize': 3}  # Max recommended by AWS Support
+                PaginationConfig={'PageSize': self._lookup_policy_max}
             )
             for path in response['PolicyToPathList']
         ]
         return policies_paths
 
-    def get_policies(self, policy_paths: List[Dict[str, Any]]) -> List[str]:
+    def get_link_attributes(self, TypedLinkSpecifier, AttributeNames):
+        cd_client.get_link_attributes(
+            DirectoryArn=self._dir_arn,
+            TypedLinkSpecifier=TypedLinkSpecifier,
+            AttributeNames=AttributeNames,
+            ConsistencyLevel='EVENTUAL'
+        )
+
+    def get_policies(self, policy_paths: List[Dict[str, Any]], policy_type='IAMPolicy') -> List[str]:
         # Parse the policyIds from the policies path. Only keep the unique ids
         policy_ids = set(
             [
-                (o['PolicyId'], o['PolicyType'])
+                o['PolicyId']
                 for p in policy_paths
                 for o in p['Policies']
-                if o.get('PolicyId')
+                if o.get('PolicyId') and o['PolicyType'] == policy_type
             ]
         )
 
@@ -796,7 +838,7 @@ class CloudDirectory:
         operations = [
             {
                 'GetObjectAttributes': {
-                    'ObjectReference': {'Selector': f'${policy_id[0]}'},
+                    'ObjectReference': {'Selector': f'${policy_id}'},
                     'SchemaFacet': {
                         'SchemaArn': self.node_schema,
                         'FacetName': 'POLICY'
@@ -866,32 +908,28 @@ class CloudNode:
     _attributes = ["name"]  # the different attributes of a node stored
     _facet = 'LeafNode'
     object_type = 'node'
+    allowed_policy_types = ('IAMPolicy',)
 
     def __init__(self,
-                 cloud_directory: CloudDirectory,
                  name: str = None,
                  object_ref: str = None):
         """
 
-        :param cloud_directory:
         :param name:
         :param object_ref:
         """
-        self.log = logging.getLogger('.'.join([__name__, self.__class__.__name__]))
-        self.object_type = self.__class__.__name__.lower()
+        self.cd: CloudDirectory = Config.get_directory()
         if name and object_ref:
             raise FusilladeException("object_reference XOR name")
         if name:
             self._name: str = name
             self._path_name: str = self.hash_name(name)
-            self.object_ref: str = cloud_directory.get_obj_type_path(self.object_type) + self._path_name
+            self.object_ref: str = self.cd.get_obj_type_path(self.object_type) + self._path_name
         else:
             self._name: str = None
             self._path_name: str = None
             self.object_ref: str = object_ref
-        self.cd: CloudDirectory = cloud_directory
-        self._policy: Optional[str] = None
-        self._statement: Optional[str] = None
+        self.attached_policies: Dict[str, str] = dict()
 
     @staticmethod
     def hash_name(name):
@@ -903,49 +941,32 @@ class CloudNode:
         # links names must be unique between two objects
 
     def _get_links(self, node: Type['CloudNode'],
-                   paged=False,
+                   attribute_name,
+                   attribute_value,
+                   facet,
                    next_token=None,
                    per_page=None,
-                   incoming=True):
+                   paged=False,
+                   incoming=False):
         """
         Retrieves the links attached to this object from CloudDirectory and separates them into groups and roles
         based on the link name
         """
         get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
-        object_type = node.object_type
         object_selection = 'SourceObjectReference' if incoming else 'TargetObjectReference'
         filter_attribute_ranges = [
             {
-                'AttributeName': 'parent_type',
+                'AttributeName': attribute_name,
                 'Range': {
                     'StartMode': 'INCLUSIVE',
-                    'StartValue': {'StringValue': object_type},
+                    'StartValue': {'StringValue': attribute_value},
                     'EndMode': 'INCLUSIVE',
-                    'EndValue': {'StringValue': object_type}
+                    'EndValue': {'StringValue': attribute_value}
                 }
             }
-        ] if incoming else [
-            {
-                'AttributeName': 'parent_type',
-                'Range': {
-                    'StartMode': 'INCLUSIVE',
-                    'StartValue': {'StringValue': self.object_type},
-                    'EndMode': 'INCLUSIVE',
-                    'EndValue': {'StringValue': self.object_type}
-                }
-            },
-            {
-                'AttributeName': 'child_type',
-                'Range': {
-                    'StartMode': 'INCLUSIVE',
-                    'StartValue': {'StringValue': object_type},
-                    'EndMode': 'INCLUSIVE',
-                    'EndValue': {'StringValue': object_type}
-                }
-            },
         ]
         if paged:
-            result, next_token = get_links(self.object_ref, filter_attribute_ranges, 'association',
+            result, next_token = get_links(self.object_ref, filter_attribute_ranges, facet,
                                            next_token=next_token, paged=paged, per_page=per_page)
             if result:
                 operations = [self.cd.batch_get_attributes(
@@ -960,21 +981,21 @@ class CloudNode:
                             r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
                     else:
                         logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
-            return {f'{object_type}s': result}, next_token
+            return result, next_token
         else:
             return [
                 type_link[object_selection]['Selector']
                 for type_link in
-                get_links(self.object_ref, filter_attribute_ranges, 'association')
+                get_links(self.object_ref, filter_attribute_ranges, facet)
             ]
 
-    def _add_links_batch(self, links: List[str], link_type: str):
+    def _add_links_batch(self, links: List[str], object_Type: str):
         """
         Attaches links to this object in CloudDirectory.
         """
         if not links:
             return []
-        parent_path = self.cd.get_obj_type_path(link_type)
+        parent_path = self.cd.get_obj_type_path(object_Type)
         batch_attach_object = self.cd.batch_attach_object
         operations = []
         for link in links:
@@ -988,74 +1009,69 @@ class CloudNode:
             )
         return operations
 
-    def _add_typed_links_batch(self, links: List[str], link_type: str):
+    def _add_typed_links_batch(self, links: List[str], object_type, link_type: str, attributes: Dict, incoming=False):
         """
         Attaches links to this object in CloudDirectory.
         """
         if not links:
             return []
-        parent_path = self.cd.get_obj_type_path(link_type)
+        link_path = self.cd.get_obj_type_path(object_type)
         batch_attach_typed_link = self.cd.batch_attach_typed_link
         operations = []
         for link in links:
-            parent_ref = f"{parent_path}{self.hash_name(link)}"
-            attributes = {
-                'parent_type': link_type,
-                'child_type': self.object_type,
-            }
-            operations.append(
-                batch_attach_typed_link(
-                    parent_ref,
-                    self.object_ref,
-                    'association',
-                    attributes
-                )
-            )
+            if incoming:
+                source, target = f"{link_path}{self.hash_name(link)}", self.object_ref
+            else:
+                source, target = self.object_ref, f"{link_path}{self.hash_name(link)}"
+            operations.append(batch_attach_typed_link(source, target, link_type, attributes))
         return operations
 
-    def _remove_links_batch(self, links: List[str], link_type: str):
+    def _remove_links_batch(self, links: List[str], link_type: str, incoming=False):
         """
         Removes links from this object in CloudDirectory.
         """
         if not links:
             return []
-        parent_path = self.cd.get_obj_type_path(link_type)
+        link_path = self.cd.get_obj_type_path(link_type)
         batch_detach_object = self.cd.batch_detach_object
         operations = []
         for link in links:
-            parent_ref = f"{parent_path}{self.hash_name(link)}"
+            if incoming:
+                source, target = f"{link_path}{self.hash_name(link)}", self.object_ref
+            else:
+                source, target = self.object_ref, f"{link_path}{self.hash_name(link)}"
             operations.append(
                 batch_detach_object(
-                    parent_ref,
-                    self._get_link_name(parent_ref, self.object_ref)
+                    target,
+                    self._get_link_name(target, source)
                 )
             )
         return operations
 
-    def _remove_typed_links_batch(self, links: List[str], link_type: str):
+    def _remove_typed_links_batch(self, links: List[str], object_type, link_type: str, attributes: Dict,
+                                  incoming=False):
         """
         Removes links from this object in CloudDirectory.
         """
         if not links:
             return []
-        parent_path = self.cd.get_obj_type_path(link_type)
+        link_path = self.cd.get_obj_type_path(object_type)
         batch_detach_typed_link = self.cd.batch_detach_typed_link
         make_typed_link_specifier = self.cd.make_typed_link_specifier
         operations = []
         for link in links:
-            parent_ref = f"{parent_path}{self.hash_name(link)}"
+            if incoming:
+                source, target = f"{link_path}{self.hash_name(link)}", self.object_ref
+            else:
+                source, target = self.object_ref, f"{link_path}{self.hash_name(link)}"
             typed_link_specifier = make_typed_link_specifier(
-                parent_ref,
-                self.object_ref,
-                'association',
-                {'parent_type': link_type, 'child_type': self.object_type}
+                source,
+                target,
+                link_type,
+                attributes
             )
             operations.append(batch_detach_typed_link(typed_link_specifier))
         return operations
-
-    def lookup_policies(self) -> List[str]:
-        policy_paths = self.cd.lookup_policy(self.object_ref)
-        return self.cd.get_policies(policy_paths)
 
     @property
     def name(self):
@@ -1064,22 +1080,56 @@ class CloudNode:
             self._path_name = self.hash_name(self._name)
         return self._name
 
-    @property
-    def policy(self):
-        if not self._policy:
-            try:
-                policies = [i for i in self.cd.list_object_policies(self.object_ref)]
-            except cd_client.exceptions.ResourceNotFoundException:
-                raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
-            if not policies:
-                return None
-            elif len(policies) > 1:
-                raise ValueError("Node has multiple policies attached")
-            else:
-                self._policy = policies[0]
-        return self._policy
+    def _get_attributes(self, attributes: List[str]):
+        """
+        retrieve attributes for this from CloudDirectory and sets local private variables.
+        """
+        if not attributes:
+            attributes = self._attributes
+        try:
+            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeNotFoundException(detail="Resource does not exist.")
+        for attr in resp['Attributes']:
+            self.__setattr__('_' + attr['Key']['Name'], attr['Value'].popitem()[1])
 
-    def create_policy(self, statement: str) -> str:
+    def get_attributes(self, attributes: List[str]) -> Dict[str, str]:
+        try:
+            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeNotFoundException(detail="Resource does not exist.")
+        return dict([(attr['Key']['Name'], attr['Value'].popitem()[1]) for attr in resp['Attributes']])
+
+    @classmethod
+    def list_all(cls, next_token: str, per_page: int):
+        cd = Config.get_directory()
+        resp, next_token = cd.list_object_children_paged(f'/{cls.object_type}/', next_token, per_page)
+        operations = [cd.batch_get_attributes(f'${obj_ref}', cls._facet, ['name'])
+                      for obj_ref in resp.values()]
+        results = []
+        for r in cd.batch_read(operations)['Responses']:
+            if r.get('SuccessfulResponse'):
+                results.append(
+                    r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
+            else:
+                logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
+        return {f"{cls.object_type}s": results}, next_token
+
+    def get_info(self) -> Dict[str, Any]:
+        info = dict(**self.get_attributes(self._attributes))
+        info[f'{self.object_type}_id'] = info.pop('name')
+        return info
+
+
+class PolicyMixin:
+    """Adds policy support to a cloudNode"""
+    allowed_policy_types = ['IAMPolicy']
+
+    def lookup_policies(self) -> List[str]:
+        policy_paths = self.cd.lookup_policy(self.object_ref)
+        return self.cd.get_policies(policy_paths)
+
+    def create_policy(self, statement: str, policy_type='IAMPolicy', **kwargs) -> str:
         """
         Create a policy object and attach it to the CloudNode
         :param statement: Json string that follow AWS IAM Policy Grammar.
@@ -1087,8 +1137,8 @@ class CloudNode:
         :return:
         """
         operations = list()
-        object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement)
-        policy_link_name = self.get_policy_name('IAMPolicy')
+        object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement, **kwargs)
+        policy_link_name = self.get_policy_name(policy_type)
         parent_path = self.cd.get_obj_type_path('policy')
         operations.append(
             {
@@ -1096,7 +1146,7 @@ class CloudNode:
                     'SchemaFacet': [
                         {
                             'SchemaArn': self.cd.schema,
-                            'FacetName': 'IAMPolicy'
+                            'FacetName': policy_type
                         },
                         {
                             'SchemaArn': self.cd.node_schema,
@@ -1115,102 +1165,115 @@ class CloudNode:
 
         operations.append(self.cd.batch_attach_policy(policy_ref, self.object_ref))
         self.cd.batch_write(operations)
-        self.log.info(dict(message="Policy created",
-                           object=dict(
-                               type=self.object_type,
-                               path_name=self._path_name
-                           ),
-                           policy=dict(
-                               link_name=policy_link_name,
-                               policy_type="IAMPolicy")
-                           ))
+        logger.info(dict(message="Policy created",
+                         object=dict(
+                             type=self.object_type,
+                             path_name=self._path_name
+                         ),
+                         policy=dict(
+                             link_name=policy_link_name,
+                             policy_type=policy_type)
+                         ))
         return policy_ref
 
     def get_policy_name(self, policy_type):
         return self.hash_name(f"{self._path_name}{self.object_type}{policy_type}")
 
-    @property
-    def statement(self):
+    def get_policy(self, policy_type: str = 'IAMPolicy'):
         """
         Policy statements follow AWS IAM Policy Grammer. See for grammar details
         https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html
         """
-        if not self._statement and self.policy:
-            self._statement = self.cd.get_object_attributes(self.policy,
-                                                            'POLICY',
-                                                            ['policy_document'],
-                                                            self.cd.node_schema
-                                                            )['Attributes'][0]['Value'].popitem()[1].decode("utf-8")
+        if policy_type in self.allowed_policy_types:  # check if this policy type is allowed
+            if not self.attached_policies.get(policy_type):  # check if we already have the policy
+                policy_ref = self.cd.get_obj_type_path('policy') + self.get_policy_name(policy_type)
+                try:
+                    resp = self.cd.get_object_attributes(
+                        policy_ref,
+                        'POLICY',
+                        ['policy_document', 'policy_type'],
+                        self.cd.node_schema
+                    )
+                    attrs = dict([(attr['Key']['Name'], attr['Value'].popitem()[1]) for attr in resp['Attributes']])
+                    if attrs['policy_type'] != policy_type:
+                        logger.warning({'message': "Retrieved policy_type does not match requested policy_type.",
+                                        'expected': policy_type,
+                                        'received': attrs['policy_type']
+                                        })
+                    self.attached_policies[policy_type] = attrs['policy_document'].decode("utf-8")
+                except cd_client.exceptions.ResourceNotFoundException:
+                    pass
+            return self.attached_policies.get(policy_type, '')
+        else:
+            FusilladeHTTPException(
+                title='Bad Request',
+                detail=f"{self.object_type} cannot have policy type {policy_type}."
+                f" Allowed types are: {self.allowed_policy_types}")
 
-        return self._statement
-
-    @statement.setter
-    def statement(self, statement: str):
-        self._verify_statement(statement)
-        self._set_statement(statement)
-
-    def _set_statement(self, statement: str):
-        try:
-            if not self.policy:
-                self.create_policy(statement)
+    def set_policy(self, statement: str, policy_type: str = 'IAMPolicy'):
+        if policy_type in self.allowed_policy_types:
+            try:
+                # check if this object exists
+                self.cd.get_object_information(self.object_ref)
+            except cd_client.exceptions.ResourceNotFoundException:
+                raise FusilladeNotFoundException(detail="Resource does not exist.")
             else:
-                params = [
-                    UpdateObjectParams('POLICY',
-                                       'policy_document',
-                                       ValueTypes.BinaryValue,
-                                       statement,
-                                       UpdateActions.CREATE_OR_UPDATE,
-                                       )
-                ]
-                self.cd.update_object_attribute(self.policy, params, self.cd.node_schema)
+                _statement = self._set_policy_id(statement, self.name)
+                self._verify_statement(_statement)
+                self._set_policy(_statement, policy_type)
+
+    @classmethod
+    def _set_policy_id(cls, statement: str, object_name: str) -> str:
+        try:
+            s = json.loads(statement)
+        except JSONDecodeError as ex:
+            raise FusilladeBindingException(detail=f"JSONDecodeError: {ex}")
+        policy_id = ':'.join([cls.object_type, object_name])
+        s['Id'] = policy_id
+        return json.dumps(s)
+
+    def _set_policy(self, statement: str, policy_type: str):
+        params = [
+            UpdateObjectParams('POLICY',
+                               'policy_document',
+                               ValueTypes.BinaryValue,
+                               statement,
+                               UpdateActions.CREATE_OR_UPDATE,
+                               )
+        ]
+        try:
+            try:
+                self.cd.update_object_attribute(self.cd.get_obj_type_path('policy') + self.get_policy_name(policy_type),
+                                                params,
+                                                self.cd.node_schema)
+            except cd_client.exceptions.ResourceNotFoundException:
+                self.create_policy(statement, policy_type)
         except cd_client.exceptions.LimitExceededException as ex:
             raise FusilladeHTTPException(ex)
         else:
-            self.log.info(dict(message="Policy updated",
-                               object=dict(
-                                   type=self.object_type,
-                                   path_name=self._path_name
-                               ),
-                               policy=dict(
-                                   link_name=self.get_policy_name('IAMPolicy'),
-                                   policy_type="IAMPolicy")
-                               ))
+            logger.info(dict(message="Policy updated",
+                             object=dict(
+                                 type=self.object_type,
+                                 path_name=self._path_name
+                             ),
+                             policy=dict(
+                                 link_name=self.get_policy_name(policy_type),
+                                 policy_type=policy_type)
+                             ))
 
-        self._statement = None
+        self.attached_policies[policy_type] = None
 
     @retry(timeout=1, delay=0.1)
-    def _set_statement_with_retry(self, statement):
+    def _set_policy_with_retry(self, statement, policy_type: str = 'IAMPolicy'):
         """
-        Its possible for self._set_statement to fail with resource not found when the node is first created due to
+        Its possible for self._set_policy to fail with resource not found when the node is first created due to
         race conditions in creating new nodes in cloud directory. Retries give the cloud directory time to finish
         creating node before adding a new policy statement.
-        :param statement:
+        :param policy:
         :return:
         """
-        self._set_statement(statement)
-
-    def _get_attributes(self, attributes: List[str]):
-        """
-        retrieve attributes for this from CloudDirectory and sets local private variables.
-        """
-        try:
-            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
-        except cd_client.exceptions.ResourceNotFoundException:
-            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
-        for attr in resp['Attributes']:
-            self.__setattr__('_' + attr['Key']['Name'], attr['Value'].popitem()[1])
-
-    def get_attributes(self, attributes: List[str]):
-        attrs = dict()
-        if not attributes:
-            return attrs
-        try:
-            resp = self.cd.get_object_attributes(self.object_ref, self._facet, attributes)
-        except cd_client.exceptions.ResourceNotFoundException:
-            raise FusilladeHTTPException(status=404, title="Not Found", detail="Resource does not exist.")
-        for attr in resp['Attributes']:
-            attrs[attr['Key']['Name']] = attr['Value'].popitem()[1]  # noqa
-        return attrs
+        if policy_type in self.allowed_policy_types:
+            self._set_policy(statement, policy_type)
 
     @staticmethod
     def _verify_statement(statement):
@@ -1226,129 +1289,200 @@ class CloudNode:
         except iam.exceptions.InvalidInputException:
             raise FusilladeHTTPException(status=400, title="Bad Request", detail="Invalid policy format.")
 
-    @classmethod
-    def list_all(cls, directory: CloudDirectory, next_token: str, per_page: int):
-        resp, next_token = directory.list_object_children_paged(f'/{cls.object_type}/', next_token, per_page)
-        operations = [directory.batch_get_attributes(f'${obj_ref}', cls._facet, ['name'])
-                      for obj_ref in resp.values()]
-        results = []
-        for r in directory.batch_read(operations)['Responses']:
-            if r.get('SuccessfulResponse'):
-                results.append(
-                    r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
-            else:
-                logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
-        return {f"{cls.object_type}s": results}, next_token
+    def get_policy_info(self):
+        return {'policies': dict([(i, self.get_policy(i)) for i in self.allowed_policy_types if self.get_policy(i)])}
 
 
-class CreateMixin:
+class CreateMixin(PolicyMixin):
+    """Adds creation support to a cloudNode"""
+
     @classmethod
-    def create(cls, cloud_directory: CloudDirectory, name: str, statement: Optional[str] = None) -> Type['CloudNode']:
+    def create(cls, name: str, statement: Optional[str] = None,
+               creator=None) -> Type['CloudNode']:
         if not statement:
             statement = get_json_file(cls._default_policy_path)
+        statement = cls._set_policy_id(statement, name)
         cls._verify_statement(statement)
+        _creator = creator if creator else "fusillade"
         try:
-            cloud_directory.create_object(cls.hash_name(name), cls._facet, name=name, obj_type=cls.object_type)
+            Config.get_directory().create_object(cls.hash_name(name), cls._facet, name=name, obj_type=cls.object_type,
+                                                 created_by=_creator)
         except cd_client.exceptions.LinkNameAlreadyInUseException:
-            raise FusilladeHTTPException(status=409, title="Conflict", detail="The object already exists")
-        new_node = cls(cloud_directory, name)
-        new_node.log.info(dict(message=f"{cls.object_type} created",
-                               object=dict(type=new_node.object_type, path_name=new_node._path_name)))
-        new_node._set_statement_with_retry(statement)
+            raise FusilladeHTTPException(
+                status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists.")
+        new_node = cls(name)
+        if creator:
+            User(name=creator).add_ownership(new_node)
+        logger.info(dict(message=f"{cls.object_type} created by {_creator}",
+                         object=dict(type=new_node.object_type, path_name=new_node._path_name)))
+        new_node._set_policy_with_retry(statement)
         return new_node
 
 
 class RolesMixin:
+    """Adds role support to a cloudNode"""
+
     @property
     def roles(self) -> List[str]:
         if not self._roles:
-            self._roles = self._get_links(Role)
+            self._roles = self._get_links(Role,
+                                          'member_of',
+                                          Role.object_type,
+                                          'membership_link',
+                                          incoming=False)
         return self._roles
 
     def get_roles(self, next_token: str = None, per_page: str = None):
-        return self._get_links(Role, paged=True, next_token=next_token, per_page=per_page)
+        result, next_token = self._get_links(Role,
+                                             'member_of',
+                                             Role.object_type,
+                                             'membership_link',
+                                             paged=True,
+                                             next_token=next_token,
+                                             per_page=per_page)
+        return {'roles': result}, next_token
 
     def add_roles(self, roles: List[str]):
         operations = []
         operations.extend(self._add_links_batch(roles, Role.object_type))
-        operations.extend(self._add_typed_links_batch(roles, Role.object_type))
+        operations.extend(self._add_typed_links_batch(roles,
+                                                      Role.object_type,
+                                                      'membership_link',
+                                                      {'member_of': Role.object_type}))
         self.cd.batch_write(operations)
         self._roles = None  # update roles
-        self.log.info(dict(message="Roles added",
-                           object=dict(type=self.object_type, path_name=self._path_name),
-                           roles=roles))
+        logger.info(dict(message="Roles added",
+                         object=dict(type=self.object_type, path_name=self._path_name),
+                         roles=roles))
 
     def remove_roles(self, roles: List[str]):
         operations = []
         operations.extend(self._remove_links_batch(roles, Role.object_type))
-        operations.extend(self._remove_typed_links_batch(roles, Role.object_type))
+        operations.extend(self._remove_typed_links_batch(roles,
+                                                         Role.object_type,
+                                                         'membership_link',
+                                                         {'member_of': Role.object_type}))
         self.cd.batch_write(operations)
         self._roles = None  # update roles
-        self.log.info(dict(message="Roles removed",
-                           object=dict(type=self.object_type, path_name=self._path_name),
-                           roles=roles))
+        logger.info(dict(message="Roles removed",
+                         object=dict(type=self.object_type, path_name=self._path_name),
+                         roles=roles))
 
 
-class User(CloudNode, RolesMixin):
+class OwnershipMixin:
+    ownable = ['group', 'role']
+
+    def add_ownership(self, node: Type['CloudNode']):
+        self.cd.attach_typed_link(
+            self.object_ref,
+            node.object_ref,
+            'ownership_link',
+            {'owner_of': node.object_type})
+
+    def remove_ownership(self, node: Type['CloudNode']):
+        typed_link_specifier = self.cd.make_typed_link_specifier(
+            self.object_ref,
+            node.object_ref,
+            'ownership_link',
+            {'owner_of': node.object_type}
+        )
+        self.cd.detach_typed_link(typed_link_specifier)
+
+    def is_owner(self, node: Type['CloudNode']):
+        tls = self.cd.make_typed_link_specifier(
+            self.object_ref,
+            node.object_ref,
+            'ownership_link',
+            {'owner_of': node.object_type})
+        try:
+            self.cd.get_link_attributes(tls, [])
+        except cd_client.exceptions.ResourceNotFoundException:
+            return False
+        else:
+            return True
+
+    def list_owned(self, node: Type['CloudNode'], **kwargs):
+        result, next_token = self._get_links(node=node,
+                                             facet='ownership_link',
+                                             attribute_value=node.object_type,
+                                             attribute_name='owner_of',
+                                             incoming=False,
+                                             **kwargs)
+        return {f"{node.object_type}s": result}, next_token
+
+    def get_owned(self, object_type, **kwargs):
+        if object_type in self.ownable:
+            if object_type == 'group':
+                return self.list_owned(Group, **kwargs)
+            if object_type == 'role':
+                return self.list_owned(Role, **kwargs)
+
+
+class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
     """
     Represents a user in CloudDirectory
     """
     _attributes = ['status'] + CloudNode._attributes
-    default_roles = ['default_user']  # TODO: make configurable
-    default_groups = []  # TODO: make configurable
+    default_roles = []  # TODO: make configurable
+    default_groups = ['user_default']  # TODO: make configurable
     _facet = 'LeafFacet'
     object_type = 'user'
 
-    def __init__(self, cloud_directory: CloudDirectory, name: str = None, object_ref: str = None):
+    def __init__(self, name: str = None, object_ref: str = None):
         """
 
-        :param cloud_directory:
         :param name:
         """
-        super(User, self).__init__(cloud_directory,
-                                   name=name,
+        super(User, self).__init__(name=name,
                                    object_ref=object_ref)
         self._status = None
         self._groups: Optional[List[str]] = None
         self._roles: Optional[List[str]] = None
 
     def lookup_policies(self) -> List[str]:
-        try:
-            if self.groups:
-                policy_paths = self._lookup_policies_threaded()
-            else:
-                policy_paths = self.cd.lookup_policy(self.object_ref)
-        except cd_client.exceptions.ResourceNotFoundException:
-            self.provision_user(self.cd, self.name)
-            policy_paths = self.cd.lookup_policy(self.object_ref)
+        if self.is_enabled():
+            policy_paths = self.lookup_policies_batched()
+        else:
+            raise AuthorizationException(f"User {self.status}")
         return self.cd.get_policies(policy_paths)
 
-    def _lookup_policies_threaded(self):
+    def lookup_policies_batched(self):
         object_refs = self.groups + [self.object_ref]
-
-        def _call_with_future(fn, _future, args):
-            """
-            Returns the result of the wrapped threaded function.
-            """
-            try:
-                result = fn(*args)
-                _future.set_result(result)
-            except Exception as exc:
-                _future.set_exception(exc)
-
-        futures = []
-        for object_ref in object_refs:
-            future = Future()
-            Thread(target=_call_with_future, args=(self.cd.lookup_policy, future, [object_ref])).start()
-            futures.append(future)
-        results = [i for future in futures for i in future.result()]
-        return results
+        operations = [self.cd.batch_lookup_policy(object_ref) for object_ref in object_refs]
+        all_results = []
+        while True:
+            results = [r['SuccessfulResponse']['LookupPolicy'] for r in self.cd.batch_read(operations)['Responses']]
+            ops_index_modifier = 0
+            for i in range(len(results)):
+                all_results.extend(results[i]['PolicyToPathList'])  # get results
+                if results[i].get('NextToken'):
+                    operations[i - ops_index_modifier]['LookupPolicy']['NextToken'] = results[i]['NextToken']
+                else:
+                    operations.pop(i - ops_index_modifier)
+                    ops_index_modifier += 1
+            if not operations:
+                break
+        return all_results
 
     @property
     def status(self):
         if not self._status:
             self._get_attributes(['status'])
         return self._status
+
+    def is_enabled(self) -> bool:
+        """
+        Check if the user is enabled. Create the users with defaults if the user does not exist already.
+        :return: users status
+        """
+        try:
+            # check if the node has been created in cloud directory.
+            result = self.status == 'Enabled'
+        except FusilladeNotFoundException:
+            # node does not exist, create the node.
+            self.provision_user(self.name)
+            result = self.is_enabled()
+        return result
 
     def enable(self):
         """change the status of a user to enabled"""
@@ -1360,7 +1494,7 @@ class User(CloudNode, RolesMixin):
                                UpdateActions.CREATE_OR_UPDATE)
         ]
         self.cd.update_object_attribute(self.object_ref, update_params)
-        self.log.info(dict(message="User Enabled", object=dict(type=self.object_type, path_name=self._path_name)))
+        logger.info(dict(message="User Enabled", object=dict(type=self.object_type, path_name=self._path_name)))
         self._status = None
 
     def disable(self):
@@ -1373,41 +1507,43 @@ class User(CloudNode, RolesMixin):
                                UpdateActions.CREATE_OR_UPDATE)
         ]
         self.cd.update_object_attribute(self.object_ref, update_params)
-        self.log.info(dict(message="User Disabled", object=dict(type=self.object_type, path_name=self._path_name)))
+        logger.info(dict(message="User Disabled", object=dict(type=self.object_type, path_name=self._path_name)))
         self._status = None
 
     @classmethod
     def provision_user(
             cls,
-            cloud_directory: CloudDirectory,
             name: str,
             statement: Optional[str] = None,
             roles: List[str] = None,
             groups: List[str] = None,
+            creator: str = None
     ) -> 'User':
         """
         Creates a user in cloud directory if the users does not already exists.
 
-        :param cloud_directory:
         :param name:
         :param statement:
         :param roles:
         :param groups:
         :return:
         """
-        user = cls(cloud_directory, name)
+        user = cls(name)
+        _creator = creator if creator else "fusillade"
         try:
             user.cd.create_object(user._path_name,
                                   user._facet,
                                   name=user.name,
                                   status='Enabled',
-                                  obj_type=cls.object_type
+                                  obj_type=cls.object_type,
+                                  created_by=_creator
                                   )
         except cd_client.exceptions.LinkNameAlreadyInUseException:
-            raise FusilladeException("User already exists.")
+            raise FusilladeHTTPException(
+                status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists.")
         else:
-            user.log.info(dict(message="User created",
-                               object=dict(type=user.object_type, path_name=user._path_name)))
+            logger.info(dict(message=f"{user.object_ref} created by {_creator}",
+                             object=dict(type=user.object_type, path_name=user._path_name)))
         if roles:
             user.add_roles(roles + cls.default_roles)
         else:
@@ -1420,38 +1556,70 @@ class User(CloudNode, RolesMixin):
 
         if statement:  # TODO make using user default configurable
             user._verify_statement(statement)
-            user._set_statement_with_retry(statement)
+            user._set_policy_with_retry(statement)
         return user
 
     @property
     def groups(self) -> List[str]:
         if not self._groups:
-            self._groups = self._get_links(Group)
+            self._groups = self._get_links(Group,
+                                           'member_of',
+                                           Group.object_type,
+                                           'membership_link')
         return self._groups
 
     def get_groups(self, next_token: str = None, per_page: int = None):
-        return self._get_links(Group, paged=True, next_token=next_token, per_page=per_page)
+        result, next_token = self._get_links(Group,
+                                             'member_of',
+                                             Group.object_type,
+                                             'membership_link',
+                                             paged=True,
+                                             next_token=next_token,
+                                             per_page=per_page)
+        return {'groups': result}, next_token
 
-    def add_groups(self, groups: List[str]):
+    def add_groups(self, groups: List[str], run=True):
         operations = []
-        operations.extend(self._add_typed_links_batch(groups, Group.object_type))
-        self.cd.batch_write(operations)
-        self._groups = None  # update groups
-        self.log.info(dict(message="Groups joined",
-                           object=dict(type=self.object_type, path_name=self._path_name),
-                           groups=groups))
+        if len(self.groups) + len(groups) >= Config.group_max:
+            raise FusilladeLimitException(
+                f"Failed to add groups [{groups}]. The user belongs to {len(self.groups)} groups. "
+                f"Only {Config.group_max - len(self.groups)} can be added.")
+        operations.extend(self._add_typed_links_batch(groups,
+                                                      Group.object_type,
+                                                      'membership_link',
+                                                      {'member_of': Group.object_type}))
+        if run:
+            self.cd.batch_write(operations)
+            self._groups = None  # update groups
+            logger.info(dict(message="Groups joined",
+                             object=dict(type=self.object_type, path_name=self._path_name),
+                             groups=groups))
+        else:
+            return operations
 
-    def remove_groups(self, groups: List[str]):
+    def remove_groups(self, groups: List[str], run=True):
         operations = []
-        operations.extend(self._remove_typed_links_batch(groups, Group.object_type))
-        self.cd.batch_write(operations)
-        self._groups = None  # update groups
-        self.log.info(dict(message="Groups left",
-                           object=dict(type=self.object_type, path_name=self._path_name),
-                           groups=groups))
+        operations.extend(self._remove_typed_links_batch(groups,
+                                                         Group.object_type,
+                                                         'membership_link',
+                                                         {'member_of': Group.object_type}))
+        if run:
+            self.cd.batch_write(operations)
+            self._groups = None  # update groups
+            logger.info(dict(message="Groups left",
+                             object=dict(type=self.object_type, path_name=self._path_name),
+                             groups=groups))
+        else:
+            return operations
+
+    def get_info(self):
+        info = super(User, self).get_info()
+        info.update(super(User, self).get_policy_info())
+        info['status'] = self.status
+        return info
 
 
-class Group(CloudNode, RolesMixin, CreateMixin):
+class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
     """
     Represents a group in CloudDirectory
     """
@@ -1459,76 +1627,83 @@ class Group(CloudNode, RolesMixin, CreateMixin):
     object_type = 'group'
     _default_policy_path = default_group_policy_path
 
-    def __init__(self, cloud_directory: CloudDirectory, name: str = None, object_ref: str = None):
+    def __init__(self, name: str = None, object_ref: str = None):
         """
 
-        :param cloud_directory:
         :param name:
         """
-        super(Group, self).__init__(cloud_directory, name=name, object_ref=object_ref)
-        self._groups = None
-        self._roles = None
+        super(Group, self).__init__(name=name, object_ref=object_ref)
+        self._groups: Optional[List[str]] = None
+        self._roles: Optional[List[str]] = None
 
-    def get_users_iter(self) -> List[str]:
+    def get_users_iter(self) -> Tuple[Dict[str, Union[list, Any]], Any]:
         """
         Retrieves the object_refs for all user in this group.
         :return: (user name, user object reference)
         """
         return self._get_links(
             User,
-            incoming=False)
+            'member_of',
+            self.object_type,
+            'membership_link',
+            incoming=True)
 
     def get_users_page(self, next_token=None, per_page=None) -> Tuple[Dict, str]:
         """
         Retrieves the object_refs for all user in this group.
         :return: (user name, user object reference)
         """
-        return self._get_links(
+        results, next_token = self._get_links(
             User,
+            'member_of',
+            self.object_type,
+            'membership_link',
             paged=True,
             per_page=per_page,
-            incoming=False,
+            incoming=True,
             next_token=next_token)
+        return {'users': results}, next_token
 
-    def add_users(self, users: List[User]) -> None:
+    def add_users(self, users: List['User']) -> None:
         if users:
-            operations = [
-                self.cd.batch_attach_typed_link(
-                    self.object_ref,
-                    i.object_ref,
-                    'association',
-                    {
-                        'parent_type': self.object_type,
-                        'child_type': i.object_type,
-                    }
-                )
-                for i in users]
+            operations = [i for i in itertools.chain(*[user.add_groups([self.name], False) for user in users])]
             self.cd.batch_write(operations)
-            self.log.info(dict(message="Adding users to group",
-                               object=dict(type=self.object_type, path_name=self._path_name),
-                               users=[user._path_name for user in users]))
+            logger.info(dict(message="Adding users to group",
+                             object=dict(type=self.object_type, path_name=self._path_name),
+                             users=[user._path_name for user in users]))
 
-    def remove_users(self, users: List[str]) -> None:
+    def remove_users(self, users: List['User']) -> None:
         """
         Removes users from this group.
 
         :param users: a list of user names to remove from group
         :return:
         """
-        for user in users:
-            User(self.cd, user).remove_groups([self._path_name])
-        self.log.info(dict(message="Removing users from group",
-                           object=dict(type=self.object_type, path_name=self._path_name),
-                           users=[user for user in users]))
+        if users:
+            operations = [i for i in itertools.chain(*[user.remove_groups([self.name], False) for user in users])]
+            self.cd.batch_write(operations)
+            logger.info(dict(message="Removing users from group",
+                             object=dict(type=self.object_type, path_name=self._path_name),
+                             users=[user for user in users]))
+
+    def get_info(self):
+        info = super(Group, self).get_info()
+        info.update(self.get_policy_info())
+        return info
 
 
 class Role(CloudNode, CreateMixin):
     """
     Represents a role in CloudDirectory
     """
-    _facet = 'NodeFacet'
-    object_type = 'role'
-    _default_policy_path = default_role_path
+    _facet: str = 'NodeFacet'
+    object_type: str = 'role'
+    _default_policy_path: str = default_role_path
 
-    def __init__(self, cloud_directory: CloudDirectory, name: str = None, object_ref: str = None):
-        super(Role, self).__init__(cloud_directory, name=name, object_ref=object_ref)
+    def __init__(self, name: str = None, object_ref: str = None):
+        super(Role, self).__init__(name=name, object_ref=object_ref)
+
+    def get_info(self):
+        info = super(Role, self).get_info()
+        info.update(self.get_policy_info())
+        return info

@@ -3,24 +3,25 @@ import os
 
 from furl import furl
 
-from tests import random_hex_string
+from tests.common import service_accounts, new_test_directory
 from tests.infra.testmode import is_integration
 
 if not is_integration():
     old_directory_name = os.getenv("FUSILLADE_DIR", None)
-    os.environ["FUSILLADE_DIR"] = "test_api_" + random_hex_string()
 
-from tests.common import service_accounts
-from fusillade import directory, Config
-from fusillade.clouddirectory import cleanup_directory, User
+from fusillade import Config
+from fusillade.clouddirectory import cleanup_directory, User, get_published_schema_from_directory, cleanup_schema
 
 
 class BaseAPITest():
 
     @classmethod
     def setUpClass(cls):
+        if not is_integration():
+            new_test_directory()
+
         try:
-            User.provision_user(directory, service_accounts['admin']['client_email'], roles=['admin'])
+            User.provision_user(service_accounts['admin']['client_email'], roles=['fusillade_admin'])
         except Exception:
             pass
 
@@ -35,19 +36,22 @@ class BaseAPITest():
     @staticmethod
     def clear_directory(**kwargs):
         kwargs["users"] = kwargs.get('users', []) + [*Config.get_admin_emails()]
-        directory.clear(**kwargs)
+        Config.get_directory().clear(**kwargs)
 
     @classmethod
     def tearDownClass(cls):
         cls.clear_directory()
-
         if not is_integration():
-            cleanup_directory(directory._dir_arn)
+            directory_arn = Config.get_directory()._dir_arn
+            schema_arn = get_published_schema_from_directory(directory_arn)
+            cleanup_directory(directory_arn)
+            cleanup_schema(f"{schema_arn}/0")
             if old_directory_name:
                 os.environ["FUSILLADE_DIR"] = old_directory_name
 
     def _test_paging(self, url, headers, per_page, key):
-        url = furl(url, query_params={'per_page': per_page})
+        url = furl(url)
+        url.add(query_params={'per_page': per_page})
         resp = self.app.get(url.url, headers=headers)
         self.assertEqual(206, resp.status_code)
         self.assertEqual(per_page, len(json.loads(resp.body)[key]))
@@ -58,6 +62,6 @@ class BaseAPITest():
         self.assertEqual(200, resp.status_code)
         self.assertFalse("Link" in resp.headers)
         next_results = json.loads(resp.body)[key]
-        self.assertEqual(len(next_results), per_page)
+        self.assertLessEqual(len(next_results), per_page)
         result.extend(next_results)
         return result

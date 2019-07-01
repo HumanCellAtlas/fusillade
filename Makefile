@@ -32,6 +32,12 @@ install: docs
 set_oauth2_config:
 	cat ./oauth2_config.json | ./scripts/set_secret.py --secret-name oauth2_config
 
+check_directory_schema:
+	./scripts/upgrade_schema.py
+
+upgrade_directory_schema: check_directory_schema
+	./scripts/upgrade_schema.py --upgrade-published --upgrade-directory
+
 plan-infra:
 	$(MAKE) -C infra plan-all
 
@@ -46,7 +52,10 @@ package:
 	rm ./chalicelib/service_config.json
 	cp -R ./fusillade ./policies ./service_config.json chalicelib
 
-deploy: package
+setup_directory:
+	./scripts/make_directory.py
+
+deploy: package setup_directory check_directory_schema
 	./build_chalice_config.sh $(FUS_DEPLOYMENT_STAGE)
 	chalice deploy --no-autogen-policy --stage $(FUS_DEPLOYMENT_STAGE) --api-gateway-stage $(FUS_DEPLOYMENT_STAGE)
 

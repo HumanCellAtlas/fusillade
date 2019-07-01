@@ -5,9 +5,10 @@ import typing
 
 import jwt
 from dcplib.aws import clients
-from tests import schema_name, random_hex_string
-from fusillade.config import Config
+
 from fusillade.clouddirectory import publish_schema, create_directory, CloudDirectory
+from fusillade.config import Config
+from tests import schema_name, random_hex_string
 
 try:
     with open(f"{os.environ['FUS_HOME']}/test_accounts_{os.environ['FUS_DEPLOYMENT_STAGE']}.json", 'r') as fh:
@@ -58,9 +59,12 @@ def create_test_statements(length=1):
     return json.dumps(statement)
 
 
-def new_test_directory(directory_name=None) -> typing.Tuple[CloudDirectory, str]:
+def new_test_directory(directory_name=None) -> typing.Tuple[CloudDirectory, str, str]:
     directory_name = directory_name if directory_name else "test_dir_" + random_hex_string()
     schema_arn = publish_schema(schema_name, 'T' + random_hex_string())
+    Config._directory = None
+    Config._directory_name = None
+    os.environ["FUSILLADE_DIR"] = directory_name
     directory = create_directory(directory_name, schema_arn, [service_accounts['admin']['client_email']])
     return directory, schema_arn
 

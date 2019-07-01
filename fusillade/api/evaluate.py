@@ -1,10 +1,11 @@
-from threading import Thread
-from concurrent.futures import Future
 import typing
+from concurrent.futures import Future
+from threading import Thread
 
 from flask import make_response, jsonify
 
-from fusillade import User, directory
+from fusillade import User
+from fusillade.errors import AuthorizationException
 from fusillade.utils.authorize import assert_authorized, evaluate_policy
 
 
@@ -12,8 +13,12 @@ def evaluate_policy_api(token_info, body):
     with AuthorizeThread(token_info['https://auth.data.humancellatlas.org/email'],
                          ['fus:Evaluate'],
                          ['arn:hca:fus:*:*:user']):
-        policies = User(directory, body['principal']).lookup_policies()
-        result = evaluate_policy(body['principal'], body['action'], body['resource'], policies)
+        try:
+            policies = User(body['principal']).lookup_policies()
+        except AuthorizationException:
+            result = False
+        else:
+            result = evaluate_policy(body['principal'], body['action'], body['resource'], policies)
     return make_response(jsonify(**body, result=result), 200)
 
 
@@ -22,6 +27,7 @@ class AuthorizeThread:
     Authorize the requester in a separate thread while executing the request. This is safe only when performing
     read operations. If authorization fails a 403 is returned and the original request results are discarded.
     """
+
     def __init__(
             self,
             user: str,
