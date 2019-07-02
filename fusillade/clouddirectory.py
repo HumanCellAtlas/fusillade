@@ -836,30 +836,31 @@ class CloudDirectory:
 
         # retrieve the policies in a single request
         operations = [
-                         {
-                             'GetObjectAttributes': {
-                                 'ObjectReference': {'Selector': f'${policy_id}'},
-                                 'SchemaFacet': {
-                                     'SchemaArn': self.node_schema,
-                                     'FacetName': 'POLICY'
-                                 },
-                                 'AttributeNames': ['policy_document']
-                             }
-                         }
-                         for policy_id in policy_ids
-                     ] + [
-                         {
-                             'GetObjectAttributes': {
-                                 'ObjectReference': {'Selector': f'${policy_id}'},
-                                 'SchemaFacet': {
-                                     'SchemaArn': self._schema,
-                                     'FacetName': 'IAMPolicy'
-                                 },
-                                 'AttributeNames': ['name', 'type']
-                             }
-                         }
-                         for policy_id in policy_ids
-                     ]
+            {
+                'GetObjectAttributes': {
+                    'ObjectReference': {'Selector': f'${policy_id}'},
+                    'SchemaFacet': {
+                        'SchemaArn': self.node_schema,
+                        'FacetName': 'POLICY'
+                    },
+                    'AttributeNames': ['policy_document']
+                }
+            }
+            for policy_id in policy_ids
+        ]
+        operations.extend([
+            {
+                'GetObjectAttributes': {
+                    'ObjectReference': {'Selector': f'${policy_id}'},
+                    'SchemaFacet': {
+                        'SchemaArn': self._schema,
+                        'FacetName': 'IAMPolicy'
+                    },
+                    'AttributeNames': ['name', 'type']
+                }
+            }
+            for policy_id in policy_ids
+        ])
 
         # parse the policies from the responses
         responses = cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations)['Responses']
