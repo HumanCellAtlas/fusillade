@@ -54,12 +54,13 @@ def assert_authorized(user, actions, resources, context_entries=None):
     :return:
     """
     u = User(user)
+    context_entries = context_entries if context_entries else []
     try:
         authz_params = u.get_authz_params()
     except AuthorizationException:
         raise FusilladeForbiddenException(detail="User must be enabled to make authenticated requests.")
     else:
-        context_entries.append(restricted_context_entries(authz_params))
+        context_entries.extend(restricted_context_entries(authz_params))
         if not evaluate_policy(user, actions, resources, authz_params['policies'], context_entries):
             logger.info(dict(message="User not authorized.", user=u._path_name, action=actions, resources=resources))
             raise FusilladeForbiddenException()
