@@ -11,6 +11,7 @@ env:
 
 before_install:
   - source environment
+  - build_chalice_config.sh
 
 install:
   - pip install -r requirements-dev.txt
