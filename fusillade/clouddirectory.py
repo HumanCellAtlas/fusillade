@@ -1149,7 +1149,7 @@ class PolicyMixin:
 
     def get_authz_params(self) -> List[str]:
         policy_paths = self.cd.lookup_policy(self.object_ref)
-        return self.cd.get_policies(policy_paths)
+        return self.cd.get_policies(policy_paths)['policies']  # TODO use roles and groups extraced from policy
 
     def create_policy(self, statement: str, policy_type='IAMPolicy', **kwargs) -> str:
         """
@@ -1466,7 +1466,7 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
             policy_paths = self.lookup_policies_batched()
         else:
             raise AuthorizationException(f"User {self.status}")
-        return self.cd.get_policies(policy_paths)
+        return self.cd.get_policies(policy_paths)['policies']  # TODO use roles and groups extraced from policy
 
     def lookup_policies_batched(self):
         object_refs = self.groups + [self.object_ref]
