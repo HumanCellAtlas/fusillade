@@ -1466,7 +1466,7 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
             policy_paths = self.lookup_policies_batched()
         else:
             raise AuthorizationException(f"User {self.status}")
-        return self.cd.get_policies(policy_paths)['policies']  # TODO use roles and groups extraced from policy
+        return self.cd.get_policies(policy_paths)
 
     def lookup_policies_batched(self):
         object_refs = self.groups + [self.object_ref]
