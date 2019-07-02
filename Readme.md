@@ -66,8 +66,8 @@ To do this, your application should define an access control model consisting of
 - Populate `FUS_ADMIN_EMAILS` with a list of admins to assigned upon creating the fusillade deployment. This
   is only used when fusillade is first deployed to create the first users. Afterwards this variable has no effect. If
   more admins are required assign a user the admin role.
-- Environment variables can be set in `./deployment/${FUS_DEPLOYMENT_STAGE}/environment.local` for each 
-  deployment for convenience.
+- Deployment specific environment variables can be set in `./deployment/${FUS_DEPLOYMENT_STAGE}/environment.local` 
+  per deployment for convenience.
 - **Optionally** Before deploying fusillade you can modify the [default policies and roles](../blob/master/policies) 
  to suite your needs. The `default_admin_role.json` is policy attached to the fusillade_admin role created during 
  deployment. The `default_group_policy.json` is assigned to all new group when they are created. The 
@@ -75,14 +75,19 @@ To do this, your application should define an access control model consisting of
  these policies and role can be modified after deployment using the fusillade API.
 
 ## Set Secrets
-Fusillade uses AWS Secret Store for its secrets. Use ./scripts/set_secrets to set the following secrets:
+Fusillade uses AWS Secret Store for its secrets. You can set secrets using *./scripts/set_secrets*. For example:
+
+ `cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/oauth2_config.json | ./scripts/set_secret.py --secret-name oauth2_config`
+ 
+ The following secrets are use by Fusillade:
 
 * **oauth2_config** - contains the fields needed to proxy an OIDC provider. Populate this file with the OIDC providers 
 you'd like to use to authenticate users. See [oauth2_config.json](../master/deployment/example/oauth2_config.example.json) 
-for the expected format. This file is uploaded to AWS secrets manager using `make set_oauth2_config`.
+for the expected format. This secret can also be set using `make set_oauth2_config`.
 * **test_service_accounts Optional** - contains google service accounts to test users access and admin access. This 
 only required for running tests See [test_service_accounts.json](../master/deployment/example/oauth2_config.example.json) 
 for the expected format.
+
 
 ## Deploy Infrastructure 
 Set `FUS_TERRAFORM_BACKEND_BUCKET_TEMPLATE` in your environment to an AWS S3 bucket to store your terraform state files.
