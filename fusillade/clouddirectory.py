@@ -1149,7 +1149,7 @@ class PolicyMixin:
 
     def get_authz_params(self) -> List[str]:
         policy_paths = self.cd.lookup_policy(self.object_ref)
-        return self.cd.get_policies(policy_paths)['policies']  # TODO use roles and groups extraced from policy
+        return self.cd.get_policies(policy_paths)
 
     def create_policy(self, statement: str, policy_type='IAMPolicy', **kwargs) -> str:
         """
