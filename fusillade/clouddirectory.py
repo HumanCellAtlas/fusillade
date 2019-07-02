@@ -873,10 +873,16 @@ class CloudDirectory:
         )
         for response in responses[middle:]:
             try:
-                _type, name = response['SuccessfulResponse']['GetObjectAttributes']['Attributes']
+                attrs = response['SuccessfulResponse']['GetObjectAttributes']['Attributes']
+                if attrs[0]['Key']['Name'] == 'name':
+                    name = attrs[0]['Value']['StringValue']
+                    _type = attrs[1]['Value']['StringValue']
+                else:
+                    name = attrs[1]['Value']['StringValue']
+                    _type = attrs[0]['Value']['StringValue']
             except KeyError:
                 continue
-            results[_type['Value']['StringValue']].append(name['Value']['StringValue'])
+            results[_type].append(name)
         return results
 
     def get_object_information(self, obj_ref: str) -> Dict[str, Any]:
