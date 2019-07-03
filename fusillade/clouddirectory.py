@@ -1153,7 +1153,7 @@ class PolicyMixin:
     """Adds policy support to a cloudNode"""
     allowed_policy_types = ['IAMPolicy']
 
-    def get_authz_params(self) -> List[str]:
+    def get_authz_params(self) -> Dict[str, List[str]]:
         policy_paths = self.cd.lookup_policy(self.object_ref)
         return self.cd.get_policies(policy_paths)
 

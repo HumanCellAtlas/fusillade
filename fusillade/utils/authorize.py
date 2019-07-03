@@ -142,10 +142,11 @@ def format_context_entries(context_entries: Dict[str, str],
                     suffix = "List"
             else:
                 v_type = type(v)
+                v = [v]
                 suffix = ""
             _ce.append({
                 'ContextKeyName': key,
-                'ContextKeyValues': [v],
+                'ContextKeyValues': v,
                 'ContextKeyType': f"{context_type_mapping[v_type]}{suffix}"
             })
     return _ce
