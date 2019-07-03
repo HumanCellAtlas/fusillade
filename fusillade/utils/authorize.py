@@ -132,7 +132,7 @@ def format_context_entries(context_entries: Dict[str, str],
     _ce = []
     restricted = restricted if restricted else []
     for key, value in context_entries.items():
-        if not key in restricted:
+        if key not in restricted:
             v = kwargs.get(value)
             if v is None:
                 continue
