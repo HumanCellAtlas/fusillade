@@ -6,7 +6,7 @@ from typing import List, Dict, Optional, Union
 from dcplib.aws import clients as aws_clients
 
 from fusillade import User
-from fusillade.errors import FusilladeForbiddenException, AuthorizationException
+from fusillade.errors import FusilladeForbiddenException, AuthorizationException, FusilladeBadRequestException
 
 logger = logging.getLogger(__name__)
 iam = aws_clients.iam
@@ -74,11 +74,15 @@ restricted_set = {'fus:groups', 'fus:roles', 'fus:user_email'}
 
 def restricted_context_entries(authz_params):
     """
+    Restricts context_entries from containing reserved entries.
 
     :param authz_params:
     :return:
     """
-    return format_context_entries({'fus:groups': 'group', 'fus:roles': 'role'}, authz_params)
+    try:
+        return format_context_entries({'fus:groups': 'group', 'fus:roles': 'role'}, authz_params)
+    except KeyError:
+        FusilladeBadRequestException("Invalid context entry type.")
 
 
 def format_resources(resources: List[str], resource_param: List[str], kwargs: Dict[str, Union[List[str], str]]):
@@ -128,27 +132,22 @@ def format_context_entries(context_entries: Dict[str, str],
     _ce = []
     restricted = restricted if restricted else []
     for key, value in context_entries.items():
-        if key in restricted:
-            continue
-        else:
+        if not key in restricted:
             v = kwargs.get(value)
             if v is None:
                 continue
-            elif isinstance(v, list):
+            elif isinstance(v, list) and v:
                 v_type = type(v[0])
                 if all(isinstance(i, v_type) for i in v):
-                    _ce.append({
-                        'ContextKeyName': key,
-                        'ContextKeyValues': v,
-                        'ContextKeyType': f"{context_type_mapping[v_type]}List"
-                    })
+                    suffix = "List"
             else:
-                v_type = type(v[0])
-                _ce.append({
-                    'ContextKeyName': key,
-                    'ContextKeyValues': [v],
-                    'ContextKeyType': context_type_mapping[v_type]
-                })
+                v_type = type(v)
+                suffix = ""
+            _ce.append({
+                'ContextKeyName': key,
+                'ContextKeyValues': [v],
+                'ContextKeyType': f"{context_type_mapping[v_type]}{suffix}"
+            })
     return _ce
 
 
