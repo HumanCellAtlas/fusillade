@@ -1574,10 +1574,10 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
             # verify parameters
             if roles:
                 for role in roles:
-                    operations.append(Role(role).object_ref)
+                    operations.append(directory.batch_get_object_info(Role(role).object_ref))
             if groups:
                 for group in groups:
-                    operations.append(Group(group).object_ref)
+                    operations.append(directory.batch_get_object_info(Group(group).object_ref))
             directory.batch_read(operations)
         except cd_client.exceptions.ResourceNotFoundException:
             FusilladeBadRequestException(f"One or more groups or roles does not exist.")
