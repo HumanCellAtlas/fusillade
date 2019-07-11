@@ -1568,10 +1568,10 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         user = cls(name)
         _creator = creator if creator else "fusillade"
 
+        # verify parameters
         operations = []
         directory = Config.get_directory()
         try:
-            # verify parameters
             if roles:
                 for role in roles:
                     operations.append(directory.batch_get_object_info(Role(role).object_ref))
@@ -1581,7 +1581,8 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
             directory.batch_read(operations)
         except cd_client.exceptions.ResourceNotFoundException:
             FusilladeBadRequestException(f"One or more groups or roles does not exist.")
-        user._verify_statement(statement)
+        if statement:
+            user._verify_statement(statement)
 
         try:
             user.cd.create_object(user._path_name,
