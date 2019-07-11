@@ -1572,10 +1572,12 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         directory = Config.get_directory()
         try:
             # verify parameters
-            for role in roles:
-                operations.append(Role(role).object_ref)
-            for group in groups:
-                operations.append(Group(group).object_ref)
+            if roles:
+                for role in roles:
+                    operations.append(Role(role).object_ref)
+            if groups:
+                for group in groups:
+                    operations.append(Group(group).object_ref)
             directory.batch_read(operations)
         except cd_client.exceptions.ResourceNotFoundException:
             FusilladeBadRequestException(f"One or more groups or roles does not exist.")
