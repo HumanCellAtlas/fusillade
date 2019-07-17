@@ -10,8 +10,9 @@ from fusillade.clouddirectory import publish_schema, create_directory, CloudDire
 from fusillade.config import Config
 from tests import schema_name, random_hex_string
 
+test_account_file=f"{os.environ['FUS_HOME']}/test_accounts_{os.environ['FUS_DEPLOYMENT_STAGE']}.json"
 try:
-    with open(f"{os.environ['FUS_HOME']}/test_accounts_{os.environ['FUS_DEPLOYMENT_STAGE']}.json", 'r') as fh:
+    with open(test_account_file, 'r') as fh:
         service_accounts = json.load(fh)
 except FileNotFoundError:
     sm = clients.secretsmanager
@@ -19,7 +20,7 @@ except FileNotFoundError:
         sm.get_secret_value(SecretId=f"{os.environ['FUS_SECRETS_STORE']}/{os.environ['FUS_DEPLOYMENT_STAGE']}"
         f"/test_service_accounts")["SecretString"]
     )
-    with open(f"{os.environ['FUS_HOME']}/test_accounts_{os.environ['FUS_DEPLOYMENT_STAGE']}.json", 'w') as fh:
+    with open(test_account_file, 'w') as fh:
         json.dump(service_accounts, fh)
 
 
