@@ -38,8 +38,8 @@ set_test_service_accounts:
 check_directory_schema:
 	source environment && ./scripts/upgrade_schema.py
 
-upgrade_directory_schema: check_directory_schema
-	source environment && /scripts/upgrade_schema.py --upgrade-published --upgrade-directory
+upgrade_directory_schema:
+	source environment && ./scripts/upgrade_schema.py --upgrade-published --upgrade-directory
 
 plan-infra:
 	source environment && $(MAKE) -C infra plan-all
@@ -47,22 +47,22 @@ plan-infra:
 deploy-infra:
 	source environment && $(MAKE) -C infra apply-all
 
-_package:
-	source environment && $(MAKE) package
-
 package:
+	git fetch --all
+	source environment && $(MAKE) _package
+
+_package:
 	git clean -df chalicelib vendor
 	shopt -s nullglob; for wheel in vendor.in/*/*.whl; do unzip -q -o -d vendor $$wheel; done
 	cat fusillade-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/fusillade-api.yml
 	cat fusillade-internal-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/fusillade-internal-api.yml
-	git fetch --all
 	cat service_config.json | jq .version=\"$(shell git describe --tags --abbrev=0)\" > ./chalicelib/service_config.json
 	cp -R ./fusillade ./policies chalicelib
 
 setup_directory:
 	source environment && ./scripts/make_directory.py
 
-_deploy: package setup_directory check_directory_schema
+_deploy: setup_directory check_directory_schema package
 	./build_chalice_config.sh $(FUS_DEPLOYMENT_STAGE)
 	chalice deploy --no-autogen-policy --stage $(FUS_DEPLOYMENT_STAGE) --api-gateway-stage $(FUS_DEPLOYMENT_STAGE)
 

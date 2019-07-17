@@ -40,6 +40,8 @@ parser.add_argument('--release-notes', type=str, required=False,
                     )
 parser.add_argument('--dry-run', '-d',
                     action="store_true")
+parser.add_argument('--auto', action="store_false",
+                    help="Used for automated deployment. No user interaction is required.")
 args = parser.parse_args()
 
 
@@ -104,7 +106,8 @@ def make_release_notes(src, dst) -> str:
             temp_file = f"{temp_path}/release_notes.txt"
             with open(temp_file, 'w') as file:
                 file.write(r_notes)
-            subprocess.call([os.environ.get('EDITOR', 'vim'), temp_file])
+            if args.auto:
+                subprocess.call([os.environ.get('EDITOR', 'vim'), temp_file])
             with open(temp_file, 'r') as file:
                 r_notes = file.read()
     return r_notes

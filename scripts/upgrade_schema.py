@@ -95,23 +95,10 @@ if major_version == schema_name:  # Check if their is a minor version by parsing
     major_version = minor_version
     minor_version = '0'
 
-# --- Check if the directory is up to date with the most recent published schema.
+# --- Check if the published schema is up to date with the local schema
 pub_schemas = get_published(major_version)
 pub_schema_arn_latest = pub_schemas[-1]
 pub_schema_json = cd_client.get_schema_as_json(SchemaArn=pub_schema_arn_latest)['Document']
-applied_schema_json = cd_client.get_schema_as_json(SchemaArn=applied_schema)['Document']
-directory_uptodate = schemas_equal(pub_schema_json, applied_schema_json)
-if directory_uptodate:
-    print('Directory schema is up to date!')
-else:
-    print("Directory schema is out of date.")
-    print('-' * 16)
-    print(f"Published:\n{json.dumps(json.loads(pub_schema_json), indent=2)}")
-    print('-' * 16)
-    print(f"Applied:\n{json.dumps(json.loads(applied_schema_json), indent=2)}")
-    print('-' * 16)
-
-# --- Check if the schema is up to date with the local schema
 schema_uptodate = schemas_equal(new_schema, pub_schema_json)
 if schema_uptodate:
     print(f"Published schema {pub_schema_arn_latest} is up to date.")
@@ -143,7 +130,19 @@ else:
               f"upgrade.")
         rv = 1
 
-if not directory_uptodate:
+# --- Check if the directory is up to date with the most recent published schema.
+applied_schema_json = cd_client.get_schema_as_json(SchemaArn=applied_schema)['Document']
+directory_uptodate = schemas_equal(pub_schema_json, applied_schema_json)
+if directory_uptodate:
+    print('Directory schema is up to date with published!')
+else:
+    print("Directory schema is out of date.")
+    print('-' * 16)
+    print(f"Published:\n{json.dumps(json.loads(pub_schema_json), indent=2)}")
+    print('-' * 16)
+    print(f"Applied:\n{json.dumps(json.loads(applied_schema_json), indent=2)}")
+    print('-' * 16)
+
     if args.upgrade_directory:
         print("Upgrading directory schema to {pub_schema_arn}")
         response = cd_client.upgrade_applied_schema(
