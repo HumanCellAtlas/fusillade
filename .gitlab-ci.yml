@@ -1,0 +1,31 @@
+image: humancellatlas/dss-build-box
+
+variables:
+  GIT_SUBMODULE_STRATEGY: normal
+  GITHUB_API: "https://api.github.com"
+
+stages:
+  - test
+
+before_script:
+  - export COMMITS_URL=${GITHUB_API}/repos/HumanCellAtlas/fusillade/commits
+  - if not [[ CI_COMMIT_SHA == $(http GET $COMMITS_URL sha==$CI_COMMIT_REF_NAME | jq -r '.[0]["sha"]') ]]; then exit 1; fi
+  - cp -r /HumanCellAtlas/data-store ~/fusillade && cd ~/fusillade
+  - git reset --hard HEAD
+  - virtualenv ~/venv
+  - source ~/venv/bin/activate
+  - pip install -r requirements-dev.txt
+  - pip install trufflehog
+  - wget -O regex.json https://raw.githubusercontent.com/HumanCellAtlas/dcplib/master/components/trufflehog_regex_patterns.json
+  - trufflehog --regex --rules regex.json --entropy=False https://github.com/HumanCellAtlas/data-store.git
+  - rm regex.json
+  - source environment
+.tests:
+  stage: test
+  except:
+    - tags
+
+unit_tests:
+  extends: .tests
+  script:
+    - make test
