@@ -42,7 +42,7 @@ _check_directory_schema:
 	./scripts/upgrade_schema.py
 
 check_directory_schema:
-	source environment && $(MAKE) -C _check_directory_schema
+	source environment && $(MAKE) _check_directory_schema
 
 upgrade_directory_schema:
 	source environment && ./scripts/upgrade_schema.py --upgrade-published --upgrade-directory
@@ -69,7 +69,7 @@ _setup_directory:
 	./scripts/make_directory.py
 
 setup_directory:
-	source environment && $(MAKE) -C _setup_directory
+	source environment && $(MAKE) _setup_directory
 
 _deploy: _setup_directory _check_directory_schema _package
 	./build_chalice_config.sh $(FUS_DEPLOYMENT_STAGE)
