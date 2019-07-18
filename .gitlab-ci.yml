@@ -3,6 +3,7 @@ image: humancellatlas/dss-build-box
 variables:
   GIT_SUBMODULE_STRATEGY: normal
   GITHUB_API: "https://api.github.com"
+  GIT_DEPTH: "3"
 
 stages:
   - test
@@ -22,8 +23,6 @@ before_script:
   - trufflehog --regex --rules regex.json --entropy=False https://github.com/HumanCellAtlas/data-store.git
   - rm regex.json
   - source environment
-  - ./scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
-  - source environment
 .tests:
   stage: test
   except:
@@ -38,6 +37,7 @@ unit_tests:
 deploy:
   stage: deploy
   script:
+    - ./scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
     - make deploy
   only:
     - test-gitlab2
@@ -50,6 +50,7 @@ deploy:
 integration_test:
   stage: integration_test
   script:
+    - ./scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
     - make integration_test
   only:
     - test-gitlab2
