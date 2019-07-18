@@ -21,6 +21,7 @@ before_script:
   - wget -O regex.json https://raw.githubusercontent.com/HumanCellAtlas/dcplib/master/components/trufflehog_regex_patterns.json
   - trufflehog --regex --rules regex.json --entropy=False https://github.com/HumanCellAtlas/data-store.git
   - rm regex.json
+  - source environment
   - ./scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
   - source environment
 .tests:
