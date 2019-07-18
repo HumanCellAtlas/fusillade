@@ -6,6 +6,8 @@ variables:
 
 stages:
   - test
+  - deploy
+  - integration_test
 
 before_script:
   - export COMMITS_URL=${GITHUB_API}/repos/HumanCellAtlas/fusillade/commits
@@ -30,3 +32,27 @@ unit_tests:
   extends: .tests
   script:
     - make test
+
+deploy:
+  stage: deploy
+  script:
+    - make deploy
+  only:
+    - test-gitlab2
+    - master
+    - integration
+    - staging
+  except:
+    - schedules
+
+integration_test:
+  stage: integration_test
+  script:
+    - make integration_test
+  only:
+    - test-gitlab2
+    - master
+    - integration
+    - staging
+  except:
+    - schedules
