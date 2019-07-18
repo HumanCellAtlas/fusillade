@@ -51,6 +51,10 @@ set +a
 
 if [[ -f "${FUS_HOME}/deployments/${FUS_DEPLOYMENT_STAGE}/environment.local" ]]; then
     source "${FUS_HOME}/deployments/${FUS_DEPLOYMENT_STAGE}/environment.local"
+else
+    if [[ -f "${FUS_HOME}/environment.local" ]]; then
+        source "${FUS_HOME}/environment.local"
+    fi
 fi
 
 set -a

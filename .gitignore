@@ -41,12 +41,11 @@ npm-debug.log
 /README.rst
 
 # fusillade specific
-/oauth2_config.json
+test_service_accounts.json
+oauth2_config.json
 
 # terraform
 .terraform
 /infra/*/backend.tf
 /infra/*/providers.tf
 /infra/*/variables.tf
-test_service_accounts.json
-oauth2_config.json
