@@ -48,7 +48,7 @@ deploy-infra:
 	source environment && $(MAKE) -C infra apply-all
 
 package:
-	git fetch --all
+	git fetch --tags
 	source environment && $(MAKE) _package
 
 _package:
