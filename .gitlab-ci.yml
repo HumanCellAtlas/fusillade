@@ -28,6 +28,7 @@ before_script:
   stage: test
   except:
     - tags
+    - schedules
 
 unit_tests:
   extends: .tests

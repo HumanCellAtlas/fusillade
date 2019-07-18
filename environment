@@ -55,6 +55,7 @@ else
     if [[ -f "${FUS_HOME}/deployments/${FUS_DEPLOYMENT_STAGE}/environment.local" ]]; then
         source "${FUS_HOME}/deployments/${FUS_DEPLOYMENT_STAGE}/environment.local"
     fi
+fi
 
 set -a
 FUS_ZONE_NAME=${FUS_DEPLOYMENT_STAGE}.data.humancellatlas.org
