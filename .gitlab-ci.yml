@@ -11,10 +11,10 @@ stages:
   - integration_test
 
 before_script:
-  - export COMMITS_URL=${GITHUB_API}/repos/HumanCellAtlas/fusillade/commits
-  - if not [[ CI_COMMIT_SHA == $(http GET $COMMITS_URL sha==$CI_COMMIT_REF_NAME | jq -r '.[0]["sha"]') ]]; then exit 1; fi
+#  - export COMMITS_URL=${GITHUB_API}/repos/HumanCellAtlas/fusillade/commits
+#  - if not [[ CI_COMMIT_SHA == $(http GET $COMMITS_URL sha==$CI_COMMIT_REF_NAME | jq -r '.[0]["sha"]') ]]; then exit 1; fi
   - cp -r /HumanCellAtlas/fusillade ~/fusillade && cd ~/fusillade
-  - git reset --hard HEAD
+#  - git reset --hard HEAD
   - virtualenv ~/venv
   - source ~/venv/bin/activate
   - pip install -r requirements-dev.txt
