@@ -20,7 +20,7 @@ before_script:
   - pip install -r requirements-dev.txt
   - pip install trufflehog
   - wget -O regex.json https://raw.githubusercontent.com/HumanCellAtlas/dcplib/master/components/trufflehog_regex_patterns.json
-  - trufflehog --regex --rules regex.json --entropy=False https://github.com/HumanCellAtlas/data-store.git
+  - trufflehog --regex --rules regex.json --entropy=False https://github.com/HumanCellAtlas/fusillade.git
   - rm regex.json
   - source environment
 .tests:
