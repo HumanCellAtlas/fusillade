@@ -32,7 +32,7 @@ before_script:
 unit_tests:
   extends: .tests
   script:
-    - make test
+    - make unittests
 
 deploy:
   stage: deploy
@@ -40,7 +40,6 @@ deploy:
     - ./scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
     - make deploy
   only:
-    - test-gitlab2
     - master
     - integration
     - staging
@@ -53,7 +52,6 @@ integration_test:
     - ./scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
     - make integration_test
   only:
-    - test-gitlab2
     - master
     - integration
     - staging
