@@ -129,9 +129,10 @@ class ChaliceWithConnexion(chalice.Chalice):
             except Exception as ex:
                 self.log.exception(json.dumps(dict(
                     msg='The request failed!',
-                    exception=ex
+                    exception=str(ex)
                 )))
                 status_code = 500
+                raise
             finally:
                 self.log.info(dict(
                     dispatch=dict(

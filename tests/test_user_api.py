@@ -11,6 +11,8 @@ import unittest
 
 from furl import furl
 
+import fusillade
+
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
@@ -146,7 +148,10 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         self._test_paging(f'/v1/users', headers, 7, 'users')
 
     def test_get_user(self):
-        User.provision_user(service_accounts['user']['client_email'])
+        try:
+            User.provision_user(service_accounts['user']['client_email'])
+        except fusillade.errors.FusilladeHTTPException:
+            pass
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['user']))
         name = service_accounts['user']['client_email']
@@ -190,7 +195,10 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 self.assertEqual(test['response']['code'], resp.status_code)
 
     def test_user_status(self):
-        User.provision_user(service_accounts['user']['client_email'])
+        try:
+            User.provision_user(service_accounts['user']['client_email'])
+        except fusillade.errors.FusilladeHTTPException:
+            pass
         user_id = service_accounts['user']['client_email']
         user_headers = {'Content-Type': "application/json"}
         user_headers.update(get_auth_header(service_accounts['user']))

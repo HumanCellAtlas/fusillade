@@ -170,10 +170,13 @@ class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute',
     pass
 
 
-cd_retry_parameters = dict(timeout=1,
-                           delay=0.1,
-                           retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
+cd_read_retry_parameters = dict(timeout=1,
+                                delay=0.1,
+                                retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
 
+cd_write_retry_parameters = dict(timeout=5,
+                                delay=0.2,
+                                retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
 
 class CloudDirectory:
     _page_limit = 30  # This is the max allowed by AWS
@@ -569,7 +572,7 @@ class CloudDirectory:
             'IdentityAttributeValues': self.make_attributes(attributes)
         }
 
-    @retry(**cd_retry_parameters)
+    @retry(**cd_write_retry_parameters)
     def clear(self, users: List[str] = None,
               groups: List[str] = None,
               roles: List[str] = None) -> None:
@@ -765,7 +768,7 @@ class CloudDirectory:
             }
         }
 
-    @retry(**cd_retry_parameters)
+    @retry(**cd_write_retry_parameters)
     def batch_write(self, operations: list) -> List[dict]:
         """
         A wrapper around CloudDirectory.Client.batch_write
@@ -794,7 +797,7 @@ class CloudDirectory:
 
         return responses
 
-    @retry(**cd_retry_parameters)
+    @retry(**cd_read_retry_parameters)
     def batch_read(self, operations: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         A wrapper around CloudDirectory.Client.batch_read
@@ -1409,6 +1412,7 @@ class RolesMixin:
 class OwnershipMixin:
     ownable = ['group', 'role']
 
+    @retry(cd_write_retry_parameters)
     def add_ownership(self, node: Type['CloudNode']):
         self.cd.attach_typed_link(
             self.object_ref,
@@ -1416,6 +1420,7 @@ class OwnershipMixin:
             'ownership_link',
             {'owner_of': node.object_type})
 
+    @retry(cd_write_retry_parameters)
     def remove_ownership(self, node: Type['CloudNode']):
         typed_link_specifier = self.cd.make_typed_link_specifier(
             self.object_ref,
@@ -1600,16 +1605,14 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
             logger.info(dict(message=f"{user.object_ref} created by {_creator}",
                              object=dict(type=user.object_type, path_name=user._path_name)))
 
-        if roles:
-            user.add_roles(roles + cls.default_roles)
-        else:
-            user.add_roles(cls.default_roles)
+        retry(timeout=1, delay=0.1,
+              retryable=lambda e: isinstance(e, FusilladeNotFoundException))(user.get_info)()
+        roles = roles + cls.default_roles if roles else cls.default_roles
+        user.add_roles(roles)
 
-        if groups:
-            user.add_groups(groups + cls.default_groups)
-        else:
-            user.add_groups(cls.default_groups)
-
+        groups = groups + cls.default_groups if groups else cls.default_groups
+        user.add_groups(groups)
+        
         if statement:  # TODO make using user default configurable
             user._set_policy_with_retry(statement)
         return user

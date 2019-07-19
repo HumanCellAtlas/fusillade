@@ -11,6 +11,8 @@ import unittest
 
 from furl import furl
 
+from tests import eventually
+
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
@@ -110,16 +112,20 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
         } for name, description in TEST_NAMES_NEG
         ])
         for test in tests:
-            with self.subTest(test['name']):
-                headers = {'Content-Type': "application/json"}
-                headers.update(get_auth_header(service_accounts['admin']))
-                if test['name'] == "400 returned when creating a group that already exists":
-                    self.app.post('/v1/group', headers=headers, data=json.dumps(test['json_request_body']))
-                resp = self.app.post('/v1/group', headers=headers, data=json.dumps(test['json_request_body']))
-                self.assertEqual(test['response']['code'], resp.status_code)
-                if resp.status_code == 201:
-                    resp = self.app.get(f'/v1/group/{test["json_request_body"]["group_id"]}/', headers=headers)
-                    self.assertEqual(test["json_request_body"]["group_id"], json.loads(resp.body)['group_id'])
+            self._test_post_group(test)
+
+    @eventually(2, 0.5)
+    def _test_post_group(self, test):
+        with self.subTest(test['name']):
+            headers = {'Content-Type': "application/json"}
+            headers.update(get_auth_header(service_accounts['admin']))
+            if test['name'] == "400 returned when creating a group that already exists":
+                self.app.post('/v1/group', headers=headers, data=json.dumps(test['json_request_body']))
+            resp = self.app.post('/v1/group', headers=headers, data=json.dumps(test['json_request_body']))
+            self.assertEqual(test['response']['code'], resp.status_code)
+            if resp.status_code == 201:
+                resp = self.app.get(f'/v1/group/{test["json_request_body"]["group_id"]}/', headers=headers)
+                self.assertEqual(test["json_request_body"]["group_id"], json.loads(resp.body)['group_id'])
 
     def test_get_group(self):
         headers = {'Content-Type': "application/json"}
