@@ -17,7 +17,7 @@ sys.path.insert(0, pkg_root)  # noqa
 from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_statement
 from tests.data import TEST_NAMES_POS, TEST_NAMES_NEG
-import fusillade
+from fusillade.errors import FusilladeHTTPException
 from fusillade.clouddirectory import User, Group, Role
 
 
@@ -149,7 +149,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
     def test_get_user(self):
         try:
             User.provision_user(service_accounts['user']['client_email'])
-        except fusillade.errors.FusilladeHTTPException:
+        except FusilladeHTTPException:
             pass
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['user']))
