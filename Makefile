@@ -14,8 +14,11 @@ test: before-test lint $(tests)
 $(tests): %.py : lint
 	coverage run -p --source=fusillade $*.py -v
 
+unittest: before-test
+	python -m unittest discover -p test_*.py -t .
+
 integration_test:
-	source environment && $(MAKE) FUS_TEST_MODE=integration test
+	source environment && $(MAKE) FUS_TEST_MODE=integration unittest
 	
 init_docs:
 	cd docs; sphinx-quickstart
@@ -35,8 +38,11 @@ set_oauth2_config:
 set_test_service_accounts:
 	source environment && cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/test_service_accounts.json | ./scripts/set_secret.py --secret-name test_service_accounts
 
+_check_directory_schema:
+	./scripts/upgrade_schema.py
+
 check_directory_schema:
-	source environment && ./scripts/upgrade_schema.py
+	source environment && $(MAKE) _check_directory_schema
 
 upgrade_directory_schema:
 	source environment && ./scripts/upgrade_schema.py --upgrade-published --upgrade-directory
@@ -48,7 +54,7 @@ deploy-infra:
 	source environment && $(MAKE) -C infra apply-all
 
 package:
-	git fetch --all
+	git fetch --tags
 	source environment && $(MAKE) _package
 
 _package:
@@ -59,10 +65,13 @@ _package:
 	cat service_config.json | jq .version=\"$(shell git describe --tags --abbrev=0)\" > ./chalicelib/service_config.json
 	cp -R ./fusillade ./policies chalicelib
 
-setup_directory:
-	source environment && ./scripts/make_directory.py
+_setup_directory:
+	./scripts/make_directory.py
 
-_deploy: setup_directory check_directory_schema package
+setup_directory:
+	source environment && $(MAKE) _setup_directory
+
+_deploy: _setup_directory _check_directory_schema _package
 	./build_chalice_config.sh $(FUS_DEPLOYMENT_STAGE)
 	chalice deploy --no-autogen-policy --stage $(FUS_DEPLOYMENT_STAGE) --api-gateway-stage $(FUS_DEPLOYMENT_STAGE)
 
