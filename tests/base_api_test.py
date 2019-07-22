@@ -3,7 +3,7 @@ import os
 
 from furl import furl
 
-from tests.common import service_accounts, new_test_directory
+from tests.common import service_accounts, new_test_directory, get_auth_header
 from tests.infra.testmode import is_integration
 
 if not is_integration():
@@ -32,10 +32,33 @@ class BaseAPITest():
             from tests.infra.server import ChaliceTestHarness
             # ChaliceTestHarness must be imported after FUSILLADE_DIR has be set
             cls.app = ChaliceTestHarness()
+        cls._save_state()
 
-    @staticmethod
-    def clear_directory(**kwargs):
-        kwargs["users"] = kwargs.get('users', []) + [*Config.get_admin_emails()]
+    @classmethod
+    def _save_state(cls):
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(service_accounts['admin']))
+
+        def _iterator(url, key):
+            url = furl(url)
+            url.add(query_params={'per_page': 30})
+            resp = cls.app.get(url.url, headers=headers)
+            results = json.loads(resp.body)[key]
+            while "Link" in resp.headers:
+                next_url = resp.headers['Link'].split(';')[0][1:-1]
+                resp = cls.app.get(next_url, headers=headers)
+                results.extend(json.loads(resp.body)[key])
+            return results
+
+        cls.saved_groups = _iterator('/v1/groups', 'groups')
+        cls.saved_users = _iterator('/v1/users', 'users')
+        cls.saved_roles = _iterator('/v1/roles', 'roles')
+
+    @classmethod
+    def clear_directory(cls, **kwargs):
+        kwargs["users"] = kwargs.get('users', []) + [*Config.get_admin_emails()] + cls.saved_users
+        kwargs["groups"] = kwargs.get('groups', []) + cls.saved_groups
+        kwargs["roles"] = kwargs.get('roles', []) + cls.saved_roles
         Config.get_directory().clear(**kwargs)
 
     @classmethod
@@ -56,12 +79,11 @@ class BaseAPITest():
         self.assertEqual(206, resp.status_code)
         self.assertEqual(per_page, len(json.loads(resp.body)[key]))
         self.assertTrue("Link" in resp.headers)
-        result = json.loads(resp.body)[key]
-        next_url = resp.headers['Link'].split(';')[0][1:-1]
-        resp = self.app.get(next_url, headers=headers)
-        self.assertEqual(200, resp.status_code)
-        self.assertFalse("Link" in resp.headers)
-        next_results = json.loads(resp.body)[key]
-        self.assertLessEqual(len(next_results), per_page)
-        result.extend(next_results)
-        return result
+        while "Link" in resp.headers:
+            next_url = resp.headers['Link'].split(';')[0][1:-1]
+            resp = self.app.get(next_url, headers=headers)
+            self.assertIn(resp.status_code, [200, 206])
+        else:
+            self.assertEqual(200, resp.status_code)
+            next_results = json.loads(resp.body)[key]
+            self.assertLessEqual(len(next_results), per_page)
