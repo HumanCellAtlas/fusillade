@@ -18,6 +18,7 @@ EXPORT_ENV_VARS_TO_LAMBDA_ARRAY=(
     FUS_ADMIN_EMAILS
     API_DOMAIN_NAME
     DEBUG
+    JSON_LOGS
 )
 
 if [[ -z "${DEPLOYMENT}" ]]; then
@@ -49,8 +50,12 @@ FUS_OWNER_TAG=user@email.com
 
 set +a
 
-if [[ -f "${FUS_HOME}/deployments/${FUS_DEPLOYMENT_STAGE}/environment.local" ]]; then
-    source "${FUS_HOME}/deployments/${FUS_DEPLOYMENT_STAGE}/environment.local"
+if [[ -f "${FUS_HOME}/environment.local" ]]; then
+    source "${FUS_HOME}/environment.local"
+else
+    if [[ -f "${FUS_HOME}/deployments/${FUS_DEPLOYMENT_STAGE}/environment.local" ]]; then
+        source "${FUS_HOME}/deployments/${FUS_DEPLOYMENT_STAGE}/environment.local"
+    fi
 fi
 
 set -a
