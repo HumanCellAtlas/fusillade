@@ -175,8 +175,9 @@ cd_read_retry_parameters = dict(timeout=1,
                                 retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
 
 cd_write_retry_parameters = dict(timeout=5,
-                                delay=0.2,
-                                retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
+                                 delay=0.2,
+                                 retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
+
 
 class CloudDirectory:
     _page_limit = 30  # This is the max allowed by AWS
@@ -1612,7 +1613,7 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
 
         groups = groups + cls.default_groups if groups else cls.default_groups
         user.add_groups(groups)
-        
+
         if statement:  # TODO make using user default configurable
             user._set_policy_with_retry(statement)
         return user
