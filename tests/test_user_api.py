@@ -11,14 +11,13 @@ import unittest
 
 from furl import furl
 
-import fusillade
-
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
 from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_statement
 from tests.data import TEST_NAMES_POS, TEST_NAMES_NEG
+import fusillade
 from fusillade.clouddirectory import User, Group, Role
 
 
