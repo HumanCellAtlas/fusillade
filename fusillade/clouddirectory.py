@@ -644,8 +644,8 @@ class CloudDirectory:
         """
         [self.delete_policy(policy_ref) for policy_ref in self.list_object_policies(
             obj_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)]
-        self.batch_write([self.batch_detach_object(parent_ref, link_name)
-                          for parent_ref, link_name in self.list_object_parents(
+        self.batch_write(
+            [self.batch_detach_object(parent_ref, link_name) for parent_ref, link_name in self.list_object_parents(
                 obj_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
         self.batch_write([self.batch_detach_typed_link(i) for i in self.list_incoming_typed_links(
             object_ref=obj_ref,
