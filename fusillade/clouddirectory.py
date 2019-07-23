@@ -40,15 +40,13 @@ default_admin_role_path = os.path.join(proj_path, '..', 'policies', 'default_adm
 default_user_role_path = os.path.join(proj_path, '..', 'policies', 'default_user_role.json')
 default_role_path = os.path.join(proj_path, '..', 'policies', 'default_role.json')
 
-cd_read_retry_parameters = dict(timeout=2,
+cd_read_retry_parameters = dict(timeout=5,
                                 delay=0.1,
-                                retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException),
-                                logger=logger)
+                                retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
 
 cd_write_retry_parameters = dict(timeout=5,
                                  delay=0.2,
-                                 retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException),
-                                 logger=logger)
+                                 retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
 
 
 def get_json_file(file_name):
@@ -240,6 +238,7 @@ class CloudDirectory:
         result = cd_client.list_object_children(**kwargs)
         return result['Children'], result.get("NextToken")
 
+    @retry(**cd_read_retry_parameters)
     def list_object_children(self, object_ref: str, **kwargs) -> Iterator[Tuple[str, str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children
