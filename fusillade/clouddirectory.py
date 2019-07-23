@@ -165,6 +165,15 @@ class ValueTypes(Enum):
     DatetimeValue = auto()
 
 
+class ConsistencyLevel(Enum):
+    """
+    Use by clouddirectory for read and write function to control the consistency of responses from the directory.
+    See https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_consistency_levels.html
+    """
+    SERIALIZABLE = auto()
+    EVENTUAL = auto()
+
+
 class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute', 'value_type', 'value', 'action'])):
     pass
 
@@ -410,7 +419,7 @@ class CloudDirectory:
                                                    'FacetName': facet
                                                },
                                                AttributeNames=attributes,
-                                               ConsistencyLevel='SERIALIZABLE'
+                                               ConsistencyLevel=ConsistencyLevel.SERIALIZABLE
                                                )
 
     def get_object_attribute_list(self, facet="LeafFacet", **kwargs) -> List[Dict[str, Any]]:
@@ -594,13 +603,13 @@ class CloudDirectory:
         protected_groups = [CloudNode.hash_name(name) for name in ['user_default'] + groups]
         protected_roles = [CloudNode.hash_name(name) for name in ["fusillade_admin", "default_user"] + roles]
 
-        for name, obj_ref in self.list_object_children('/user/', ConsistencyLevel='SERIALIZABLE'):
+        for name, obj_ref in self.list_object_children('/user/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
             if name not in protected_users:
                 self.delete_object(obj_ref)
-        for name, obj_ref in self.list_object_children('/group/', ConsistencyLevel='SERIALIZABLE'):
+        for name, obj_ref in self.list_object_children('/group/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
             if name not in protected_groups:
                 self.delete_object(obj_ref)
-        for name, obj_ref in self.list_object_children('/role/', ConsistencyLevel='SERIALIZABLE'):
+        for name, obj_ref in self.list_object_children('/role/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
             if name not in protected_roles:
                 self.delete_object(obj_ref)
 
@@ -610,12 +619,14 @@ class CloudDirectory:
         See details on deletion requirements for more info
         https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_access_objects.html
         """
-        self.batch_write([self.batch_detach_policy(policy_ref, obj_ref)
-                          for obj_ref in self.list_policy_attachments(policy_ref,
-                                                                      ConsistencyLevel='SERIALIZABLE')])
-        self.batch_write([self.batch_detach_object(parent_ref, link_name)
-                          for parent_ref, link_name in self.list_object_parents(policy_ref,
-                                                                                ConsistencyLevel='SERIALIZABLE')])
+        self.batch_write(
+            [self.batch_detach_policy(policy_ref, obj_ref) for obj_ref in self.list_policy_attachments(
+                policy_ref,
+                ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
+        self.batch_write(
+            [self.batch_detach_object(parent_ref, link_name) for parent_ref, link_name in self.list_object_parents(
+                policy_ref,
+                ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
         cd_client.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': policy_ref})
 
     @retry(**cd_write_retry_parameters)
@@ -624,18 +635,18 @@ class CloudDirectory:
         See details on deletion requirements for more info
         https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_access_objects.html
         """
-        [self.delete_policy(policy_ref) for policy_ref in self.list_object_policies(obj_ref,
-                                                                                    ConsistencyLevel='SERIALIZABLE')]
+        [self.delete_policy(policy_ref) for policy_ref in self.list_object_policies(
+            obj_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)]
         self.batch_write([self.batch_detach_object(parent_ref, link_name)
-                          for parent_ref, link_name in self.list_object_parents(obj_ref,
-                                                                                ConsistencyLevel='SERIALIZABLE')])
+                          for parent_ref, link_name in self.list_object_parents(
+                obj_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
         self.batch_write([self.batch_detach_typed_link(i) for i in self.list_incoming_typed_links(
             object_ref=obj_ref,
-            ConsistencyLevel='SERIALIZABLE'
+            ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name
         )])
         self.batch_write([self.batch_detach_typed_link(i) for i in self.list_outgoing_typed_links(
             obj_ref,
-            ConsistencyLevel='SERIALIZABLE')])
+            ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
         cd_client.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': obj_ref})
 
     @staticmethod
@@ -928,7 +939,7 @@ class CloudDirectory:
         retry(timeout=timeout,
               delay=0.1,
               retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException)
-              )(self.get_object_information)(object_ref, ConsistencyLevel='SERIALIZABLE')
+              )(self.get_object_information)(object_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
 
     def get_health_status(self) -> dict:
         """
@@ -1613,9 +1624,6 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         else:
             logger.info(dict(message=f"{user.object_ref} created by {_creator}",
                              object=dict(type=user.object_type, path_name=user._path_name)))
-
-        retry(timeout=1, delay=0.1,
-              retryable=lambda e: isinstance(e, FusilladeNotFoundException))(user.get_info)()
         roles = roles + cls.default_roles if roles else cls.default_roles
         user.add_roles(roles)
 
