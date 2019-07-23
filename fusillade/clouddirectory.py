@@ -1287,14 +1287,14 @@ class PolicyMixin:
         if policy_type in self.allowed_policy_types:
             try:
                 # check if this object exists
-                self.cd.get_object_information(self.object_ref)
+                self.cd.get_object_information(self.object_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
             except cd_client.exceptions.ResourceNotFoundException:
                 raise FusilladeNotFoundException(detail="Resource does not exist.")
             else:
                 self._verify_statement(statement)
                 self._set_policy(statement, policy_type)
 
-    def _set_policy(self, statement: str, policy_type: str):
+    def _set_policy(self, statement: str, policy_type: str = 'IAMPolicy'):
         params = [
             UpdateObjectParams('POLICY',
                                'policy_document',
@@ -1324,18 +1324,6 @@ class PolicyMixin:
                              ))
 
         self.attached_policies[policy_type] = None
-
-    @retry(timeout=1, delay=0.1)
-    def _set_policy_with_retry(self, statement, policy_type: str = 'IAMPolicy'):
-        """
-        Its possible for self._set_policy to fail with resource not found when the node is first created due to
-        race conditions in creating new nodes in cloud directory. Retries give the cloud directory time to finish
-        creating node before adding a new policy statement.
-        :param policy:
-        :return:
-        """
-        if policy_type in self.allowed_policy_types:
-            self._set_policy(statement, policy_type)
 
     @staticmethod
     def _verify_statement(statement):
@@ -1376,7 +1364,7 @@ class CreateMixin(PolicyMixin):
             User(name=creator).add_ownership(new_node)
         logger.info(dict(message=f"{cls.object_type} created by {_creator}",
                          object=dict(type=new_node.object_type, path_name=new_node._path_name)))
-        new_node._set_policy_with_retry(statement)
+        new_node.set_policy(statement)
         return new_node
 
 
@@ -1632,7 +1620,7 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         user.add_groups(groups)
 
         if statement:  # TODO make using user default configurable
-            user._set_policy_with_retry(statement)
+            user.set_policy(statement)
         return user
 
     @property
