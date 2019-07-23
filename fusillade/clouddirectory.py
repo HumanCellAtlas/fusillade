@@ -40,6 +40,16 @@ default_admin_role_path = os.path.join(proj_path, '..', 'policies', 'default_adm
 default_user_role_path = os.path.join(proj_path, '..', 'policies', 'default_user_role.json')
 default_role_path = os.path.join(proj_path, '..', 'policies', 'default_role.json')
 
+cd_read_retry_parameters = dict(timeout=2,
+                                delay=0.1,
+                                retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException),
+                                logger=logger)
+
+cd_write_retry_parameters = dict(timeout=5,
+                                 delay=0.2,
+                                 retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException),
+                                 logger=logger)
+
 
 def get_json_file(file_name):
     with open(file_name, 'r') as fp:
@@ -138,6 +148,7 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         return directory
 
 
+@retry(**cd_read_retry_parameters, inherit=True)
 def _paging_loop(fn: Callable, key: str, upack_response: Optional[Callable] = None, **kwarg):
     while True:
         resp = fn(**kwarg)
@@ -176,17 +187,6 @@ class ConsistencyLevel(Enum):
 
 class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute', 'value_type', 'value', 'action'])):
     pass
-
-
-cd_read_retry_parameters = dict(timeout=2,
-                                delay=0.1,
-                                retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException),
-                                logger=logger)
-
-cd_write_retry_parameters = dict(timeout=5,
-                                 delay=0.2,
-                                 retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException),
-                                 logger=logger)
 
 
 class CloudDirectory:
@@ -240,7 +240,6 @@ class CloudDirectory:
         result = cd_client.list_object_children(**kwargs)
         return result['Children'], result.get("NextToken")
 
-    @retry(**cd_read_retry_parameters)
     def list_object_children(self, object_ref: str, **kwargs) -> Iterator[Tuple[str, str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children
@@ -261,7 +260,6 @@ class CloudDirectory:
             else:
                 break
 
-    @retry(**cd_read_retry_parameters)
     def list_object_parents(self,
                             object_ref: str,
                             include_all_links_to_each_parent: bool = True,
@@ -293,7 +291,6 @@ class CloudDirectory:
                                 **kwargs
                                 )
 
-    @retry(**cd_read_retry_parameters)
     def list_object_policies(self, object_ref: str, **kwargs) -> Iterator[str]:
         """
         a wrapper around CloudDirectory.Client.list_object_policies with paging
@@ -307,7 +304,6 @@ class CloudDirectory:
                             **kwargs
                             )
 
-    @retry(**cd_read_retry_parameters)
     def list_policy_attachments(self, policy: str, **kwargs) -> Iterator[str]:
         """
         a wrapper around CloudDirectory.Client.list_policy_attachments with paging
@@ -621,7 +617,6 @@ class CloudDirectory:
             if name not in protected_roles:
                 self.delete_object(obj_ref)
 
-    @retry(**cd_write_retry_parameters)
     def delete_policy(self, policy_ref: str) -> None:
         """
         See details on deletion requirements for more info
@@ -802,7 +797,7 @@ class CloudDirectory:
             }
         }
 
-    @retry(**cd_write_retry_parameters)
+    @retry(**cd_write_retry_parameters, inherit=True)
     def batch_write(self, operations: list) -> List[dict]:
         """
         A wrapper around CloudDirectory.Client.batch_write
@@ -831,7 +826,7 @@ class CloudDirectory:
 
         return responses
 
-    @retry(**cd_read_retry_parameters)
+    @retry(**cd_read_retry_parameters, inherit=True)
     def batch_read(self, operations: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
         """
         A wrapper around CloudDirectory.Client.batch_read
