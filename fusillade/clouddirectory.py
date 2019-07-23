@@ -178,13 +178,15 @@ class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute',
     pass
 
 
-cd_read_retry_parameters = dict(timeout=1,
+cd_read_retry_parameters = dict(timeout=2,
                                 delay=0.1,
-                                retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
+                                retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException),
+                                logger=logger)
 
 cd_write_retry_parameters = dict(timeout=5,
                                  delay=0.2,
-                                 retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
+                                 retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException),
+                                 logger=logger)
 
 
 class CloudDirectory:
@@ -349,7 +351,6 @@ class CloudDirectory:
             return [i for i in resp[key]], resp.get("NextToken")
         else:
             return _paging_loop(func, key, **kwargs)
-
 
     def list_outgoing_typed_links(self,
                                   object_ref: str,
