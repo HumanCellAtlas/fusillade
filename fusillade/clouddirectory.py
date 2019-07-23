@@ -1259,19 +1259,8 @@ class PolicyMixin:
             except cd_client.exceptions.ResourceNotFoundException:
                 raise FusilladeNotFoundException(detail="Resource does not exist.")
             else:
-                _statement = self._set_policy_id(statement, self.name)
-                self._verify_statement(_statement)
-                self._set_policy(_statement, policy_type)
-
-    @classmethod
-    def _set_policy_id(cls, statement: str, object_name: str) -> str:
-        try:
-            s = json.loads(statement)
-        except JSONDecodeError as ex:
-            raise FusilladeBindingException(detail=f"JSONDecodeError: {ex}")
-        policy_id = ':'.join([cls.object_type, object_name])
-        s['Id'] = policy_id
-        return json.dumps(s)
+                self._verify_statement(statement)
+                self._set_policy(statement, policy_type)
 
     def _set_policy(self, statement: str, policy_type: str):
         params = [
@@ -1342,7 +1331,6 @@ class CreateMixin(PolicyMixin):
                creator=None) -> Type['CloudNode']:
         if not statement:
             statement = get_json_file(cls._default_policy_path)
-        statement = cls._set_policy_id(statement, name)
         cls._verify_statement(statement)
         _creator = creator if creator else "fusillade"
         try:
