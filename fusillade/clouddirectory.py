@@ -426,7 +426,7 @@ class CloudDirectory:
                                                    'FacetName': facet
                                                },
                                                AttributeNames=attributes,
-                                               ConsistencyLevel=ConsistencyLevel.SERIALIZABLE
+                                               ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name
                                                )
 
     def get_object_attribute_list(self, facet="LeafFacet", **kwargs) -> List[Dict[str, Any]]:
