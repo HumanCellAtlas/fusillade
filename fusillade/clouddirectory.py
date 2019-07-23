@@ -14,14 +14,13 @@ import os
 from collections import namedtuple, defaultdict
 from datetime import datetime
 from enum import Enum, auto
-from json import JSONDecodeError
 from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, Type
 
 from dcplib.aws import clients as aws_clients
 
 from fusillade import Config
 from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException, \
-    AuthorizationException, FusilladeLimitException, FusilladeBindingException, FusilladeBadRequestException
+    AuthorizationException, FusilladeLimitException, FusilladeBadRequestException
 from fusillade.utils.retry import retry
 
 logger = logging.getLogger(__name__)
