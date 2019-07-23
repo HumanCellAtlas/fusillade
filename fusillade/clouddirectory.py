@@ -319,6 +319,7 @@ class CloudDirectory:
                             **kwargs
                             )
 
+    @retry(**cd_read_retry_parameters)
     def _list_typed_links(self,
                           func: Callable,
                           key: str,
@@ -349,7 +350,7 @@ class CloudDirectory:
         else:
             return _paging_loop(func, key, **kwargs)
 
-    @retry(**cd_read_retry_parameters)
+
     def list_outgoing_typed_links(self,
                                   object_ref: str,
                                   filter_attribute_ranges: List = None,
@@ -367,7 +368,6 @@ class CloudDirectory:
                                       filter_typed_link,
                                       **kwargs)
 
-    @retry(**cd_read_retry_parameters)
     def list_incoming_typed_links(
             self,
             object_ref: str,
