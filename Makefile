@@ -15,7 +15,7 @@ $(tests): %.py : lint
 	coverage run -p --source=fusillade $*.py -v
 
 unittest: before-test
-	python -m unittest discover -p test_*.py -t . -v
+	python -m unittest discover -p test_*api.py -t . -v
 
 integration_test:
 	source environment && $(MAKE) FUS_TEST_MODE=integration unittest
