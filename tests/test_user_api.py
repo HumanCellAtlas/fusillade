@@ -196,7 +196,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
     def test_user_status(self):
         try:
             User.provision_user(service_accounts['user']['client_email'])
-        except fusillade.errors.FusilladeHTTPException:
+        except FusilladeHTTPException:
             pass
         user_id = service_accounts['user']['client_email']
         user_headers = {'Content-Type': "application/json"}
