@@ -216,6 +216,7 @@ class CloudDirectory:
             self._schema = cd_client.list_applied_schema_arns(DirectoryArn=self._dir_arn)['SchemaArns'][0]
         return self._schema
 
+    @retry(**cd_read_retry_parameters)
     def list_object_children_paged(self, object_ref: str,
                                    next_token: Optional[str] = None,
                                    per_page=None, **kwargs) -> Tuple[dict, Optional[str]]:
@@ -237,6 +238,7 @@ class CloudDirectory:
         result = cd_client.list_object_children(**kwargs)
         return result['Children'], result.get("NextToken")
 
+    @retry(**cd_read_retry_parameters)
     def list_object_children(self, object_ref: str, **kwargs) -> Iterator[Tuple[str, str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children
@@ -257,6 +259,7 @@ class CloudDirectory:
             else:
                 break
 
+    @retry(**cd_read_retry_parameters)
     def list_object_parents(self,
                             object_ref: str,
                             include_all_links_to_each_parent: bool = True,
@@ -288,6 +291,7 @@ class CloudDirectory:
                                 **kwargs
                                 )
 
+    @retry(**cd_read_retry_parameters)
     def list_object_policies(self, object_ref: str, **kwargs) -> Iterator[str]:
         """
         a wrapper around CloudDirectory.Client.list_object_policies with paging
@@ -301,6 +305,7 @@ class CloudDirectory:
                             **kwargs
                             )
 
+    @retry(**cd_read_retry_parameters)
     def list_policy_attachments(self, policy: str, **kwargs) -> Iterator[str]:
         """
         a wrapper around CloudDirectory.Client.list_policy_attachments with paging
@@ -344,6 +349,7 @@ class CloudDirectory:
         else:
             return _paging_loop(func, key, **kwargs)
 
+    @retry(**cd_read_retry_parameters)
     def list_outgoing_typed_links(self,
                                   object_ref: str,
                                   filter_attribute_ranges: List = None,
@@ -361,6 +367,7 @@ class CloudDirectory:
                                       filter_typed_link,
                                       **kwargs)
 
+    @retry(**cd_read_retry_parameters)
     def list_incoming_typed_links(
             self,
             object_ref: str,
@@ -401,7 +408,7 @@ class CloudDirectory:
                                 ParentReference=dict(Selector=parent_path),
                                 LinkName=link_name)
         object_ref = parent_path + link_name
-        self.wait_for_object(object_ref)
+        self.get_object_information(object_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
         return object_ref
 
     @retry(**cd_read_retry_parameters)
@@ -853,6 +860,7 @@ class CloudDirectory:
         ]
         return policies_paths
 
+    @retry(**cd_read_retry_parameters)
     def get_link_attributes(self, TypedLinkSpecifier, AttributeNames, **kwargs):
         cd_client.get_link_attributes(
             DirectoryArn=self._dir_arn,
@@ -923,6 +931,7 @@ class CloudDirectory:
             results[_type].append(name)
         return results
 
+    @retry(**cd_read_retry_parameters)
     def get_object_information(self, obj_ref: str, **kwargs) -> Dict[str, Any]:
         """
         A wrapper around CloudDirectory.Client.get_object_information
@@ -934,12 +943,6 @@ class CloudDirectory:
             },
             **kwargs
         )
-
-    def wait_for_object(self, object_ref, timeout=1):
-        retry(timeout=timeout,
-              delay=0.1,
-              retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException)
-              )(self.get_object_information)(object_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
 
     def get_health_status(self) -> dict:
         """
@@ -1039,7 +1042,8 @@ class CloudNode:
         ]
         if paged:
             result, next_token = get_links(self.object_ref, filter_attribute_ranges, facet,
-                                           next_token=next_token, paged=paged, per_page=per_page)
+                                           next_token=next_token, paged=paged, per_page=per_page,
+                                           ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
             if result:
                 operations = [self.cd.batch_get_attributes(
                     obj_ref[object_selection]['Selector'],
@@ -1058,7 +1062,8 @@ class CloudNode:
             return [
                 type_link[object_selection]['Selector']
                 for type_link in
-                get_links(self.object_ref, filter_attribute_ranges, facet)
+                get_links(self.object_ref, filter_attribute_ranges, facet,
+                          ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
             ]
 
     def _add_links_batch(self, links: List[str], object_Type: str):
