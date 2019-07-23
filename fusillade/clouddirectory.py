@@ -209,7 +209,7 @@ class CloudDirectory:
 
     def list_object_children_paged(self, object_ref: str,
                                    next_token: Optional[str] = None,
-                                   per_page=None) -> Tuple[dict, Optional[str]]:
+                                   per_page=None, **kwargs) -> Tuple[dict, Optional[str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children with paging
 
@@ -218,10 +218,9 @@ class CloudDirectory:
         :param per_page:
         :return:
         """
-        kwargs = dict(
+        kwargs.update(
             DirectoryArn=self._dir_arn,
             ObjectReference={'Selector': object_ref},
-            ConsistencyLevel='EVENTUAL',
             MaxResults=min(per_page, self._page_limit) if per_page else self._page_limit,
         )
         if next_token:
@@ -229,14 +228,14 @@ class CloudDirectory:
         result = cd_client.list_object_children(**kwargs)
         return result['Children'], result.get("NextToken")
 
-    def list_object_children(self, object_ref: str) -> Iterator[Tuple[str, str]]:
+    def list_object_children(self, object_ref: str, **kwargs) -> Iterator[Tuple[str, str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children
         """
         resp = cd_client.list_object_children(DirectoryArn=self._dir_arn,
                                               ObjectReference={'Selector': object_ref},
-                                              ConsistencyLevel='EVENTUAL',
-                                              MaxResults=self._page_limit)
+                                              MaxResults=self._page_limit,
+                                              **kwargs)
         while True:
             for name, ref in resp['Children'].items():
                 yield name, '$' + ref
@@ -251,7 +250,8 @@ class CloudDirectory:
 
     def list_object_parents(self,
                             object_ref: str,
-                            include_all_links_to_each_parent: bool = True) -> Iterator:
+                            include_all_links_to_each_parent: bool = True,
+                            **kwargs) -> Iterator:
         """
         a wrapper around CloudDirectory.Client.list_object_parents with paging
         """
@@ -264,9 +264,9 @@ class CloudDirectory:
                                 unpack_response,
                                 DirectoryArn=self._dir_arn,
                                 ObjectReference={'Selector': object_ref},
-                                ConsistencyLevel='EVENTUAL',
                                 IncludeAllLinksToEachParent=include_all_links_to_each_parent,
-                                MaxResults=self._page_limit
+                                MaxResults=self._page_limit,
+                                **kwargs
                                 )
         else:
             return _paging_loop(cd_client.list_object_parents,
@@ -274,12 +274,12 @@ class CloudDirectory:
                                 self._make_ref,
                                 DirectoryArn=self._dir_arn,
                                 ObjectReference={'Selector': object_ref},
-                                ConsistencyLevel='EVENTUAL',
                                 IncludeAllLinksToEachParent=include_all_links_to_each_parent,
-                                MaxResults=self._page_limit
+                                MaxResults=self._page_limit,
+                                **kwargs
                                 )
 
-    def list_object_policies(self, object_ref: str) -> Iterator[str]:
+    def list_object_policies(self, object_ref: str, **kwargs) -> Iterator[str]:
         """
         a wrapper around CloudDirectory.Client.list_object_policies with paging
         """
@@ -288,10 +288,11 @@ class CloudDirectory:
                             self._make_ref,
                             DirectoryArn=self._dir_arn,
                             ObjectReference={'Selector': object_ref},
-                            MaxResults=self._page_limit
+                            MaxResults=self._page_limit,
+                            **kwargs
                             )
 
-    def list_policy_attachments(self, policy: str) -> Iterator[str]:
+    def list_policy_attachments(self, policy: str, **kwargs) -> Iterator[str]:
         """
         a wrapper around CloudDirectory.Client.list_policy_attachments with paging
         """
@@ -300,7 +301,8 @@ class CloudDirectory:
                             self._make_ref,
                             DirectoryArn=self._dir_arn,
                             PolicyReference={'Selector': policy},
-                            MaxResults=self._page_limit
+                            MaxResults=self._page_limit,
+                            **kwargs
                             )
 
     def _list_typed_links(self,
@@ -390,8 +392,10 @@ class CloudDirectory:
                                 ParentReference=dict(Selector=parent_path),
                                 LinkName=link_name)
         object_ref = parent_path + link_name
+        self.wait_for_object(object_ref)
         return object_ref
 
+    @retry(**cd_read_retry_parameters)
     def get_object_attributes(self, obj_ref: str, facet: str, attributes: List[str],
                               schema=None) -> Dict[str, Any]:
         """
@@ -405,7 +409,8 @@ class CloudDirectory:
                                                    'SchemaArn': schema,
                                                    'FacetName': facet
                                                },
-                                               AttributeNames=attributes
+                                               AttributeNames=attributes,
+                                               ConsistencyLevel='SERIALIZABLE'
                                                )
 
     def get_object_attribute_list(self, facet="LeafFacet", **kwargs) -> List[Dict[str, Any]]:
@@ -572,7 +577,6 @@ class CloudDirectory:
             'IdentityAttributeValues': self.make_attributes(attributes)
         }
 
-    @retry(**cd_write_retry_parameters)
     def clear(self, users: List[str] = None,
               groups: List[str] = None,
               roles: List[str] = None) -> None:
@@ -590,37 +594,48 @@ class CloudDirectory:
         protected_groups = [CloudNode.hash_name(name) for name in ['user_default'] + groups]
         protected_roles = [CloudNode.hash_name(name) for name in ["fusillade_admin", "default_user"] + roles]
 
-        for name, obj_ref in self.list_object_children('/user/'):
+        for name, obj_ref in self.list_object_children('/user/', ConsistencyLevel='SERIALIZABLE'):
             if name not in protected_users:
                 self.delete_object(obj_ref)
-        for name, obj_ref in self.list_object_children('/group/'):
+        for name, obj_ref in self.list_object_children('/group/', ConsistencyLevel='SERIALIZABLE'):
             if name not in protected_groups:
                 self.delete_object(obj_ref)
-        for name, obj_ref in self.list_object_children('/role/'):
+        for name, obj_ref in self.list_object_children('/role/', ConsistencyLevel='SERIALIZABLE'):
             if name not in protected_roles:
                 self.delete_object(obj_ref)
 
+    @retry(**cd_write_retry_parameters)
     def delete_policy(self, policy_ref: str) -> None:
         """
         See details on deletion requirements for more info
         https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_access_objects.html
         """
         self.batch_write([self.batch_detach_policy(policy_ref, obj_ref)
-                          for obj_ref in self.list_policy_attachments(policy_ref)])
+                          for obj_ref in self.list_policy_attachments(policy_ref,
+                                                                      ConsistencyLevel='SERIALIZABLE')])
         self.batch_write([self.batch_detach_object(parent_ref, link_name)
-                          for parent_ref, link_name in self.list_object_parents(policy_ref)])
+                          for parent_ref, link_name in self.list_object_parents(policy_ref,
+                                                                                ConsistencyLevel='SERIALIZABLE')])
         cd_client.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': policy_ref})
 
+    @retry(**cd_write_retry_parameters)
     def delete_object(self, obj_ref: str) -> None:
         """
         See details on deletion requirements for more info
         https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_access_objects.html
         """
-        [self.delete_policy(policy_ref) for policy_ref in self.list_object_policies(obj_ref)]
+        [self.delete_policy(policy_ref) for policy_ref in self.list_object_policies(obj_ref,
+                                                                                    ConsistencyLevel='SERIALIZABLE')]
         self.batch_write([self.batch_detach_object(parent_ref, link_name)
-                          for parent_ref, link_name in self.list_object_parents(obj_ref)])
-        self.batch_write([self.batch_detach_typed_link(i) for i in self.list_incoming_typed_links(object_ref=obj_ref)])
-        self.batch_write([self.batch_detach_typed_link(i) for i in self.list_outgoing_typed_links(obj_ref)])
+                          for parent_ref, link_name in self.list_object_parents(obj_ref,
+                                                                                ConsistencyLevel='SERIALIZABLE')])
+        self.batch_write([self.batch_detach_typed_link(i) for i in self.list_incoming_typed_links(
+            object_ref=obj_ref,
+            ConsistencyLevel='SERIALIZABLE'
+        )])
+        self.batch_write([self.batch_detach_typed_link(i) for i in self.list_outgoing_typed_links(
+            obj_ref,
+            ConsistencyLevel='SERIALIZABLE')])
         cd_client.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': obj_ref})
 
     @staticmethod
@@ -798,11 +813,11 @@ class CloudDirectory:
         return responses
 
     @retry(**cd_read_retry_parameters)
-    def batch_read(self, operations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def batch_read(self, operations: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
         """
         A wrapper around CloudDirectory.Client.batch_read
         """
-        return cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations)
+        return cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations, **kwargs)
 
     @staticmethod
     def get_obj_type_path(obj_type: str) -> str:
@@ -827,12 +842,12 @@ class CloudDirectory:
         ]
         return policies_paths
 
-    def get_link_attributes(self, TypedLinkSpecifier, AttributeNames):
+    def get_link_attributes(self, TypedLinkSpecifier, AttributeNames, **kwargs):
         cd_client.get_link_attributes(
             DirectoryArn=self._dir_arn,
             TypedLinkSpecifier=TypedLinkSpecifier,
             AttributeNames=AttributeNames,
-            ConsistencyLevel='EVENTUAL'
+            **kwargs
         )
 
     def get_policies(self, policy_paths: List[Dict[str, Any]], policy_type='IAMPolicy') -> Dict[str, List[str]]:
@@ -897,7 +912,7 @@ class CloudDirectory:
             results[_type].append(name)
         return results
 
-    def get_object_information(self, obj_ref: str) -> Dict[str, Any]:
+    def get_object_information(self, obj_ref: str, **kwargs) -> Dict[str, Any]:
         """
         A wrapper around CloudDirectory.Client.get_object_information
         """
@@ -906,8 +921,14 @@ class CloudDirectory:
             ObjectReference={
                 'Selector': obj_ref
             },
-            ConsistencyLevel='EVENTUAL'
+            **kwargs
         )
+
+    def wait_for_object(self, object_ref, timeout=1):
+        retry(timeout=timeout,
+              delay=0.1,
+              retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException)
+              )(self.get_object_information)(object_ref, ConsistencyLevel='SERIALIZABLE')
 
     def get_health_status(self) -> dict:
         """
