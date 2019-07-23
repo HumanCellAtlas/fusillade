@@ -1037,8 +1037,7 @@ class CloudNode:
         ]
         if paged:
             result, next_token = get_links(self.object_ref, filter_attribute_ranges, facet,
-                                           next_token=next_token, paged=paged, per_page=per_page,
-                                           ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
+                                           next_token=next_token, paged=paged, per_page=per_page)
             if result:
                 operations = [self.cd.batch_get_attributes(
                     obj_ref[object_selection]['Selector'],
@@ -1057,8 +1056,7 @@ class CloudNode:
             return [
                 type_link[object_selection]['Selector']
                 for type_link in
-                get_links(self.object_ref, filter_attribute_ranges, facet,
-                          ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
+                get_links(self.object_ref, filter_attribute_ranges, facet)
             ]
 
     def _add_links_batch(self, links: List[str], object_Type: str):
