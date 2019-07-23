@@ -629,9 +629,10 @@ class CloudDirectory:
             [self.batch_detach_object(parent_ref, link_name) for parent_ref, link_name in self.list_object_parents(
                 policy_ref,
                 ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
-        cd_client.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': policy_ref})
+        retry(**cd_read_retry_parameters)(cd_client.delete_object)(
+            DirectoryArn=self._dir_arn,
+            ObjectReference={'Selector': policy_ref})
 
-    @retry(**cd_write_retry_parameters)
     def delete_object(self, obj_ref: str) -> None:
         """
         See details on deletion requirements for more info
@@ -649,7 +650,9 @@ class CloudDirectory:
         self.batch_write([self.batch_detach_typed_link(i) for i in self.list_outgoing_typed_links(
             obj_ref,
             ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
-        cd_client.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': obj_ref})
+        retry(**cd_read_retry_parameters)(cd_client.delete_object)(
+            DirectoryArn=self._dir_arn,
+            ObjectReference={'Selector': obj_ref})
 
     @staticmethod
     def batch_detach_policy(policy_ref: str, object_ref: str):
