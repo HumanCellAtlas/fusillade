@@ -34,7 +34,7 @@ if __name__ == "__main__":
                         metavar='stage',
                         type=str,
                         help="The stage you would like to upload the environment variables for.",
-                        choices=["dev", "integration", "staging", "prod"])
+                        choices=["master", "dev", "integration", "staging", "prod"])
     parser.add_argument("-p", "--print",
                         default=False,
                         action="store_true",
@@ -46,6 +46,8 @@ if __name__ == "__main__":
                         )
     args = parser.parse_args()
 
+    if args.stage == "master":
+        args.stage = "dev"
     if args.print:
         try:
             print(get_ssm_deployment_environment())
