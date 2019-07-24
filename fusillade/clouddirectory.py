@@ -146,7 +146,7 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         return directory
 
 
-@retry(**cd_read_retry_parameters)
+@retry(**cd_read_retry_parameters, inherit=True)
 def _paging_loop(fn: Callable, key: str, upack_response: Optional[Callable] = None, **kwarg):
     while True:
         resp = fn(**kwarg)
@@ -506,6 +506,7 @@ class CloudDirectory:
         except cd_client.exceptions.LinkNameAlreadyInUseException:
             pass
 
+    @retry(cd_write_retry_parameters)
     def attach_typed_link(
             self,
             source: str,
@@ -530,6 +531,7 @@ class CloudDirectory:
             Attributes=self.make_attributes(attributes)
         )
 
+    @retry(cd_write_retry_parameters)
     def detach_typed_link(self, typed_link_specifier: Dict[str, Any]):
         """
         a wrapper around CloudDirectory.Client.detach_typed_link
@@ -1421,7 +1423,6 @@ class RolesMixin:
 class OwnershipMixin:
     ownable = ['group', 'role']
 
-    @retry(cd_write_retry_parameters)
     def add_ownership(self, node: Type['CloudNode']):
         self.cd.attach_typed_link(
             self.object_ref,
@@ -1429,7 +1430,6 @@ class OwnershipMixin:
             'ownership_link',
             {'owner_of': node.object_type})
 
-    @retry(cd_write_retry_parameters)
     def remove_ownership(self, node: Type['CloudNode']):
         typed_link_specifier = self.cd.make_typed_link_specifier(
             self.object_ref,
