@@ -146,7 +146,7 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         return directory
 
 
-@retry(**cd_read_retry_parameters, inherit=True)
+@retry(**cd_read_retry_parameters)
 def _paging_loop(fn: Callable, key: str, upack_response: Optional[Callable] = None, **kwarg):
     while True:
         resp = fn(**kwarg)
@@ -629,12 +629,9 @@ class CloudDirectory:
             [self.batch_detach_object(parent_ref, link_name) for parent_ref, link_name in self.list_object_parents(
                 policy_ref,
                 ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
-        try:
-            retry(**cd_read_retry_parameters)(cd_client.delete_object)(
-                DirectoryArn=self._dir_arn,
-                ObjectReference={'Selector': policy_ref})
-        except cd_client.exceptions.ResourceNotFoundException:
-            pass
+        retry(**cd_read_retry_parameters)(cd_client.delete_object)(
+            DirectoryArn=self._dir_arn,
+            ObjectReference={'Selector': policy_ref})
 
     def delete_object(self, obj_ref: str) -> None:
         """
@@ -653,12 +650,9 @@ class CloudDirectory:
         self.batch_write([self.batch_detach_typed_link(i) for i in self.list_outgoing_typed_links(
             obj_ref,
             ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
-        try:
-            retry(**cd_read_retry_parameters)(cd_client.delete_object)(
-                DirectoryArn=self._dir_arn,
-                ObjectReference={'Selector': obj_ref})
-        except cd_client.exceptions.ResourceNotFoundException:
-            pass
+        retry(**cd_read_retry_parameters)(cd_client.delete_object)(
+            DirectoryArn=self._dir_arn,
+            ObjectReference={'Selector': obj_ref})
 
     @staticmethod
     def batch_detach_policy(policy_ref: str, object_ref: str):
@@ -805,7 +799,7 @@ class CloudDirectory:
             }
         }
 
-    @retry(**cd_write_retry_parameters, inherit=True)
+    @retry(**cd_write_retry_parameters)
     def batch_write(self, operations: list) -> List[dict]:
         """
         A wrapper around CloudDirectory.Client.batch_write
@@ -834,7 +828,7 @@ class CloudDirectory:
 
         return responses
 
-    @retry(**cd_read_retry_parameters, inherit=True)
+    @retry(**cd_read_retry_parameters)
     def batch_read(self, operations: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
         """
         A wrapper around CloudDirectory.Client.batch_read
