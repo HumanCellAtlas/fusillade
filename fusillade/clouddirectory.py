@@ -40,6 +40,14 @@ default_admin_role_path = os.path.join(proj_path, '..', 'policies', 'default_adm
 default_user_role_path = os.path.join(proj_path, '..', 'policies', 'default_user_role.json')
 default_role_path = os.path.join(proj_path, '..', 'policies', 'default_role.json')
 
+cd_read_retry_parameters = dict(timeout=5,
+                                delay=0.1,
+                                retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
+
+cd_write_retry_parameters = dict(timeout=5,
+                                 delay=0.2,
+                                 retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
+
 
 def get_json_file(file_name):
     with open(file_name, 'r') as fp:
@@ -138,6 +146,7 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         return directory
 
 
+@retry(**cd_read_retry_parameters, inherit=True)
 def _paging_loop(fn: Callable, key: str, upack_response: Optional[Callable] = None, **kwarg):
     while True:
         resp = fn(**kwarg)
@@ -165,17 +174,17 @@ class ValueTypes(Enum):
     DatetimeValue = auto()
 
 
+class ConsistencyLevel(Enum):
+    """
+    Use by clouddirectory for read and write function to control the consistency of responses from the directory.
+    See https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_consistency_levels.html
+    """
+    SERIALIZABLE = auto()
+    EVENTUAL = auto()
+
+
 class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute', 'value_type', 'value', 'action'])):
     pass
-
-
-cd_read_retry_parameters = dict(timeout=1,
-                                delay=0.1,
-                                retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
-
-cd_write_retry_parameters = dict(timeout=5,
-                                 delay=0.2,
-                                 retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
 
 
 class CloudDirectory:
@@ -207,9 +216,10 @@ class CloudDirectory:
             self._schema = cd_client.list_applied_schema_arns(DirectoryArn=self._dir_arn)['SchemaArns'][0]
         return self._schema
 
+    @retry(**cd_read_retry_parameters)
     def list_object_children_paged(self, object_ref: str,
                                    next_token: Optional[str] = None,
-                                   per_page=None) -> Tuple[dict, Optional[str]]:
+                                   per_page=None, **kwargs) -> Tuple[dict, Optional[str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children with paging
 
@@ -218,10 +228,9 @@ class CloudDirectory:
         :param per_page:
         :return:
         """
-        kwargs = dict(
+        kwargs.update(
             DirectoryArn=self._dir_arn,
             ObjectReference={'Selector': object_ref},
-            ConsistencyLevel='EVENTUAL',
             MaxResults=min(per_page, self._page_limit) if per_page else self._page_limit,
         )
         if next_token:
@@ -229,14 +238,15 @@ class CloudDirectory:
         result = cd_client.list_object_children(**kwargs)
         return result['Children'], result.get("NextToken")
 
-    def list_object_children(self, object_ref: str) -> Iterator[Tuple[str, str]]:
+    @retry(**cd_read_retry_parameters)
+    def list_object_children(self, object_ref: str, **kwargs) -> Iterator[Tuple[str, str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children
         """
         resp = cd_client.list_object_children(DirectoryArn=self._dir_arn,
                                               ObjectReference={'Selector': object_ref},
-                                              ConsistencyLevel='EVENTUAL',
-                                              MaxResults=self._page_limit)
+                                              MaxResults=self._page_limit,
+                                              **kwargs)
         while True:
             for name, ref in resp['Children'].items():
                 yield name, '$' + ref
@@ -251,7 +261,8 @@ class CloudDirectory:
 
     def list_object_parents(self,
                             object_ref: str,
-                            include_all_links_to_each_parent: bool = True) -> Iterator:
+                            include_all_links_to_each_parent: bool = True,
+                            **kwargs) -> Iterator:
         """
         a wrapper around CloudDirectory.Client.list_object_parents with paging
         """
@@ -264,9 +275,9 @@ class CloudDirectory:
                                 unpack_response,
                                 DirectoryArn=self._dir_arn,
                                 ObjectReference={'Selector': object_ref},
-                                ConsistencyLevel='EVENTUAL',
                                 IncludeAllLinksToEachParent=include_all_links_to_each_parent,
-                                MaxResults=self._page_limit
+                                MaxResults=self._page_limit,
+                                **kwargs
                                 )
         else:
             return _paging_loop(cd_client.list_object_parents,
@@ -274,12 +285,12 @@ class CloudDirectory:
                                 self._make_ref,
                                 DirectoryArn=self._dir_arn,
                                 ObjectReference={'Selector': object_ref},
-                                ConsistencyLevel='EVENTUAL',
                                 IncludeAllLinksToEachParent=include_all_links_to_each_parent,
-                                MaxResults=self._page_limit
+                                MaxResults=self._page_limit,
+                                **kwargs
                                 )
 
-    def list_object_policies(self, object_ref: str) -> Iterator[str]:
+    def list_object_policies(self, object_ref: str, **kwargs) -> Iterator[str]:
         """
         a wrapper around CloudDirectory.Client.list_object_policies with paging
         """
@@ -288,10 +299,11 @@ class CloudDirectory:
                             self._make_ref,
                             DirectoryArn=self._dir_arn,
                             ObjectReference={'Selector': object_ref},
-                            MaxResults=self._page_limit
+                            MaxResults=self._page_limit,
+                            **kwargs
                             )
 
-    def list_policy_attachments(self, policy: str) -> Iterator[str]:
+    def list_policy_attachments(self, policy: str, **kwargs) -> Iterator[str]:
         """
         a wrapper around CloudDirectory.Client.list_policy_attachments with paging
         """
@@ -300,9 +312,11 @@ class CloudDirectory:
                             self._make_ref,
                             DirectoryArn=self._dir_arn,
                             PolicyReference={'Selector': policy},
-                            MaxResults=self._page_limit
+                            MaxResults=self._page_limit,
+                            **kwargs
                             )
 
+    @retry(**cd_read_retry_parameters)
     def _list_typed_links(self,
                           func: Callable,
                           key: str,
@@ -390,8 +404,10 @@ class CloudDirectory:
                                 ParentReference=dict(Selector=parent_path),
                                 LinkName=link_name)
         object_ref = parent_path + link_name
+        self.get_object_information(object_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
         return object_ref
 
+    @retry(**cd_read_retry_parameters)
     def get_object_attributes(self, obj_ref: str, facet: str, attributes: List[str],
                               schema=None) -> Dict[str, Any]:
         """
@@ -405,7 +421,8 @@ class CloudDirectory:
                                                    'SchemaArn': schema,
                                                    'FacetName': facet
                                                },
-                                               AttributeNames=attributes
+                                               AttributeNames=attributes,
+                                               ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name
                                                )
 
     def get_object_attribute_list(self, facet="LeafFacet", **kwargs) -> List[Dict[str, Any]]:
@@ -489,6 +506,7 @@ class CloudDirectory:
         except cd_client.exceptions.LinkNameAlreadyInUseException:
             pass
 
+    @retry(cd_write_retry_parameters)
     def attach_typed_link(
             self,
             source: str,
@@ -513,6 +531,7 @@ class CloudDirectory:
             Attributes=self.make_attributes(attributes)
         )
 
+    @retry(cd_write_retry_parameters)
     def detach_typed_link(self, typed_link_specifier: Dict[str, Any]):
         """
         a wrapper around CloudDirectory.Client.detach_typed_link
@@ -572,7 +591,6 @@ class CloudDirectory:
             'IdentityAttributeValues': self.make_attributes(attributes)
         }
 
-    @retry(**cd_write_retry_parameters)
     def clear(self, users: List[str] = None,
               groups: List[str] = None,
               roles: List[str] = None) -> None:
@@ -590,13 +608,13 @@ class CloudDirectory:
         protected_groups = [CloudNode.hash_name(name) for name in ['user_default'] + groups]
         protected_roles = [CloudNode.hash_name(name) for name in ["fusillade_admin", "default_user"] + roles]
 
-        for name, obj_ref in self.list_object_children('/user/'):
+        for name, obj_ref in self.list_object_children('/user/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
             if name not in protected_users:
                 self.delete_object(obj_ref)
-        for name, obj_ref in self.list_object_children('/group/'):
+        for name, obj_ref in self.list_object_children('/group/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
             if name not in protected_groups:
                 self.delete_object(obj_ref)
-        for name, obj_ref in self.list_object_children('/role/'):
+        for name, obj_ref in self.list_object_children('/role/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
             if name not in protected_roles:
                 self.delete_object(obj_ref)
 
@@ -605,23 +623,38 @@ class CloudDirectory:
         See details on deletion requirements for more info
         https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_access_objects.html
         """
-        self.batch_write([self.batch_detach_policy(policy_ref, obj_ref)
-                          for obj_ref in self.list_policy_attachments(policy_ref)])
-        self.batch_write([self.batch_detach_object(parent_ref, link_name)
-                          for parent_ref, link_name in self.list_object_parents(policy_ref)])
-        cd_client.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': policy_ref})
+        self.batch_write(
+            [self.batch_detach_policy(policy_ref, obj_ref) for obj_ref in self.list_policy_attachments(
+                policy_ref,
+                ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
+        self.batch_write(
+            [self.batch_detach_object(parent_ref, link_name) for parent_ref, link_name in self.list_object_parents(
+                policy_ref,
+                ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
+        retry(**cd_read_retry_parameters)(cd_client.delete_object)(
+            DirectoryArn=self._dir_arn,
+            ObjectReference={'Selector': policy_ref})
 
     def delete_object(self, obj_ref: str) -> None:
         """
         See details on deletion requirements for more info
         https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_access_objects.html
         """
-        [self.delete_policy(policy_ref) for policy_ref in self.list_object_policies(obj_ref)]
-        self.batch_write([self.batch_detach_object(parent_ref, link_name)
-                          for parent_ref, link_name in self.list_object_parents(obj_ref)])
-        self.batch_write([self.batch_detach_typed_link(i) for i in self.list_incoming_typed_links(object_ref=obj_ref)])
-        self.batch_write([self.batch_detach_typed_link(i) for i in self.list_outgoing_typed_links(obj_ref)])
-        cd_client.delete_object(DirectoryArn=self._dir_arn, ObjectReference={'Selector': obj_ref})
+        [self.delete_policy(policy_ref) for policy_ref in self.list_object_policies(
+            obj_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)]
+        self.batch_write(
+            [self.batch_detach_object(parent_ref, link_name) for parent_ref, link_name in self.list_object_parents(
+                obj_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
+        self.batch_write([self.batch_detach_typed_link(i) for i in self.list_incoming_typed_links(
+            object_ref=obj_ref,
+            ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name
+        )])
+        self.batch_write([self.batch_detach_typed_link(i) for i in self.list_outgoing_typed_links(
+            obj_ref,
+            ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
+        retry(**cd_read_retry_parameters)(cd_client.delete_object)(
+            DirectoryArn=self._dir_arn,
+            ObjectReference={'Selector': obj_ref})
 
     @staticmethod
     def batch_detach_policy(policy_ref: str, object_ref: str):
@@ -798,11 +831,11 @@ class CloudDirectory:
         return responses
 
     @retry(**cd_read_retry_parameters)
-    def batch_read(self, operations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def batch_read(self, operations: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
         """
         A wrapper around CloudDirectory.Client.batch_read
         """
-        return cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations)
+        return cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations, **kwargs)
 
     @staticmethod
     def get_obj_type_path(obj_type: str) -> str:
@@ -827,12 +860,13 @@ class CloudDirectory:
         ]
         return policies_paths
 
-    def get_link_attributes(self, TypedLinkSpecifier, AttributeNames):
+    @retry(**cd_read_retry_parameters)
+    def get_link_attributes(self, TypedLinkSpecifier, AttributeNames, **kwargs):
         cd_client.get_link_attributes(
             DirectoryArn=self._dir_arn,
             TypedLinkSpecifier=TypedLinkSpecifier,
             AttributeNames=AttributeNames,
-            ConsistencyLevel='EVENTUAL'
+            **kwargs
         )
 
     def get_policies(self, policy_paths: List[Dict[str, Any]], policy_type='IAMPolicy') -> Dict[str, List[str]]:
@@ -897,7 +931,8 @@ class CloudDirectory:
             results[_type].append(name)
         return results
 
-    def get_object_information(self, obj_ref: str) -> Dict[str, Any]:
+    @retry(**cd_read_retry_parameters)
+    def get_object_information(self, obj_ref: str, **kwargs) -> Dict[str, Any]:
         """
         A wrapper around CloudDirectory.Client.get_object_information
         """
@@ -906,7 +941,7 @@ class CloudDirectory:
             ObjectReference={
                 'Selector': obj_ref
             },
-            ConsistencyLevel='EVENTUAL'
+            **kwargs
         )
 
     def get_health_status(self) -> dict:
@@ -1254,14 +1289,14 @@ class PolicyMixin:
         if policy_type in self.allowed_policy_types:
             try:
                 # check if this object exists
-                self.cd.get_object_information(self.object_ref)
+                self.cd.get_object_information(self.object_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
             except cd_client.exceptions.ResourceNotFoundException:
                 raise FusilladeNotFoundException(detail="Resource does not exist.")
             else:
                 self._verify_statement(statement)
                 self._set_policy(statement, policy_type)
 
-    def _set_policy(self, statement: str, policy_type: str):
+    def _set_policy(self, statement: str, policy_type: str = 'IAMPolicy'):
         params = [
             UpdateObjectParams('POLICY',
                                'policy_document',
@@ -1291,18 +1326,6 @@ class PolicyMixin:
                              ))
 
         self.attached_policies[policy_type] = None
-
-    @retry(timeout=1, delay=0.1)
-    def _set_policy_with_retry(self, statement, policy_type: str = 'IAMPolicy'):
-        """
-        Its possible for self._set_policy to fail with resource not found when the node is first created due to
-        race conditions in creating new nodes in cloud directory. Retries give the cloud directory time to finish
-        creating node before adding a new policy statement.
-        :param policy:
-        :return:
-        """
-        if policy_type in self.allowed_policy_types:
-            self._set_policy(statement, policy_type)
 
     @staticmethod
     def _verify_statement(statement):
@@ -1343,7 +1366,7 @@ class CreateMixin(PolicyMixin):
             User(name=creator).add_ownership(new_node)
         logger.info(dict(message=f"{cls.object_type} created by {_creator}",
                          object=dict(type=new_node.object_type, path_name=new_node._path_name)))
-        new_node._set_policy_with_retry(statement)
+        new_node.set_policy(statement)
         return new_node
 
 
@@ -1400,7 +1423,6 @@ class RolesMixin:
 class OwnershipMixin:
     ownable = ['group', 'role']
 
-    @retry(cd_write_retry_parameters)
     def add_ownership(self, node: Type['CloudNode']):
         self.cd.attach_typed_link(
             self.object_ref,
@@ -1408,7 +1430,6 @@ class OwnershipMixin:
             'ownership_link',
             {'owner_of': node.object_type})
 
-    @retry(cd_write_retry_parameters)
     def remove_ownership(self, node: Type['CloudNode']):
         typed_link_specifier = self.cd.make_typed_link_specifier(
             self.object_ref,
@@ -1592,9 +1613,6 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         else:
             logger.info(dict(message=f"{user.object_ref} created by {_creator}",
                              object=dict(type=user.object_type, path_name=user._path_name)))
-
-        retry(timeout=1, delay=0.1,
-              retryable=lambda e: isinstance(e, FusilladeNotFoundException))(user.get_info)()
         roles = roles + cls.default_roles if roles else cls.default_roles
         user.add_roles(roles)
 
@@ -1602,7 +1620,7 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         user.add_groups(groups)
 
         if statement:  # TODO make using user default configurable
-            user._set_policy_with_retry(statement)
+            user.set_policy(statement)
         return user
 
     @property
