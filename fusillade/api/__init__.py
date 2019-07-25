@@ -6,7 +6,6 @@ import typing
 
 import chalice
 import requests
-
 from connexion import FlaskApp
 from connexion.resolver import RestyResolver
 
@@ -94,7 +93,7 @@ class ChaliceWithConnexion(chalice.Chalice):
         context = cr.context
         uri_params = cr.uri_params or {}
         method = cr.method
-        query_params = cr.query_params
+        query_params = cr.query_params or {}
         path = context["resourcePath"].format(**uri_params)
         if context["resourcePath"] in self.trailing_slash_routes:
             if context["path"].endswith("/"):
@@ -118,7 +117,7 @@ class ChaliceWithConnexion(chalice.Chalice):
         )
         with self.connexion_request_context(path=path,
                                             base_url=os.environ["API_DOMAIN_NAME"],
-                                            query_string=cr.query_params,
+                                            query_string=list(query_params.items()),
                                             method=method,
                                             headers=list(cr.headers.items()),
                                             data=req_body,
