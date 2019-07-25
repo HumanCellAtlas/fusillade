@@ -14,16 +14,24 @@ before_script:
   - virtualenv ~/venv
   - source ~/venv/bin/activate
   - pip install -r requirements-dev.txt
-  - pip install trufflehog
-  - wget -O regex.json https://raw.githubusercontent.com/HumanCellAtlas/dcplib/master/components/trufflehog_regex_patterns.json
-  - trufflehog --regex --rules regex.json --entropy=False https://github.com/HumanCellAtlas/fusillade.git
-  - rm regex.json
   - source environment
+
 .tests:
   stage: test
   except:
     - tags
     - schedules
+
+security_checks:
+  extends: .tests
+  before_script:
+      - virtualenv ~/venv
+      - source ~/venv/bin/activate
+  script:
+    - pip install trufflehog
+    - wget -O regex.json https://raw.githubusercontent.com/HumanCellAtlas/dcplib/master/components/trufflehog_regex_patterns.json
+    - trufflehog --regex --rules regex.json --entropy=False https://github.com/HumanCellAtlas/fusillade.git
+    - rm regex.json
 
 unit_tests:
   extends: .tests
