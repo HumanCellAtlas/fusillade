@@ -51,6 +51,12 @@ for var in $(echo $env_json | jq -r keys[]); do
     cat "$config_json" | jq .stages.$stage.environment_variables.$var="$val" | sponge "$config_json"
 done
 
+if [[ ${CI:-} == true ]]; then
+    account_id=$(aws sts get-caller-identity | jq -r .Account)
+    export iam_role_arn="arn:aws:iam::${account_id}:role/fusillade-${stage}"
+    cat "$config_json" | jq .manage_iam_role=false | jq .iam_role_arn=env.iam_role_arn | sponge "$config_json"
+fi
+
 cp "$policy_json" "$stage_policy_json"
 export secret_arn=$(aws secretsmanager describe-secret --secret-id ${FUS_SECRETS_STORE}/${FUS_DEPLOYMENT_STAGE}/oauth2_config | jq .ARN)
 cat "$stage_policy_json" | jq .Statement[2].Resource[0]=$secret_arn | sponge "$stage_policy_json"
