@@ -72,7 +72,7 @@ setup_directory:
 	source environment && $(MAKE) _setup_directory
 
 _deploy: _setup_directory _check_directory_schema _package
-	./build_chalice_config.sh $(FUS_DEPLOYMENT_STAGE)
+	./build_chalice_config.sh
 	chalice deploy --no-autogen-policy --stage $(FUS_DEPLOYMENT_STAGE) --api-gateway-stage $(FUS_DEPLOYMENT_STAGE)
 
 deploy:
