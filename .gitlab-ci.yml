@@ -41,7 +41,6 @@ unit_tests:
 deploy:
   stage: deploy
   script:
-    - scripts/find_missing_wheels.py requirements.txt --build-wheels cryptography==2.7 PyYAML==5.1.1
     - ./scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
     - make deploy
   only:
