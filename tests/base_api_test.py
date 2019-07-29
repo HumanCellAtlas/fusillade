@@ -43,7 +43,7 @@ class BaseAPITest():
             url = furl(url)
             url.add(query_params={'per_page': 30})
             resp = cls.app.get(url.url, headers=headers)
-            results = json.loads(resp.body)[key]
+            results = json.loads(resp.body).get(key, [])
             while "Link" in resp.headers:
                 next_url = resp.headers['Link'].split(';')[0][1:-1]
                 resp = cls.app.get(next_url, headers=headers)

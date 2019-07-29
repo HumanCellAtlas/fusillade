@@ -21,7 +21,6 @@ from tests.common import get_auth_header, service_accounts
 
 class TestApi(BaseAPITest, unittest.TestCase):
 
-    @eventually(10, 0.5)
     def test_evaluate_policy(self):
         email = "test_evaluate_api@email.com"
         tests = [
@@ -51,12 +50,16 @@ class TestApi(BaseAPITest, unittest.TestCase):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
 
+        @eventually(5, 0.5)
+        def _run_test(test):
+            data = json.dumps(test['json_request_body'])
+            resp = self.app.post('/v1/policies/evaluate', headers=headers, data=data)
+            self.assertEqual(test['response']['code'], resp.status_code)
+            self.assertEqual(test['response']['result'], json.loads(resp.body)['result'])
+
         for test in tests:
             with self.subTest(test['json_request_body']):
-                data = json.dumps(test['json_request_body'])
-                resp = self.app.post('/v1/policies/evaluate', headers=headers, data=data)
-                self.assertEqual(test['response']['code'], resp.status_code)
-                self.assertEqual(test['response']['result'], json.loads(resp.body)['result'])
+                _run_test(test)
 
         with self.subTest("User Disabled"):
             resp = self.app.put(furl(f"/v1/user/{email}",
