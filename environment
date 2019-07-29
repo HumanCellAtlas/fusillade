@@ -42,6 +42,8 @@ JSON_LOGS=False
 AWS_SDK_LOAD_CONFIG=1 # Needed for Terraform to correctly use AWS assumed roles
 
 GITHUB_TOKEN_PATH=None
+GITHUB_TOKEN_SECRET_NAME=dcp/fus/github_deployment_token
+
 # Used for publishing releases.
 
 # tags for AWS resources

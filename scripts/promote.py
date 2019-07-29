@@ -3,7 +3,8 @@
 A tool for promoting server code to different stages of productions, and minting new releases in github.
 
 In order to release you must have a github access token with permissions to write to your repository. Set
-environment variable `GITHUB_TOKEN_PATH` to the path of a file which contains github access token.
+environment variable `GITHUB_TOKEN_PATH` to the path of a file which contains github access token, or set environment
+variable `GITHUB_TOKEN_SECRET_NAME` to the path of the AWS secret which contains github access token.
 
 `./promote.py integration` promotes master to integration and creates a prerelease in github.
 `./promote.py staging` promotes integration to staging and creates a prerelease in github.
@@ -102,14 +103,14 @@ def make_release_notes(src, dst) -> str:
     else:
         result = _subprocess(['git', 'log', '--pretty=format:"%s"', f"{src}...{dst}"])
         r_notes = "\n".join([f"- {i[1:-1]}" for i in result.split("\n")])
-        with tempfile.TemporaryDirectory() as temp_path:
-            temp_file = f"{temp_path}/release_notes.txt"
-            with open(temp_file, 'w') as file:
-                file.write(r_notes)
-            if args.auto:
-                subprocess.call([os.environ.get('EDITOR', 'vim'), temp_file])
-            with open(temp_file, 'r') as file:
-                r_notes = file.read()
+        if args.auto:
+            with tempfile.TemporaryDirectory() as temp_path:
+                temp_file = f"{temp_path}/release_notes.txt"
+                with open(temp_file, 'w') as file:
+                    file.write(r_notes)
+                    subprocess.call([os.environ.get('EDITOR', 'vim'), temp_file])
+                with open(temp_file, 'r') as file:
+                    r_notes = file.read()
     return r_notes
 
 
@@ -158,9 +159,16 @@ release_map = {
 }
 
 s = requests.Session()
-token_path = os.environ['GITHUB_TOKEN_PATH']
-with open(os.path.expanduser(token_path), 'r') as fp:
-    token = fp.read().strip()
+token_path = os.environ.get('GITHUB_TOKEN_PATH')
+if token_path:
+    with open(os.path.expanduser(token_path), 'r') as fp:
+        token = fp.read().strip()
+else:
+    secret_id = os.environ['GITHUB_TOKEN_SECRET_NAME']
+    import boto3
+
+    SM = boto3.client('secretsmanager')
+    token = SM.get_secret(SecretId=secret_id)['SecretString']
 
 if __name__ == "__main__":
     src, dst, prerelease = release_map[args.stage]
