@@ -9,6 +9,9 @@ stages:
   - test
   - deploy
   - integration_test
+  - promote_integration
+  - promote_staging
+  - promote_prod
 
 before_script:
   - virtualenv ~/venv
@@ -61,3 +64,24 @@ integration_test:
     - staging
   except:
     - schedules
+
+promote_integration:
+  stage: promote_integration
+  script:
+    - ./scripts/promote.py integration --auto
+  only:
+    - master
+
+promote_staging:
+  stage: promote_staging
+  script:
+    - ./scripts/promote.py staging --auto
+  only:
+    - integration
+
+promote_production:
+  stage: promote_prod
+  script:
+    - ./scripts/promote.py production --auto
+  only:
+    - staging
