@@ -10,6 +10,8 @@ stages:
   - deploy
   - integration_test
   - promote_integration
+  - promote_staging
+  - promote_production
 
 before_script:
   - virtualenv ~/venv
@@ -63,9 +65,62 @@ integration_test:
   except:
     - schedules
 
-promote_integration:
+.promote_integration:
+  stage: promote_integration
+  except:
+    - tags
+    - schedules
+
+integration_major:
   stage: promote_integration
   script:
-    - ./scripts/promote.py integration --auto
+    - ./scripts/promote.py integration --auto --release major
   only:
     - master
+  when: manual
+
+integration_minor:
+  stage: promote_integration
+  script:
+    - ./scripts/promote.py integration --auto --release minor
+  only:
+    - master
+  when: manual
+
+integration_patch:
+  stage: promote_integration
+  script:
+    - ./scripts/promote.py integration --auto --release patch
+  only:
+    - master
+  when: manual
+
+integration_build:
+  stage: promote_integration
+  script:
+    - ./scripts/promote.py integration --auto --release build
+  only:
+    - master
+  when: manual
+
+promote_staging:
+  stage: promote_staging
+  except:
+    - tags
+    - schedules
+  script:
+    - ./scripts/promote.py staging --auto
+  only:
+    - integration
+  when: manual
+
+promote_production:
+  stage: promote_staging
+  except:
+    - tags
+    - schedules
+  script:
+    - ./scripts/promote.py production --auto
+  only:
+    - staging
+  when: manual
