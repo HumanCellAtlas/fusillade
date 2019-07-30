@@ -62,7 +62,8 @@ To do this, your application should define an access control model consisting of
 - Setup [AWS CLI](https://github.com/aws/aws-cli) with the correct profile, default region, and output format.
 - Local environment variables can be set in *environment.local* for convenience. If you use "source environment" and it 
   will set environment variables from *environment.local* after *environment* varaibles have been set, if you choose to 
-  set them.
+  set them. If using multiple deployment with unique *environment.local* files, the *environment.local* file in the top
+  directory of *fusillade* take precedence over *environment.local* in *fusillade/deployments/**
 - Populate `FUS_ADMIN_EMAILS` with a list of admins to assigned upon creating the fusillade deployment. This
   is only used when fusillade is first deployed to create the first users. Afterwards this variable has no effect. If
   more admins are required assign a user the admin role.
@@ -97,6 +98,14 @@ If you're ok with the changes run `make deploy-infra`.
 ## Deploy Fusillade
 `make deploy`
 
+### Environment Variables
+**DEPLOYMENT** - used to set the current deployment of fusillade to target. This determines what deployment variables to
+ source from `environment`. 
+**GITHUB_TOKEN_PATH** - Point to the location of a file in your local directory containing a github token used for 
+ promoting fusillade branches and publishing new version. If GITHUB_TOKEN_SECRET_NAME is also present, GITHUB_TOKEN_PATH
+ take precedence over GITHUB_TOKEN_SECRET_NAME.
+**GITHUB_TOKEN_SECRET_NAME** - oint to the location of a AWS parameters key containing a github token used for 
+ promoting fusillade branches and publishing new version.
 # Using Fusillade as a Service
 
 The following are created on deployment:
