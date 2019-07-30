@@ -160,7 +160,7 @@ release_map = {
 
 s = requests.Session()
 token_path = os.environ.get('GITHUB_TOKEN_PATH')
-if token_path:
+if token_path and token_path != 'None':
     with open(os.path.expanduser(token_path), 'r') as fp:
         token = fp.read().strip()
 else:
