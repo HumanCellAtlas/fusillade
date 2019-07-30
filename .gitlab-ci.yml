@@ -44,7 +44,7 @@ unit_tests:
 deploy:
   stage: deploy
   script:
-    - ./scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
+    - scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
     - make deploy
   only:
     - master
@@ -56,7 +56,7 @@ deploy:
 integration_test:
   stage: integration_test
   script:
-    - ./scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
+    - scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
     - make integration_test
   only:
     - master
@@ -74,7 +74,7 @@ integration_test:
 integration_major:
   stage: promote_integration
   script:
-    - ./scripts/promote.py integration --auto --release major
+    - scripts/promote.py integration --auto --release major
   only:
     - master
   when: manual
@@ -82,7 +82,7 @@ integration_major:
 integration_minor:
   stage: promote_integration
   script:
-    - ./scripts/promote.py integration --auto --release minor
+    - scripts/promote.py integration --auto --release minor
   only:
     - master
   when: manual
@@ -90,7 +90,7 @@ integration_minor:
 integration_patch:
   stage: promote_integration
   script:
-    - ./scripts/promote.py integration --auto --release patch
+    - scripts/promote.py integration --auto --release patch
   only:
     - master
   when: manual
@@ -98,7 +98,7 @@ integration_patch:
 integration_build:
   stage: promote_integration
   script:
-    - ./scripts/promote.py integration --auto --release build
+    - scripts/promote.py integration --auto --release build
   only:
     - master
   when: manual
@@ -109,7 +109,7 @@ promote_staging:
     - tags
     - schedules
   script:
-    - ./scripts/promote.py staging --auto
+    - scripts/promote.py staging --auto
   only:
     - integration
   when: manual
@@ -120,7 +120,7 @@ promote_production:
     - tags
     - schedules
   script:
-    - ./scripts/promote.py production --auto
+    - scripts/promote.py production --auto
   only:
     - staging
   when: manual
