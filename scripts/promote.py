@@ -168,7 +168,7 @@ else:
     import boto3
 
     SM = boto3.client('secretsmanager')
-    token = SM.get_secret(SecretId=secret_id)['SecretString']
+    token = SM.get_secret_value(SecretId=secret_id)['SecretString']
 
 if __name__ == "__main__":
     src, dst, prerelease = release_map[args.stage]
