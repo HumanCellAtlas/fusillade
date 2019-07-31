@@ -10,6 +10,7 @@ import os
 import sys
 import unittest
 from itertools import combinations, product
+from uuid import uuid4
 
 from furl import furl
 
@@ -35,24 +36,27 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
     def test_authorize(self):
         CLIENT_ID = "qtMgNk9fqVeclLtZl6WkbdJ59dP3WeAt"
         REDIRECT_URI = "http://localhost:8080"
+        path = "/oauth/authorize"
 
-        from uuid import uuid4
         states = [str(uuid4()), "1", "12", "ABCD", "\n\n"]
         scopes = ["openid", "email", "profile", "offline"]
         scopes_combination = [i for y in range(1, len(scopes) + 1) for i in combinations(scopes, y)]
         tests = product(states, scopes_combination)
+        OPENID_PROVIDER = os.environ["OPENID_PROVIDER"]
+        query_params_client_id = {
+            "response_type": "code",
+            "redirect_uri": REDIRECT_URI,
+            "client_id": CLIENT_ID
+        }
+        query_params = {
+            "response_type": "code",
+            "redirect_uri": REDIRECT_URI,
+        }
         for state, scope in tests:
             _scope = ' '.join(scope)
-            query_params = {
-                "response_type": "code",
-                "state": state,
-                "redirect_uri": REDIRECT_URI,
-                "scope": _scope
-            }
+            query_params_client_id.update(scope=_scope, state=state)
             with self.subTest(f"with client_id: {state} {scope}"):  # TODO improve description
-                url = furl("/oauth/authorize")
-                url.add(query_params=query_params)
-                url.add(query_params={"client_id": CLIENT_ID})
+                url = furl(path, query_params=query_params_client_id)
 
                 resp = self.app.get(url.url)
                 self.assertEqual(302, resp.status_code)
@@ -62,24 +66,24 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
                 self.assertEqual(redirect_url.args["state"], state)
                 self.assertEqual(redirect_url.args["redirect_uri"], REDIRECT_URI)
                 self.assertEqual(redirect_url.args["scope"], _scope)
-                self.assertEqual(redirect_url.host, os.environ["OPENID_PROVIDER"])
+                self.assertEqual(redirect_url.host, OPENID_PROVIDER)
                 self.assertEqual(redirect_url.path, '/authorize')
+
+            query_params.update(scope=_scope, state=state)
             with self.subTest(f"without client_id: {state} {scope}"):  # TODO improve description
-                url = furl("/oauth/authorize")
-                url.add(query_params=query_params)
-                url.remove(query_params=["client_id"])
+                url = furl(path, query_params=query_params)
 
                 resp = self.app.get(url.url)
                 self.assertEqual(302, resp.status_code)
                 redirect_url = furl(resp.headers['Location'])
                 self.assertIn('client_id', redirect_url.args)
                 self.assertEqual(redirect_url.args["response_type"], 'code')
-                query_params["openid_provider"] = os.environ["OPENID_PROVIDER"]
+                query_params["openid_provider"] = OPENID_PROVIDER
                 self.assertDictEqual(json.loads(base64.b64decode(redirect_url.args["state"])), query_params)
                 redirect_uri = furl(redirect_url.args["redirect_uri"])
                 self.assertTrue(redirect_uri.pathstr.endswith('/cb'))
                 self.assertEqual(redirect_url.args["scope"], "openid email profile")
-                self.assertEqual(redirect_url.host, os.environ["OPENID_PROVIDER"])
+                self.assertEqual(redirect_url.host, OPENID_PROVIDER)
                 self.assertEqual(redirect_url.path, '/authorize')
 
     def test_well_know_openid_configuration(self):
