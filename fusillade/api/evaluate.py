@@ -5,12 +5,13 @@ from threading import Thread
 from flask import make_response, jsonify
 
 from fusillade import User
-from fusillade.errors import AuthorizationException
-from fusillade.utils.authorize import assert_authorized, evaluate_policy, restricted_context_entries
+from fusillade.errors import AuthorizationException, FusilladeForbiddenException
+from fusillade.utils.authorize import assert_authorized, evaluate_policy, restricted_context_entries, get_email_claim
 
 
 def evaluate_policy_api(token_info, body):  # TODO allow context variables to be specified in the body.
-    with AuthorizeThread(token_info['https://auth.data.humancellatlas.org/email'],
+    principal = get_email_claim(token_info)
+    with AuthorizeThread(principal,
                          ['fus:Evaluate'],
                          ['arn:hca:fus:*:*:user']):
         try:
