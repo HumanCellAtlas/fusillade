@@ -16,7 +16,7 @@ def _modify_roles(cloud_node, request):
         elif action == 'remove':
             cloud_node.remove_roles(request.json['roles'])
     except cd_client.exceptions.BatchWriteException as ex:
-        #TODO inspect the error. Return 304 if link exists error. Return 404 if object does not exist error.
+        # TODO inspect the error. Return 304 if link exists error. Return 404 if object does not exist error.
         resp['msg'] = ex.response['Error']['Message']
         code = 304
     else:
