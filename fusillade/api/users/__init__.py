@@ -1,20 +1,18 @@
-import requests
 from flask import request, make_response, jsonify
 
 from fusillade import User
 from fusillade.api._helper import _modify_roles, _modify_groups
 from fusillade.api.paging import get_next_token, get_page
-from fusillade.errors import FusilladeLimitException, FusilladeHTTPException
 from fusillade.utils.authorize import authorize
 
 
 @authorize(['fus:PostUser'], ['arn:hca:fus:*:*:user'])
 def post_user(token_info: dict):
     json_body = request.json
-    user = User.provision_user(json_body['user_id'], statement=json_body.get('policy'),
-                               creator=token_info['https://auth.data.humancellatlas.org/email'])
-    user.add_roles(json_body.get('roles', []))
-    user.add_groups(json_body.get('groups', []))
+    User.provision_user(json_body['user_id'], statement=json_body.get('policy'),
+                        creator=token_info['https://auth.data.humancellatlas.org/email'],
+                        groups=json_body.get('groups', []),
+                        roles=json_body.get('roles', []))
     return make_response(jsonify({'msg': f"{json_body['user_id']} created."}), 201)
 
 

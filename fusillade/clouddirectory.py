@@ -1594,7 +1594,7 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
                     operations.append(directory.batch_get_object_info(Group(group).object_ref))
             directory.batch_read(operations)
         except cd_client.exceptions.ResourceNotFoundException:
-            FusilladeBadRequestException(f"One or more groups or roles does not exist.")
+            raise FusilladeBadRequestException(f"One or more groups or roles does not exist.")
         if statement:
             user._verify_statement(statement)
 
