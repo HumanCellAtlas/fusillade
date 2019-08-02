@@ -76,6 +76,10 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         }
         self.assertEqual(expected_body, json.loads(resp.body))
 
+    def test_missing_custom_claim(self):
+        headers = {'Content-Type': "application/json"}
+        self._test_custom_claim(self.app.get, f'/v1/roles', headers, '')
+        
     def test_get_roles(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))

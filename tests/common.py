@@ -79,10 +79,9 @@ def get_service_jwt(service_credentials, email=True, audience=None):
                'iat': iat,
                'exp': exp,
                'scope': ['email', 'openid', 'offline_access'],
-               'https://auth.data.humancellatlas.org/email': service_credentials["client_email"]
                }
     if email:
-        payload['email'] = service_credentials["client_email"]
+        payload['https://auth.data.humancellatlas.org/email'] = service_credentials["client_email"]
     additional_headers = {'kid': service_credentials["private_key_id"]}
     signed_jwt = jwt.encode(payload, service_credentials["private_key"], headers=additional_headers,
                             algorithm='RS256').decode()

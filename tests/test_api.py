@@ -57,6 +57,11 @@ class TestApi(BaseAPITest, unittest.TestCase):
             self.assertEqual(test['response']['code'], resp.status_code)
             self.assertEqual(test['response']['result'], json.loads(resp.body)['result'])
 
+        self._test_custom_claim(self.app.post,
+                                '/v1/policies/evaluate',
+                                headers,
+                                json.dumps(tests[1]['json_request_body']))
+
         for test in tests:
             with self.subTest(test['json_request_body']):
                 _run_test(test)

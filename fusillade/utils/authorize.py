@@ -47,7 +47,7 @@ def get_email_claim(token_info):
     try:
         return token_info['https://auth.data.humancellatlas.org/email']
     except KeyError:
-        FusilladeForbiddenException("'https://auth.data.humancellatlas.org/email' claim is missing from JWT.")
+        raise FusilladeForbiddenException("'https://auth.data.humancellatlas.org/email' claim is missing from token.")
 
 
 def assert_authorized(user, actions, resources, context_entries=None):
