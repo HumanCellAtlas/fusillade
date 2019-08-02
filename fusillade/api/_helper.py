@@ -1,6 +1,6 @@
 import requests
 
-from fusillade.clouddirectory import cd_client
+from fusillade.clouddirectory import cd_client, Group, Role
 from fusillade.errors import FusilladeLimitException, FusilladeHTTPException
 
 
@@ -11,6 +11,7 @@ def _modify_roles(cloud_node, request):
             f'{cloud_node.object_type}_id': cloud_node.name
             }
     try:
+        Role.exists(request.json['roles'])
         if action == 'add':
             cloud_node.add_roles(request.json['roles'])
         elif action == 'remove':
@@ -31,6 +32,7 @@ def _modify_groups(cloud_node, request):
             f'{cloud_node.object_type}_id': cloud_node.name
             }
     try:
+        Group.exists(request.json['groups'])
         if action == 'add':
             cloud_node.add_groups(request.json['groups'])
         elif action == 'remove':
