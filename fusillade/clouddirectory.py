@@ -1195,6 +1195,17 @@ class CloudNode:
         info[f'{self.object_type}_id'] = info.pop('name')
         return info
 
+    @classmethod
+    def _exists(cls, nodes: List[str]):
+        operations = []
+        directory = Config.get_directory()
+        try:
+            for node in nodes:
+                operations.append(directory.batch_get_object_info(cls(node).object_ref))
+            directory.batch_read(operations)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeBadRequestException(f"One or more {cls.object_type} does not exist.")
+
 
 class PolicyMixin:
     """Adds policy support to a cloudNode"""
@@ -1583,18 +1594,10 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         _creator = creator if creator else "fusillade"
 
         # verify parameters
-        operations = []
-        directory = Config.get_directory()
-        try:
-            if roles:
-                for role in roles:
-                    operations.append(directory.batch_get_object_info(Role(role).object_ref))
-            if groups:
-                for group in groups:
-                    operations.append(directory.batch_get_object_info(Group(group).object_ref))
-            directory.batch_read(operations)
-        except cd_client.exceptions.ResourceNotFoundException:
-            raise FusilladeBadRequestException(f"One or more groups or roles does not exist.")
+        if roles:
+            Role.exists(roles)
+        if groups:
+            Group.exists(groups)
         if statement:
             user._verify_statement(statement)
 
@@ -1682,6 +1685,10 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         info['status'] = self.status
         return info
 
+    @classmethod
+    def exists(cls, users: List[str]):
+        cls._exists(users)
+
 
 class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
     """
@@ -1730,6 +1737,7 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
 
     def add_users(self, users: List['User']) -> None:
         if users:
+            User.exists([user.name for user in users])
             operations = [i for i in itertools.chain(*[user.add_groups([self.name], False) for user in users])]
             self.cd.batch_write(operations)
             logger.info(dict(message="Adding users to group",
@@ -1744,6 +1752,7 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
         :return:
         """
         if users:
+            User.exists([user.name for user in users])
             operations = [i for i in itertools.chain(*[user.remove_groups([self.name], False) for user in users])]
             self.cd.batch_write(operations)
             logger.info(dict(message="Removing users from group",
@@ -1754,6 +1763,10 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
         info = super(Group, self).get_info()
         info.update(self.get_policy_info())
         return info
+
+    @classmethod
+    def exists(cls, groups: List[str]):
+        cls._exists(groups)
 
 
 class Role(CloudNode, CreateMixin):
@@ -1771,3 +1784,7 @@ class Role(CloudNode, CreateMixin):
         info = super(Role, self).get_info()
         info.update(self.get_policy_info())
         return info
+
+    @classmethod
+    def exists(cls, roles: List[str]):
+        cls._exists(roles)
