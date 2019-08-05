@@ -87,3 +87,13 @@ class BaseAPITest():
             self.assertEqual(200, resp.status_code)
             next_results = json.loads(resp.body)[key]
             self.assertLessEqual(len(next_results), per_page)
+
+    def _test_custom_claim(self, func: callable, url: str, headers: dict, body: str):
+        _headers = headers.copy()
+        _headers.update(get_auth_header(service_accounts['admin'], email=False))
+        with self.subTest("Missing Custom Claim"):
+            resp = func(
+                url,
+                headers=_headers,
+                data=body)
+            self.assertEqual(403, resp.status_code)

@@ -43,6 +43,13 @@ def evaluate_policy(
         return False
 
 
+def get_email_claim(token_info):
+    try:
+        return token_info['https://auth.data.humancellatlas.org/email']
+    except KeyError:
+        raise FusilladeForbiddenException("'https://auth.data.humancellatlas.org/email' claim is missing from token.")
+
+
 def assert_authorized(user, actions, resources, context_entries=None):
     """
     Asserts a user has permission to perform actions on resources.
@@ -170,7 +177,7 @@ def authorize(actions: List[str],
     def decorate(func):
         @functools.wraps(func)
         def call(*args, **kwargs):
-            assert_authorized(kwargs['token_info']['https://auth.data.humancellatlas.org/email'],
+            assert_authorized(get_email_claim(kwargs['token_info']),
                               actions,
                               format_resources(resources, resource_params, kwargs) if resource_params else resources,
                               format_context_entries(context_entries, kwargs,
