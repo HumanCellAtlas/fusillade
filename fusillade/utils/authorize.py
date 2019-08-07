@@ -5,7 +5,7 @@ from typing import List, Dict, Optional, Union
 
 from dcplib.aws import clients as aws_clients
 
-from fusillade import User
+from fusillade import User, Config
 from fusillade.errors import FusilladeForbiddenException, AuthorizationException, FusilladeBadRequestException
 
 logger = logging.getLogger(__name__)
@@ -45,9 +45,9 @@ def evaluate_policy(
 
 def get_email_claim(token_info):
     try:
-        return token_info['https://auth.data.humancellatlas.org/email']
+        return token_info[Config.oidc_email_claim]
     except KeyError:
-        raise FusilladeForbiddenException("'https://auth.data.humancellatlas.org/email' claim is missing from token.")
+        raise FusilladeForbiddenException(f"{Config.oidc_email_claim} claim is missing from token.")
 
 
 def assert_authorized(user, actions, resources, context_entries=None):
