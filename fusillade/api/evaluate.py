@@ -6,7 +6,8 @@ from flask import make_response, jsonify
 
 from fusillade import User
 from fusillade.errors import AuthorizationException, FusilladeForbiddenException
-from fusillade.utils.authorize import assert_authorized, evaluate_policy, restricted_context_entries, get_email_claim
+from fusillade.utils.authorize import assert_authorized, evaluate_policy, format_restricted_context_entries, \
+    get_email_claim, format_context_entries
 
 
 def evaluate_policy_api(token_info, body):  # TODO allow context variables to be specified in the body.
@@ -14,16 +15,19 @@ def evaluate_policy_api(token_info, body):  # TODO allow context variables to be
     with AuthorizeThread(principal,
                          ['fus:Evaluate'],
                          ['arn:hca:fus:*:*:user']):
+        context_variables = format_restricted_context_entries(body.get('context_variables', {}))
         try:
             authz_params = User(body['principal']).get_authz_params()
         except AuthorizationException:
             result = False
         else:
+            policies = authz_params.pop('policies')
+            context_variables.extend(format_context_entries(authz_params))
             result = evaluate_policy(body['principal'],
                                      body['action'],
                                      body['resource'],
-                                     authz_params['policies'],
-                                     context_entries=restricted_context_entries(authz_params))
+                                     policies,
+                                     context_entries=context_variables)
     return make_response(jsonify(**body, result=result), 200)
 
 

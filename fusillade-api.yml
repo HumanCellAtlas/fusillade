@@ -221,6 +221,12 @@ paths:
                   type: array
                   items:
                     type: string
+                context_variables:
+                  description: context variables replace context fields specificied in a
+                   policy. For example [{'dcp:name':'jimmy'}, {'abc:type':['hello', 'world']}]
+                  type: array
+                  items:
+                    type: object
       responses:
         200:
           description: The result of the policy evaluation
