@@ -44,9 +44,10 @@ def evaluate_policy(
 
 
 def get_email_claim(token_info):
-    try:
-        return token_info[Config.oidc_email_claim]
-    except KeyError:
+    email = token_info.get(Config.oidc_email_claim) or token_info.get('email')
+    if email:
+        return email
+    else:
         raise FusilladeForbiddenException(f"{Config.oidc_email_claim} claim is missing from token.")
 
 
