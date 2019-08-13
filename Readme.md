@@ -99,38 +99,72 @@ If you're ok with the changes run `make deploy-infra`.
 `make deploy`
 
 ### Environment Variables
-**DEPLOYMENT** - used to set the current deployment of fusillade to target. This determines what deployment variables to
+- **DEPLOYMENT** - used to set the current deployment of fusillade to target. This determines what deployment 
+variables to
  source from `environment`. 
-**GITHUB_TOKEN_PATH** - Point to the location of a file in your local directory containing a github token used for 
+- **GITHUB_TOKEN_PATH** - Point to the location of a file in your local directory containing a github token used for 
  promoting fusillade branches and publishing new version. If GITHUB_TOKEN_SECRET_NAME is also present, GITHUB_TOKEN_PATH
  take precedence over GITHUB_TOKEN_SECRET_NAME.
-**GITHUB_TOKEN_SECRET_NAME** - oint to the location of a AWS parameters key containing a github token used for 
+- **GITHUB_TOKEN_SECRET_NAME** - oint to the location of a AWS parameters key containing a github token used for 
  promoting fusillade branches and publishing new version.
+ 
 # Using Fusillade as a Service
 
 The following are created on deployment:
 * `/role/fusillade_admin` - contains a policy based on `default_admin_role.json`
 * `/role/default_user` - contains a policy based on `default_user_role.json`
-* `/user/{FUS_ADMIN_EMAILS}` - a user for each admin in `FUS_ADMIN_EMAILS` with `/role/fusillade_admin` attached.
-* `/user/public` -  a user for evaluating policies without an authenticated principle. Attach policies to this role 
- to limit what unauthenticated user can do.
+* `/user/{FUS_ADMIN_EMAILS}` - a user is created for each email in `FUS_ADMIN_EMAILS` and assigned 
+  `/role/fusillade_admin`.
 * `/group/user_default` - a group assigned to all users upon creation. It has the `/role/default_user` attached. Add 
  new roles to this group to apply that role to all users.
+* `/user/public` -  a user for evaluating policies without an authenticated principle. `/user/public` is apart of 
+ `/group/user_default`. Modify the roles attached to `/group/user_default` to modify what unauthenticated user can do.
 
-All of these resources can be modified using the fusillade API after deployment.
+**Note:** All of these resources can be modified using the fusillade API after deployment.
 
-## Adding Users to Roles
-New admins can be assigned using the fusillade API and assigning the role of admin to a user.
+**Note:** New *fusillade_admins* can be assigned using the fusillade API and assigning the role of *fusillade_admin* 
+to a user.
+
+## Users
+A user can represent a service account, or a personal account. They can be explicitly created or created on demand when
+a user's permissions are first evaluated. A user is automatically added to `/group/user_default` when created. All other
+roles and groups must be added using the fusillade API.
+
+## Roles
+Roles contains policies that are used to determine what a user can do. A role can either be directly applied to a 
+user or indirectly applied to a user by applying the role to a group the user is a member.
+
+## Groups
+Groups are used to manage the roles attached to multiple users. 
+
+## Policies
+Policies can attached to a user, group, or role. The preferred method for attaching policies is to create a role with
+ that policy then attach that role to a group and assign users to that group. This makes it easier to manange many users
+ with fewer policies.
+ 
+When the permissions of a user is evaluated, all policies attached to a user, the user's groups, and the user's are 
+used.
+  
+### Defining Policy
+Uses [AWS IAM Policy grammar](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html)
+
+### Special Fusillade Context Keys for Policies
+
+In the same way AWS iam provides [context keys available to all services](https://docs.aws.amazon
+.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-globally-available), fusillade provides 
+context keys that can be used in your policies.
+
+- `fus:groups` - is a list of groups the current user belongs. This can be used to restrict permission based on 
+  the group association
+- `fus:roles` - is a list of roles the current user belongs. This can be used to restrict permission based on 
+  the role association
+- `fus:user_email` - is the email of the user. This can be used to restrict permission based on the users email.
 
 # Using Fusillade as a library
 
 # Using Fusillade as a proxy
 
 # Bundling native cloud credentials
-
-# Creating Custom Policy
-
-Uses [AWS IAM Policy grammar](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html)
 
 ### AWS
 
@@ -163,25 +197,10 @@ service configuration.
 * [Documentation (Read the Docs)](https://fusillade.readthedocs.io/)
 * [Package distribution (PyPI)](https://pypi.python.org/pypi/fusillade)
 
-# Policies
-
-
-## Special Fusillade Context Keys
-
-In the same way AWS iam provides [context keys available to all services](https://docs.aws.amazon
-.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-globally-available), fusillade provides 
-context keys that can be used in your policies.
-
-- `fus:groups` - is a list of groups the current user belongs. This can be used to restrict permission based on 
-  the group association
-- `fus:roles` - is a list of roles the current user belongs. This can be used to restrict permission based on 
-  the role association
-- `fus:user_email` - is the email of the user. This can be used to restrict permission based on the users email.
-
-### Bugs
+# Bugs
 Please report bugs, issues, feature requests, etc. on [GitHub](https://github.com/HumanCellAtlas/fusillade/issues).
 
-### License
+# License
 Licensed under the terms of the [MIT License](https://opensource.org/licenses/MIT).
 
 [![Travis CI](https://travis-ci.org/HumanCellAtlas/fusillade.svg)](https://travis-ci.org/HumanCellAtlas/fusillade)
