@@ -165,11 +165,27 @@ context keys that can be used in your policies.
 - `fus:user_email` - is the email of the user. This can be used to restrict permission based on the users email.
 
 ## Specifics For DCP
+The fusillade staging environment should be used for developing other DCP components. For components using the 
+fusillade staging environment to test your dev environment, append all roles and groups created with *dev*. For example
+For example DSS_ADMIN wouldbe DSS_ADMIN_DEV. This is to prevent name collisions between dev and staging. 
 
-### Resource Examples
-`arn:hca:fusillade:dev/user/test@test.test`
+**Note:** The fusillade managed group `user_default` and user `public` will be modified for both your components 
+staging and dev environment.
 
- For resource names in the DCP use **hca** for the par `arn:hca:{service}:{resource}`
+### Resource
+For resource set the *partition* to `hca`, set your *service* name to the name of your component, and set the 
+*account-id* to the deployment stage. All other fields can be used as needed or use \* for wild cards. resource names
+ are case sensitive.
+
+#### Examples
+
+- arn:**hca**:**fusillade**:region:**dev**:resource
+- arn:**hca**:**dss**:region:**staging**:resourcetype/resource
+- arn:**hca**:**query**:region:**integration**:resourcetype/resource/qualifier
+- arn:**hca**:**ingest**:region:**prod**:resourcetype/resource:qualifier
+- arn:**hca**:**azul**:region:**dev**:resourcetype:resource
+- arn:**hca**:**matrix**:region:**staging**:resourcetype:resource:qualifier
+
 # Using Fusillade as a library
 
 # Using Fusillade as a proxy
