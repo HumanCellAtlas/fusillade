@@ -146,7 +146,11 @@ When the permissions of a user is evaluated, all policies attached to a user, th
 used.
   
 ### Defining Policy
-Uses [AWS IAM Policy grammar](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html)
+Uses [AWS IAM Policy grammar](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html) to 
+define your services permissions.
+For resource names use the same format as [AWS Service NameSpace](https://docs.aws.amazon
+.com/general/latest/gr/aws-arns-and-namespaces
+.html).
 
 ### Special Fusillade Context Keys for Policies
 
@@ -160,6 +164,12 @@ context keys that can be used in your policies.
   the role association
 - `fus:user_email` - is the email of the user. This can be used to restrict permission based on the users email.
 
+## Specifics For DCP
+
+### Resource Examples
+`arn:hca:fusillade:dev/user/test@test.test`
+
+ For resource names in the DCP use **hca** for the par `arn:hca:{service}:{resource}`
 # Using Fusillade as a library
 
 # Using Fusillade as a proxy
