@@ -105,7 +105,7 @@ variables to
 - **GITHUB_TOKEN_PATH** - Point to the location of a file in your local directory containing a github token used for 
  promoting fusillade branches and publishing new version. If GITHUB_TOKEN_SECRET_NAME is also present, GITHUB_TOKEN_PATH
  take precedence over GITHUB_TOKEN_SECRET_NAME.
-- **GITHUB_TOKEN_SECRET_NAME** - oint to the location of a AWS parameters key containing a github token used for 
+- **GITHUB_TOKEN_SECRET_NAME** - Point to the location of a AWS parameters key containing a github token used for 
  promoting fusillade branches and publishing new version.
  
 # Using Fusillade as a Service
