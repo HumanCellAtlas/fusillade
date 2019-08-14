@@ -61,16 +61,16 @@ To do this, your application should define an access control model consisting of
 
 - Setup [AWS CLI](https://github.com/aws/aws-cli) with the correct profile, default region, and output format.
 - Local environment variables can be set in *environment.local* for convenience. If you use "source environment" and it 
-  will set environment variables from *environment.local* after *environment* varaibles have been set, if you choose to 
+  will set environment variables from *environment.local* after *environment* variables have been set, if you choose to 
   set them. If using multiple deployment with unique *environment.local* files, the *environment.local* file in the top
   directory of *fusillade* take precedence over *environment.local* in *fusillade/deployments/**
 - Populate `FUS_ADMIN_EMAILS` with a list of admins to assigned upon creating the fusillade deployment. This
   is only used when fusillade is first deployed to create the first users. Afterwards this variable has no effect. If
-  more admins are required assign a user the admin role.
+  more admins are required, then assign a user the admin role.
 - Deployment specific environment variables can be set in `./deployment/${FUS_DEPLOYMENT_STAGE}/environment.local` 
   per deployment for convenience.
 - **Optionally** Before deploying fusillade you can modify the [default policies and roles](../blob/master/policies) 
- to suite your needs. The `default_admin_role.json` is policy attached to the fusillade_admin role created during 
+ to suit your needs. The `default_admin_role.json` is policy attached to the fusillade_admin role created during 
  deployment. The `default_group_policy.json` is assigned to all new group when they are created. The 
  `default_user_role.json` is the role assigned to the group `default_user` which is created during deployment. All of 
  these policies and role can be modified after deployment using the fusillade API.
@@ -99,38 +99,96 @@ If you're ok with the changes run `make deploy-infra`.
 `make deploy`
 
 ### Environment Variables
-**DEPLOYMENT** - used to set the current deployment of fusillade to target. This determines what deployment variables to
+- **DEPLOYMENT** - used to set the current deployment of fusillade to target. This determines what deployment 
+variables to
  source from `environment`. 
-**GITHUB_TOKEN_PATH** - Point to the location of a file in your local directory containing a github token used for 
+- **GITHUB_TOKEN_PATH** - Point to the location of a file in your local directory containing a github token used for 
  promoting fusillade branches and publishing new version. If GITHUB_TOKEN_SECRET_NAME is also present, GITHUB_TOKEN_PATH
  take precedence over GITHUB_TOKEN_SECRET_NAME.
-**GITHUB_TOKEN_SECRET_NAME** - oint to the location of a AWS parameters key containing a github token used for 
+- **GITHUB_TOKEN_SECRET_NAME** - Point to the location of an AWS parameters key containing a github token used for 
  promoting fusillade branches and publishing new version.
+ 
 # Using Fusillade as a Service
 
 The following are created on deployment:
 * `/role/fusillade_admin` - contains a policy based on `default_admin_role.json`
 * `/role/default_user` - contains a policy based on `default_user_role.json`
-* `/user/{FUS_ADMIN_EMAILS}` - a user for each admin in `FUS_ADMIN_EMAILS` with `/role/fusillade_admin` attached.
-* `/user/public` -  a user for evaluating policies without an authenticated principle. Attach policies to this role 
- to limit what unauthenticated user can do.
+* `/user/{FUS_ADMIN_EMAILS}` - a user is created for each email in `FUS_ADMIN_EMAILS` and assigned 
+  `/role/fusillade_admin`.
 * `/group/user_default` - a group assigned to all users upon creation. It has the `/role/default_user` attached. Add 
  new roles to this group to apply that role to all users.
+* `/user/public` -  a user for evaluating policies without an authenticated principle. `/user/public` is apart of 
+ `/group/user_default`. Modify the roles attached to `/group/user_default` to modify what unauthenticated user can do.
 
-All of these resources can be modified using the fusillade API after deployment.
+**Note:** All of these resources can be modified using the fusillade API after deployment.
 
-## Adding Users to Roles
-New admins can be assigned using the fusillade API and assigning the role of admin to a user.
+**Note:** New *fusillade_admins* can be assigned using the fusillade API and assigning the role of *fusillade_admin* 
+to a user.
+
+## Users
+A user can represent a service account, or a personal account. They can be explicitly created or created on demand when
+a user's permissions are first evaluated. A user is automatically added to `/group/user_default` when created. All other
+roles and groups must be added using the fusillade API.
+
+## Roles
+Roles contains policies that are used to determine what a user can do. A role can either be directly applied to a 
+user or indirectly applied to a user by applying the role to a group the user is a member.
+
+## Groups
+Groups are used to manage the roles attached to multiple users. 
+
+## Policies
+Policies can attached to a user, group, or role. The preferred method for attaching policies is to create a role with
+ that policy then attach that role to a group and assign users to that group. This makes it easier to manage many users
+ with fewer policies.
+ 
+When the permissions of a user is evaluated, all policies attached to a user, the user's groups, and the user's are 
+used.
+  
+### Defining Policy
+Uses [AWS IAM Policy grammar](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html) to 
+define your services permissions.
+For resource names use the same format as [AWS Service NameSpace](https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html).
+
+### Special Fusillade Context Keys for Policies
+
+In the same way AWS IAM provides [context keys available to all services](https://docs.aws.amazon
+.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-globally-available)
+, fusillade provides context keys that can be used in your policies.
+
+- `fus:groups` - is a list of groups the current user belongs. This can be used to restrict permission based on 
+  the group association
+- `fus:roles` - is a list of roles the current user belongs. This can be used to restrict permission based on 
+  the role association
+- `fus:user_email` - is the email of the user. This can be used to restrict permission based on the users email.
+
+## Specifics For DCP
+The fusillade staging environment should be used for developing other DCP components. For components using the 
+fusillade staging environment to test your dev environment, append all roles and groups created with *dev*. For example
+For example DSS_ADMIN wouldbe DSS_ADMIN_DEV. This is to prevent name collisions between dev and staging. 
+
+**Note:** The fusillade managed group `user_default` and user `public` will be modified for both your components 
+staging and dev environment.
+
+### Resource
+For resource set the *partition* to `hca`, set your *service* name to the name of your component, and set the 
+*account-id* to the deployment stage. All other fields can be used as needed or use \* for wild cards. resource names
+ are case sensitive.
+
+#### Examples
+
+- arn:**hca**:**fusillade**:region:**dev**:resource
+- arn:**hca**:**dss**:region:**staging**:resourcetype/resource
+- arn:**hca**:**query**:region:**integration**:resourcetype/resource/qualifier
+- arn:**hca**:**ingest**:region:**prod**:resourcetype/resource:qualifier
+- arn:**hca**:**azul**:region:**dev**:resourcetype:resource
+- arn:**hca**:**matrix**:region:**staging**:resourcetype:resource:qualifier
 
 # Using Fusillade as a library
 
 # Using Fusillade as a proxy
 
 # Bundling native cloud credentials
-
-# Creating Custom Policy
-
-Uses [AWS IAM Policy grammar](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html)
 
 ### AWS
 
@@ -153,7 +211,7 @@ write permissions data. The Fusillade service administrator configures the Fusil
 service configuration.
 
 # How To
-## Upgrade Clouddirectory Schema
+## Upgrade Cloud Directory Schema
 1. Run `make check_directory_schema` to check if your local schema matches the the published schema.
 1. If the published schema does not match your local run `make upgrade_directory_schema`
 
@@ -163,25 +221,10 @@ service configuration.
 * [Documentation (Read the Docs)](https://fusillade.readthedocs.io/)
 * [Package distribution (PyPI)](https://pypi.python.org/pypi/fusillade)
 
-# Policies
-
-
-## Special Fusillade Context Keys
-
-In the same way AWS iam provides [context keys available to all services](https://docs.aws.amazon
-.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-globally-available), fusillade provides 
-context keys that can be used in your policies.
-
-- `fus:groups` - is a list of groups the current user belongs. This can be used to restrict permission based on 
-  the group association
-- `fus:roles` - is a list of roles the current user belongs. This can be used to restrict permission based on 
-  the role association
-- `fus:user_email` - is the email of the user. This can be used to restrict permission based on the users email.
-
-### Bugs
+# Bugs
 Please report bugs, issues, feature requests, etc. on [GitHub](https://github.com/HumanCellAtlas/fusillade/issues).
 
-### License
+# License
 Licensed under the terms of the [MIT License](https://opensource.org/licenses/MIT).
 
 [![Travis CI](https://travis-ci.org/HumanCellAtlas/fusillade.svg)](https://travis-ci.org/HumanCellAtlas/fusillade)
