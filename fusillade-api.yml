@@ -25,8 +25,9 @@ servers:
 paths:
   /login:
     get:
-      summary: Send the user agent to an identity provider selector and generate a user account. This is redirect
-       endpoint.
+      summary: Establish the users identity using the OIDC provider
+      description: Send the user agent to an identity provider selector and generate a user account to establish the
+       user's identity. This is a redirect endpoint.
       operationId: fusillade.api.oauth.login
       tags:
         - oauth
@@ -49,7 +50,8 @@ paths:
           description: Unexpected error
   /.well-known/openid-configuration:
     get:
-      summary: This endpoint is part of OIDC see documentation
+      summary: see documentation https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
+      description: This endpoint is part of OIDC see documentation
        https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
       tags:
         - oauth
@@ -75,7 +77,8 @@ paths:
           description: Returns the well known jwks
   /oauth/authorize:
     get:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+      summary: see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+      description: This endpoint is part of OIDC and is used to redirect to an openid provider
        see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
       operationId: fusillade.api.oauth.authorize
       tags:
@@ -112,8 +115,9 @@ paths:
           description: Unexpected error
   /oauth/token:
     post:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
-        see https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint, and
+      summary: Retrieve the authentications token
+      description: This endpoint is part of OIDC and is used to redirect to an openid
+       provider see https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint, and
         https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens
       operationId: fusillade.api.oauth.serve_oauth_token
       requestBody:
@@ -160,7 +164,8 @@ paths:
           description: Unexpected error
   /oauth/userinfo:
     get:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+      summary: see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      description: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
       operationId: fusillade.api.oauth.get_userinfo
       security:
@@ -173,7 +178,8 @@ paths:
         401:
           $ref: '#/components/responses/401'
     post:
-      summary: This endpoint is part of OIDC and is used to redirect to an openid provider
+      summary: see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      description: This endpoint is part of OIDC and is used to redirect to an openid provider
         see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
       operationId: fusillade.api.oauth.post_userinfo
       security:
@@ -188,13 +194,15 @@ paths:
   /echo:
     get:
       summary: echos the response
+      description: echos the response back
       operationId: fusillade.api.internal.echo
       responses:
         200:
           description: echo
   /v1/policies/evaluate:
     post:
-      summary: Given a set of principals, actions, and resources return a set of access control decisions.
+      summary: Evaluate a user's permissions.
+      description: Given a set of principals, actions, and resources return a set of access control decisions.
       operationId: fusillade.api.evaluate.evaluate_policy_api
       security:
         - BearerAuth: []
@@ -236,6 +244,7 @@ paths:
   /v1/users:
     get:
       summary: List users
+      description: Paginate through all users.
       operationId: fusillade.api.users.get_users
       security:
         - BearerAuth: []
@@ -260,6 +269,7 @@ paths:
   /v1/user:
     post:
       summary: Create a new user
+      description: Create a new user with the specified groups, roles, and iam policy.
       operationId: fusillade.api.users.post_user
       security:
         - BearerAuth: []
@@ -294,7 +304,8 @@ paths:
           description: Unexpected error
   /v1/user/{user_id}:
     get:
-      summary: Retrieve information about a user's status
+      summary: Retrieve information about a user
+      description: Retrieve information about the user's status and the policies attached.
       operationId: fusillade.api.users.get_user
       security:
         - BearerAuth: []
@@ -315,6 +326,8 @@ paths:
           description: Unexpected error
     put:
       summary: Modify the users status
+      description: Enable or disable a user. A disabled user will be return false for all evaluations with this user
+       as principal.
       operationId: fusillade.api.users.put_user
       security:
         - BearerAuth: []
@@ -333,6 +346,7 @@ paths:
   /v1/user/{user_id}/owns:
     get:
       summary: Retrieve the resources owned by the user
+      description: Paginate through a list of resource own by a user.
       operationId: fusillade.api.users.get_users_owns
       security:
         - BearerAuth: []
@@ -345,7 +359,7 @@ paths:
         - user
       responses:
         200:
-          description: all owned resources have been returned
+          description: All owned resources have been returned.
           content:
             application/json:
               schema:
@@ -361,6 +375,7 @@ paths:
   /v1/user/{user_id}/groups:
     get:
       summary: Retrieve group(s) a user is in.
+      description: Paginate through a list of groups a user is has membership.
       operationId: fusillade.api.users.get_users_groups
       security:
         - BearerAuth: []
@@ -385,6 +400,7 @@ paths:
           description: Unexpected error
     put:
       summary: Add or remove a user from group(s)
+      description: Modify which group(s) a user is a member.
       operationId: fusillade.api.users.put_users_groups
       security:
         - BearerAuth: []
@@ -415,6 +431,7 @@ paths:
   /v1/user/{user_id}/roles:
     get:
       summary: Retrieve roles a user is in.
+      description: Paginate through all roles a user is directly assigned.
       operationId: fusillade.api.users.get_users_roles
       security:
         - BearerAuth: []
@@ -439,6 +456,7 @@ paths:
           description: Unexpected error
     put:
       summary: Add or remove user from role(s)
+      description: Modify the role(s) a user is assigned.
       operationId: fusillade.api.users.put_users_roles
       security:
         - BearerAuth: []
@@ -469,6 +487,7 @@ paths:
   /v1/user/{user_id}/policy:
     put:
       summary: Modify policy
+      description: Modify or add the user's IAM policy.
       operationId: fusillade.api.users.put_user_policy
       security:
         - BearerAuth: []
@@ -494,6 +513,7 @@ paths:
   /v1/groups:
     get:
       summary: List groups
+      description: Paginate through all groups.
       operationId: fusillade.api.groups.get_groups
       security:
         - BearerAuth: []
@@ -518,6 +538,7 @@ paths:
   /v1/group:
     post:
       summary: Create a new group
+      description: Create a new group, attach an IAM policy and assign roles.
       operationId: fusillade.api.groups.post_group
       security:
         - BearerAuth: []
@@ -549,6 +570,7 @@ paths:
   /v1/group/{group_id}:
     get:
       summary: Get properties of a group
+      description: Get properties of a group. This includes the groups IAM policy.
       operationId: fusillade.api.groups.get_group
       security:
         - BearerAuth: []
@@ -569,6 +591,7 @@ paths:
         - group
     delete:
       summary: Remove Group from the system.
+      description: Remove all users, policies, and roles from the group, and delete the group.
       operationId: fusillade.api.groups.delete_group
       security:
         - BearerAuth: []
@@ -586,6 +609,7 @@ paths:
   /v1/group/{group_id}/roles:
     get:
       summary: Retrieve role(s) a group is in.
+      description: Paginate through all roles assigned to the group.
       operationId: fusillade.api.groups.get_groups_roles
       security:
         - BearerAuth: []
@@ -610,6 +634,7 @@ paths:
         - group
     put:
       summary: Add or remove a group from role(s).
+      description: Modify the role(s) assigned to a group.
       operationId: fusillade.api.groups.put_groups_roles
       security:
         - BearerAuth: []
@@ -640,6 +665,7 @@ paths:
   /v1/group/{group_id}/users:
     get:
       summary: Retrieve user in a group.
+      description: Paginate through all users in a group.
       operationId: fusillade.api.groups.get_group_users
       security:
         - BearerAuth: []
@@ -665,6 +691,7 @@ paths:
   /v1/group/{group_id}/policy:
     put:
       summary: Modify policy
+      description: Modify or create a policy attached to a group.
       operationId: fusillade.api.groups.put_group_policy
       security:
         - BearerAuth: []
@@ -690,6 +717,7 @@ paths:
   /v1/roles:
     get:
       summary: List roles
+      description: Paginate through all roles.
       operationId: fusillade.api.roles.get_roles
       security:
         - BearerAuth: []
@@ -714,6 +742,7 @@ paths:
   /v1/role:
     post:
       summary: Create a new role
+      description: Create a new role and attach a IAM policy
       operationId: fusillade.api.roles.post_role
       security:
         - BearerAuth: []
@@ -746,6 +775,7 @@ paths:
   /v1/role/{role_id}:
     get:
       summary: Get properties of a role
+      description: Get properties of a role.
       operationId: fusillade.api.roles.get_role
       security:
         - BearerAuth: []
@@ -767,6 +797,7 @@ paths:
   /v1/role/{role_id}/policy:
     put:
       summary: Modify policy
+      description: Modify the IAM policy attached to the role.
       operationId: fusillade.api.roles.put_role_policy
       security:
         - BearerAuth: []
