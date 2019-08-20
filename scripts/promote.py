@@ -101,7 +101,7 @@ def make_release_notes(src, dst) -> str:
         with open(args.release_notes, 'r') as file:
             r_notes = file.read()
     else:
-        result = _subprocess(['git', 'log', '--pretty=format:"%s"', f"{src}...{dst}"])
+        result = _subprocess(['git', 'log', '--pretty=format:"%s"', f"origin/{src}...origin/{dst}"])
         r_notes = "\n".join([f"- {i[1:-1]}" for i in result.split("\n")])
         if args.auto:
             with tempfile.TemporaryDirectory() as temp_path:
@@ -115,7 +115,8 @@ def make_release_notes(src, dst) -> str:
 
 
 def commit(src, dst):
-    print(_subprocess(['git', 'fetch', '--all']))
+    print(_subprocess(['git', 'remote', 'set-url', 'origin',
+                       f'https://{token}@github.com/HumanCellAtlas/fusillade.git']))
     print(_subprocess(['git', '-c', 'advice.detachedHead=false', 'checkout', f'origin/{src}']))
     print(_subprocess(['git', 'checkout', '-B', dst]))
     print(_subprocess(['git', 'push', '--force', 'origin', dst]))
@@ -173,6 +174,7 @@ else:
 if __name__ == "__main__":
     src, dst, prerelease = release_map[args.stage]
     print(Release_msg.format(src=src, dst=dst))
+    print(_subprocess(['git', 'fetch', '--all']))
     check_working_tree()
     check_diff(src, dst)
     release_notes = make_release_notes(src, dst)

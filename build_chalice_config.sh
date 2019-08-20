@@ -20,12 +20,14 @@ export lambda_name="${app_name}-${stage}"
 export account_id=$(aws sts get-caller-identity | jq -r .Account)
 
 export lambda_arn=$(aws lambda list-functions | jq -r '.Functions[] | select(.FunctionName==env.lambda_name) | .FunctionArn')
+echo lambda_arn= $lambda_arn
 if [[ -z $lambda_arn ]]; then
     echo "Lambda function $lambda_name not found, resetting Chalice config"
     rm -f "$deployed_json"
 else
     api_arn=$(aws lambda get-policy --function-name "$lambda_name" | jq -r .Policy | jq -r '.Statement[0].Condition.ArnLike["AWS:SourceArn"]')
     export api_id=$(echo "$api_arn" | cut -d ':' -f 6 | cut -d '/' -f 1)
+    echo api_id= $api_id
     jq -n ".$stage.api_handler_name = env.lambda_name | \
            .$stage.api_handler_arn = env.lambda_arn | \
            .$stage.rest_api_id = env.api_id | \
@@ -52,11 +54,16 @@ for var in $(echo $env_json | jq -r keys[]); do
 done
 
 if [[ ${CI:-} == true ]]; then
+	echo using CI configuration
     account_id=$(aws sts get-caller-identity | jq -r .Account)
     export iam_role_arn="arn:aws:iam::${account_id}:role/fusillade-${stage}"
     cat "$config_json" | jq .manage_iam_role=false | jq .iam_role_arn=env.iam_role_arn | sponge "$config_json"
 fi
+echo --- config.json ---
+cat $config_json
 
 cp "$policy_json" "$stage_policy_json"
 export secret_arn=$(aws secretsmanager describe-secret --secret-id ${FUS_SECRETS_STORE}/${FUS_DEPLOYMENT_STAGE}/oauth2_config | jq .ARN)
 cat "$stage_policy_json" | jq .Statement[2].Resource[0]=$secret_arn | sponge "$stage_policy_json"
+echo --- $stage_policy_json ---
+cat $stage_policy_json

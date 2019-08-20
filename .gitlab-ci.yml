@@ -9,11 +9,11 @@ stages:
   - test
   - deploy
   - integration_test
-  - promote_integration
-  - promote_staging
-  - promote_production
+  - release
 
 before_script:
+  - export COMMITS_URL=${GITHUB_API}/repos/HumanCellAtlas/fusillade/commits
+  - if not [[ CI_COMMIT_SHA == $(http GET $COMMITS_URL sha==$CI_COMMIT_REF_NAME | jq -r '.[0]["sha"]') ]]; then exit  1; fi
   - virtualenv ~/venv
   - source ~/venv/bin/activate
   - pip install -r requirements-dev.txt
@@ -40,6 +40,8 @@ unit_tests:
   extends: .tests
   script:
     - make unittest
+  only:
+    - master
 
 deploy:
   stage: deploy
@@ -65,14 +67,17 @@ integration_test:
   except:
     - schedules
 
-.promote_integration:
-  stage: promote_integration
+.release:
+  stage: release
+  script:
+    - ${RELEASE_COMMAND}
   except:
-    - tags
     - schedules
+  when: manual
+  allow_failure: true
 
 integration_major:
-  stage: promote_integration
+  extends: .release
   script:
     - scripts/promote.py integration --auto --release major
   only:
@@ -80,47 +85,41 @@ integration_major:
   when: manual
 
 integration_minor:
-  stage: promote_integration
-  script:
-    - scripts/promote.py integration --auto --release minor
+  extends: .release
+  variables:
+    RELEASE_COMMAND: scripts/promote.py integration --auto --release minor
   only:
     - master
   when: manual
 
 integration_patch:
-  stage: promote_integration
-  script:
-    - scripts/promote.py integration --auto --release patch
+  extends: .release
+  variables:
+    RELEASE_COMMAND: scripts/promote.py integration --auto --release patch
   only:
     - master
   when: manual
 
 integration_build:
-  stage: promote_integration
-  script:
-    - scripts/promote.py integration --auto --release build
+  extends: .release
+  variables:
+    RELEASE_COMMAND: scripts/promote.py integration --auto --release build
   only:
     - master
   when: manual
 
 promote_staging:
-  stage: promote_staging
-  except:
-    - tags
-    - schedules
-  script:
-    - scripts/promote.py staging --auto
+  extends: .release
+  variables:
+    RELEASE_COMMAND: scripts/promote.py staging --auto
   only:
     - integration
   when: manual
 
 promote_production:
-  stage: promote_staging
-  except:
-    - tags
-    - schedules
-  script:
-    - scripts/promote.py production --auto
+  extends: .release
+  variables:
+    RELEASE_COMMAND: scripts/promote.py production --auto
   only:
     - staging
   when: manual
