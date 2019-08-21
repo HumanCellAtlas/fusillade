@@ -93,13 +93,13 @@ for the expected format.
 `$ ./scripts/populate_lambda_ssm_parameters.py`
 `$ ./scripts/populate_deployment_environment.py example -f ./deployments/example/environment.local`
 
+## Deploy Fusillade
+`make deploy`
+
 ## Deploy Infrastructure 
 Set `FUS_TERRAFORM_BACKEND_BUCKET_TEMPLATE` in your environment to an AWS S3 bucket to store your terraform state files.
 run `make plan-infra` to verify what changes need to be made.
 If you're ok with the changes run `make deploy-infra`.
-
-## Deploy Fusillade
-`make deploy`
 
 ### Environment Variables
 - **DEPLOYMENT** - used to set the current deployment of fusillade to target. This determines what deployment 
