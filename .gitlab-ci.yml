@@ -43,8 +43,13 @@ unit_tests:
   only:
     - master
 
-deploy:
+.deploy:
   stage: deploy
+  except:
+    - schedules
+
+deploy_branch:
+  extends: .deploy
   script:
     - scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
     - make deploy
@@ -52,8 +57,14 @@ deploy:
     - master
     - integration
     - staging
-  except:
-    - schedules
+
+deploy_name:
+  extends: .deploy
+  script:
+    - scripts/populate_deployment_environment.py testing -p > environment.local
+    - make deploy
+  only:
+    - staging
 
 integration_test:
   stage: integration_test
