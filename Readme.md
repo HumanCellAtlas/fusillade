@@ -78,7 +78,7 @@ To do this, your application should define an access control model consisting of
 ## Set Secrets
 Fusillade uses AWS Secret Store for its secrets. You can set secrets using *./scripts/set_secrets*. For example:
 
- `cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/oauth2_config.json | ./scripts/set_secret.py --secret-name oauth2_config`
+ `$ cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/oauth2_config.json | ./scripts/set_secret.py --secret-name oauth2_config`
  
  The following secrets are use by Fusillade:
 
@@ -89,14 +89,17 @@ for the expected format. This secret can also be set using `make set_oauth2_conf
 only required for running tests See [test_service_accounts.json](../master/deployment/example/oauth2_config.example.json) 
 for the expected format.
 
+## Set Parameter Stores
+`$ ./scripts/populate_lambda_ssm_parameters.py`
+`$ ./scripts/populate_deployment_environment.py example -f ./deployments/example/environment.local`
+
+## Deploy Fusillade
+`make deploy`
 
 ## Deploy Infrastructure 
 Set `FUS_TERRAFORM_BACKEND_BUCKET_TEMPLATE` in your environment to an AWS S3 bucket to store your terraform state files.
 run `make plan-infra` to verify what changes need to be made.
 If you're ok with the changes run `make deploy-infra`.
-
-## Deploy Fusillade
-`make deploy`
 
 ### Environment Variables
 - **DEPLOYMENT** - used to set the current deployment of fusillade to target. This determines what deployment 
