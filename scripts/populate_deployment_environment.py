@@ -34,7 +34,7 @@ if __name__ == "__main__":
                         metavar='stage',
                         type=str,
                         help="The stage you would like to upload the environment variables for.",
-                        choices=["master", "dev", "integration", "staging", "prod"])
+                        choices=["master", "testing", "dev", "integration", "staging", "prod"])
     parser.add_argument("-p", "--print",
                         default=False,
                         action="store_true",
