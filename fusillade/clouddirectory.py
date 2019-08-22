@@ -1751,16 +1751,15 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
             next_token=next_token)
         return {'users': results}, next_token
 
-    def add_users(self, users: List['User']) -> None:
+    def add_users(self, users: List[str]) -> None:
         if users:
-            User.exists([user.name for user in users])
-            operations = [i for i in itertools.chain(*[user.add_groups([self.name], False) for user in users])]
+            operations = [i for i in itertools.chain(*[User(user).add_groups([self.name], False) for user in users])]
             self.cd.batch_write(operations)
             logger.info(dict(message="Adding users to group",
                              object=dict(type=self.object_type, path_name=self._path_name),
-                             users=[user._path_name for user in users]))
+                             users=[user for user in users]))
 
-    def remove_users(self, users: List['User']) -> None:
+    def remove_users(self, users: List[str]) -> None:
         """
         Removes users from this group.
 
@@ -1768,8 +1767,7 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
         :return:
         """
         if users:
-            User.exists([user.name for user in users])
-            operations = [i for i in itertools.chain(*[user.remove_groups([self.name], False) for user in users])]
+            operations = [i for i in itertools.chain(*[User(user).remove_groups([self.name], False) for user in users])]
             self.cd.batch_write(operations)
             logger.info(dict(message="Removing users from group",
                              object=dict(type=self.object_type, path_name=self._path_name),

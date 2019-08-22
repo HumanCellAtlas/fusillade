@@ -59,3 +59,10 @@ def put_groups_roles(token_info: dict, group_id: str):
 def delete_group(token_info: dict, group_id):
     Group(group_id).delete_node()
     return make_response(f"{group_id} deleted.", 200)
+
+
+@authorize(['fus:PutGroupUsers'], ['arn:hca:fus:*:*:group/{group_id}/'], ['group_id'], {'fus:group_id': 'group_id'})
+def put_groups_users(token_info: dict, group_id):
+    group = Group(group_id)
+    resp, code = _modify_users(group, request)
+    return make_response(jsonify(resp), code)

@@ -1,6 +1,6 @@
 import requests
 
-from fusillade.clouddirectory import cd_client, Group, Role
+from fusillade.clouddirectory import cd_client, Group, Role, User
 from fusillade.errors import FusilladeLimitException, FusilladeHTTPException
 
 
@@ -43,6 +43,27 @@ def _modify_groups(cloud_node, request):
         code = 304
     except FusilladeLimitException as ex:
         raise FusilladeHTTPException(detail=ex.reason, status=requests.codes.conflict, title="Conflict")
+    else:
+        resp['msg'] = f"{cloud_node.object_type}'s groups successfully modified."
+        code = 200
+    return resp, code
+
+
+def _modify_users(cloud_node, request):
+    action = request.args['action']
+    resp = {'users': request.json['users'],
+            'action': action,
+            f'{cloud_node.object_type}_id': cloud_node.name
+            }
+    try:
+        User.exists(request.json['users'])
+        if action == 'add':
+            cloud_node.add_users(request.json['users'])
+        elif action == 'remove':
+            cloud_node.remove_users(request.json['users'])
+    except cd_client.exceptions.BatchWriteException as ex:
+        resp['msg'] = ex.response['Error']['Message']
+        code = 304
     else:
         resp['msg'] = f"{cloud_node.object_type}'s groups successfully modified."
         code = 200

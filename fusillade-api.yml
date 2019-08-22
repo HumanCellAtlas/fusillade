@@ -688,6 +688,38 @@ paths:
           description: Unexpected error
       tags:
         - group
+    put:
+      summary: Add or remove a group from user(s).
+      description: Modify the user(s) assigned to a group.
+      operationId: fusillade.api.groups.put_groups_users
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/group_id'
+        - $ref: '#/components/parameters/action'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                users:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items:
+                    type: string
+      responses:
+        200:
+          description: Action successful
+        401:
+          $ref: '#/components/responses/401'
+        304:
+          description: One or more users is already in the group.
+        default:
+          description: Unexpected error
+      tags:
+        - group
   /v1/group/{group_id}/policy:
     put:
       summary: Modify policy

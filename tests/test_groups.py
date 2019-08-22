@@ -66,11 +66,11 @@ class TestGroup(unittest.TestCase):
 
     def test_users(self):
         emails = ["test@test.com", "why@not.com", "hello@world.com"]
-        users = [User.provision_user(email) for email in emails]
+        users = [User.provision_user(email).name for email in emails]
         with self.subTest("A user is added to the group when add_users is called"):
             group = Group.create("test")
             user = User.provision_user("another@place.com")
-            group.add_users([user])
+            group.add_users([user.name])
             actual_users = [i for i in group.get_users_iter()]
             self.assertEqual(len(actual_users), 1)
             self.assertEqual(User(object_ref=actual_users[0]).name, user.name)
@@ -95,7 +95,7 @@ class TestGroup(unittest.TestCase):
             group = Group.create("test4")
             user = User("ghost_user@nowhere.com")
             try:
-                group.add_users([user])
+                group.add_users([user.name])
             except cd_client.exceptions.ResourceNotFoundException:
                 pass
 
