@@ -17,7 +17,7 @@ sys.path.insert(0, pkg_root)  # noqa
 from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_statement
 from tests.data import TEST_NAMES_NEG, TEST_NAMES_POS
-from fusillade.clouddirectory import Role
+from fusillade.clouddirectory import Role, Group, User
 
 
 class TestRoleApi(BaseAPITest, unittest.TestCase):
@@ -307,6 +307,52 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
                 resp = self.app.put(url.url, data=data, headers=headers)
                 self.assertEqual(test['expected_resp'], resp.status_code)
 
+
+    def test_delete_role(self):
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(service_accounts['admin']))
+        role_id = "role_1"
+
+        with self.subTest("Role delete with users and groups."):
+            group = "group_0"
+            user = "user_1"
+            policy = create_test_statement("policy_04")
+
+            resp = self.app.post(f'/v1/role',
+                     headers=headers,
+                     data=json.dumps({
+                         "role_id": role_id,
+                         "policy": policy
+                     }))
+            resp.raise_for_status()
+            resp = self.app.post(f'/v1/group',
+                     headers=headers,
+                     data=json.dumps({
+                         "group_id": group,
+                         "roles": [role_id]
+                     }))
+            resp.raise_for_status()
+            resp = self.app.post(f'/v1/user',
+                     headers=headers,
+                     data=json.dumps({
+                         "user_id": user,
+                         "roles": [role_id]}))
+            resp.raise_for_status()
+
+            resp = self.app.delete(f'/v1/role/{role_id}', headers=headers)
+            self.assertEqual(resp.status_code, 200)
+
+            resp = self.app.get(f'/v1/user/{user}/roles', headers=headers)
+            roles = json.loads(resp.body)['roles']
+            self.assertNotIn(role_id, roles)
+
+            resp = self.app.get(f'/v1/group/{group}/roles', headers=headers)
+            roles = json.loads(resp.body)['roles']
+            self.assertNotIn(role_id, roles)
+
+        with self.subTest("delete a role that does not exist."):
+            resp = self.app.delete(f'/v1/role/{role_id}', headers=headers)
+            self.assertEqual(resp.status_code, 404)
 
 if __name__ == '__main__':
     unittest.main()

@@ -30,3 +30,9 @@ def put_role_policy(token_info: dict, role_id: str):
     role = Role(role_id)
     role.set_policy(request.json['policy'])
     return make_response('Role policy updated.', 200)
+
+
+@authorize(['fus:DeleteRole'], ['arn:hca:fus:*:*:role/{role_id}/'], ['role_id'])
+def delete_role(token_info: dict, role_id):
+    Role(role_id).delete_node()
+    return make_response(f"{role_id} deleted.", 200)

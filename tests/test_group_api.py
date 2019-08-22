@@ -229,6 +229,39 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
                     resp = self.app.get(f'/v1/group/user_default/users', headers=headers)
                     resp.raise_for_status()
 
+    def test_delete_group(self):
+        headers = {'Content-Type': "application/json"}
+        headers.update(get_auth_header(service_accounts['admin']))
+
+        role = Role.create("role_0").name
+        user = User.provision_user("user_1").name
+        policy = create_test_statement("policy_04")
+        group_id = "group_1"
+
+        with self.subTest("Group delete with users and roles."):
+
+            resp = self.app.post(f'/v1/group',
+                     headers=headers,
+                     data=json.dumps({
+                         "group_id": group_id,
+                         "roles": [role],
+                         "policy": policy
+                     }))
+            resp.raise_for_status()
+            resp = self.app.put(f'/v1/user/{user}/groups?action=add',
+                     headers=headers,
+                     data=json.dumps({"groups": [group_id]}))
+            resp.raise_for_status()
+            resp = self.app.delete(f'/v1/group/{group_id}', headers=headers)
+            self.assertEqual(resp.status_code, 200)
+            resp = self.app.get(f'/v1/user/{user}/groups', headers=headers)
+            groups = json.loads(resp.body)['groups']
+            self.assertNotIn(group_id, groups)
+
+        with self.subTest("delete a group that does not exist."):
+            resp = self.app.delete(f'/v1/group/{group_id}', headers=headers)
+            self.assertEqual(resp.status_code, 404)
+
 
 if __name__ == '__main__':
     unittest.main()
