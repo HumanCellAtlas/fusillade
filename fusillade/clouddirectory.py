@@ -640,21 +640,31 @@ class CloudDirectory:
         See details on deletion requirements for more info
         https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_access_objects.html
         """
-        [self.delete_policy(policy_ref) for policy_ref in self.list_object_policies(
-            obj_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)]
-        self.batch_write(
-            [self.batch_detach_object(parent_ref, link_name) for parent_ref, link_name in self.list_object_parents(
-                obj_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
-        self.batch_write([self.batch_detach_typed_link(i) for i in self.list_incoming_typed_links(
-            object_ref=obj_ref,
-            ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name
-        )])
-        self.batch_write([self.batch_detach_typed_link(i) for i in self.list_outgoing_typed_links(
-            obj_ref,
-            ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)])
+        object_id = f"${self.get_object_information(obj_ref)['ObjectIdentifier']}"
+        params = dict(object_ref=object_id, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
+        [self.delete_policy(policy_ref) for policy_ref in self.list_object_policies(**params)]
+        self.batch_write([
+            self.batch_detach_object(parent_ref, link_name)
+            for parent_ref, link_name in
+            self.list_object_parents(**params)])
+        self.batch_write([
+            self.batch_detach_typed_link(i)
+            for i in
+            self.list_incoming_typed_links(**params)])
+        self.batch_write([
+            self.batch_detach_typed_link(i)
+            for i in
+            self.list_outgoing_typed_links(**params)])
+        try:
+            self.batch_write([
+                self.batch_detach_object(object_id, link_name)
+                for link_name, _ in
+                self.list_object_children(**params)])
+        except cd_client.exceptions.NotNodeException:
+            pass
         retry(**cd_read_retry_parameters)(cd_client.delete_object)(
             DirectoryArn=self._dir_arn,
-            ObjectReference={'Selector': obj_ref})
+            ObjectReference={'Selector': object_id})
 
     @staticmethod
     def batch_detach_policy(policy_ref: str, object_ref: str):
@@ -1174,6 +1184,12 @@ class CloudNode:
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeNotFoundException(detail="Resource does not exist.")
         return dict([(attr['Key']['Name'], attr['Value'].popitem()[1]) for attr in resp['Attributes']])
+
+    def delete_node(self):
+        try:
+            self.cd.delete_object(self.object_ref)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
 
     @classmethod
     def list_all(cls, next_token: str, per_page: int):

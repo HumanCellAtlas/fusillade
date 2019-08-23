@@ -794,6 +794,23 @@ paths:
           description: Unexpected error
       tags:
         - role
+    delete:
+      summary: Remove Role from the system.
+      description: Remove the role from all users and groups, and finally delete the role.
+      operationId: fusillade.api.roles.delete_role
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/role_id'
+      responses:
+        200:
+          description: Role was deleted
+        401:
+          $ref: '#/components/responses/401'
+        default:
+          description: Unexpected error
+      tags:
+        - role
   /v1/role/{role_id}/policy:
     put:
       summary: Modify policy
