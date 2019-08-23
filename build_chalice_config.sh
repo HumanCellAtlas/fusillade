@@ -56,7 +56,7 @@ done
 if [[ ${CI:-} == true ]]; then
 	echo using CI configuration
     account_id=$(aws sts get-caller-identity | jq -r .Account)
-    export iam_role_arn="arn:aws:iam::${account_id}:role/fusillade-${stage}"
+    export iam_role_arn="arn:aws:iam::${account_id}:role/fusillade-${stage}-api_handler"
     cat "$config_json" | jq .manage_iam_role=false | jq .iam_role_arn=env.iam_role_arn | sponge "$config_json"
 fi
 echo --- config.json ---
