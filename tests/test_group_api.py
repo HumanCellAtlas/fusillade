@@ -279,7 +279,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
                 ]
             }
         ]
-        for i in range(len(tests)):
+        for i, test in enumerate(tests):
             test = tests[i]
             group_id = f"Group{i}"
             with self.subTest(test['json_request_body']):
