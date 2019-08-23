@@ -26,6 +26,7 @@ To do this, your application should define an access control model consisting of
 - A naming schema for service actions (for example, `GetWidget`, `CreateFolder`, `DeleteAppointment`, `UpdateDocument`)
 - A naming schema for resources in the following format: `arn:org-name:service-name:*:*:path/to/resource`
 - A default policy assigned to new users, for example:
+
   ```json
   {
     "Statement": [
@@ -43,14 +44,17 @@ To do this, your application should define an access control model consisting of
   ```
 
 ## AWS Cloud Architecture
-![AWS Cloud Architecture](https://www.lucidchart.com/publicSegments/view/b3470977-3924-4fb3-a07f-ce97be59dac1/image.png)
-## Cloud Directory Structure
-![Cloud Directory Structure](https://www.lucidchart.com/publicSegments/view/3f6f3cdc-7429-460c-b45f-33ae35d9e07c/image.png)
 
+![AWS Cloud Architecture](https://www.lucidchart.com/publicSegments/view/b3470977-3924-4fb3-a07f-ce97be59dac1/image.png)
+
+## Cloud Directory Structure
+
+![Cloud Directory Structure](https://www.lucidchart.com/publicSegments/view/3f6f3cdc-7429-460c-b45f-33ae35d9e07c/image.png)
 
 # Installing and configuring Fusillade
 
 ## Setup Environment
+
 - pip install -r ./requirements-dev
 - brew install jq
 - brew install pandoc
@@ -63,7 +67,7 @@ To do this, your application should define an access control model consisting of
 - Local environment variables can be set in *environment.local* for convenience. If you use "source environment" and it 
   will set environment variables from *environment.local* after *environment* variables have been set, if you choose to 
   set them. If using multiple deployment with unique *environment.local* files, the *environment.local* file in the top
-  directory of *fusillade* take precedence over *environment.local* in *fusillade/deployments/**
+  directory of *fusillade* take precedence over *environment.local* in *fusillade/deployments/*
 - Populate `FUS_ADMIN_EMAILS` with a list of admins to assigned upon creating the fusillade deployment. This
   is only used when fusillade is first deployed to create the first users. Afterwards this variable has no effect. If
   more admins are required, then assign a user the admin role.
@@ -78,38 +82,47 @@ To do this, your application should define an access control model consisting of
 ## Set Secrets
 Fusillade uses AWS Secret Store for its secrets. You can set secrets using *./scripts/set_secrets*. For example:
 
- `$ cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/oauth2_config.json | ./scripts/set_secret.py --secret-name oauth2_config`
+```
+$ cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/oauth2_config.json | ./scripts/set_secret.py --secret-name oauth2_config
+```
  
  The following secrets are use by Fusillade:
 
 * **oauth2_config** - contains the fields needed to proxy an OIDC provider. Populate this file with the OIDC providers 
-you'd like to use to authenticate users. See [oauth2_config.json](../master/deployment/example/oauth2_config.example.json) 
-for the expected format. This secret can also be set using `make set_oauth2_config`.
+  you'd like to use to authenticate users. See [oauth2_config.json](../master/deployment/example/oauth2_config.example.json) 
+  for the expected format. This secret can also be set using `make set_oauth2_config`.
 * **test_service_accounts Optional** - contains google service accounts to test users access and admin access. This 
-only required for running tests See [test_service_accounts.json](../master/deployment/example/oauth2_config.example.json) 
-for the expected format.
+  only required for running tests See [test_service_accounts.json](../master/deployment/example/oauth2_config.example.json) 
+  for the expected format.
 
 ## Set Parameter Stores
-`$ ./scripts/populate_lambda_ssm_parameters.py`
-`$ ./scripts/populate_deployment_environment.py example -f ./deployments/example/environment.local`
+
+```
+$ ./scripts/populate_lambda_ssm_parameters.py
+$ ./scripts/populate_deployment_environment.py example -f ./deployments/example/environment.local
+```
 
 ## Deploy Fusillade
-`make deploy`
+
+```
+make deploy
+```
 
 ## Deploy Infrastructure 
+
 Set `FUS_TERRAFORM_BACKEND_BUCKET_TEMPLATE` in your environment to an AWS S3 bucket to store your terraform state files.
 run `make plan-infra` to verify what changes need to be made.
 If you're ok with the changes run `make deploy-infra`.
 
 ### Environment Variables
+
 - **DEPLOYMENT** - used to set the current deployment of fusillade to target. This determines what deployment 
-variables to
- source from `environment`. 
+  variables to source from `environment`. 
 - **GITHUB_TOKEN_PATH** - Point to the location of a file in your local directory containing a github token used for 
- promoting fusillade branches and publishing new version. If GITHUB_TOKEN_SECRET_NAME is also present, GITHUB_TOKEN_PATH
- take precedence over GITHUB_TOKEN_SECRET_NAME.
+  promoting fusillade branches and publishing new version. If GITHUB_TOKEN_SECRET_NAME is also present, GITHUB_TOKEN_PATH
+  take precedence over GITHUB_TOKEN_SECRET_NAME.
 - **GITHUB_TOKEN_SECRET_NAME** - Point to the location of an AWS parameters key containing a github token used for 
- promoting fusillade branches and publishing new version.
+  promoting fusillade branches and publishing new version.
  
 # Using Fusillade as a Service
 
@@ -119,9 +132,9 @@ The following are created on deployment:
 * `/user/{FUS_ADMIN_EMAILS}` - a user is created for each email in `FUS_ADMIN_EMAILS` and assigned 
   `/role/fusillade_admin`.
 * `/group/user_default` - a group assigned to all users upon creation. It has the `/role/default_user` attached. Add 
- new roles to this group to apply that role to all users.
+  new roles to this group to apply that role to all users.
 * `/user/public` -  a user for evaluating policies without an authenticated principle. `/user/public` is apart of 
- `/group/user_default`. Modify the roles attached to `/group/user_default` to modify what unauthenticated user can do.
+  `/group/user_default`. Modify the roles attached to `/group/user_default` to modify what unauthenticated user can do.
 
 **Note:** All of these resources can be modified using the fusillade API after deployment.
 
@@ -129,26 +142,31 @@ The following are created on deployment:
 to a user.
 
 ## Users
+
 A user can represent a service account, or a personal account. They can be explicitly created or created on demand when
 a user's permissions are first evaluated. A user is automatically added to `/group/user_default` when created. All other
 roles and groups must be added using the fusillade API.
 
 ## Roles
+
 Roles contains policies that are used to determine what a user can do. A role can either be directly applied to a 
 user or indirectly applied to a user by applying the role to a group the user is a member.
 
 ## Groups
+
 Groups are used to manage the roles attached to multiple users. 
 
 ## Policies
+
 Policies can attached to a user, group, or role. The preferred method for attaching policies is to create a role with
- that policy then attach that role to a group and assign users to that group. This makes it easier to manage many users
- with fewer policies.
+that policy then attach that role to a group and assign users to that group. This makes it easier to manage many users
+with fewer policies.
  
 When the permissions of a user is evaluated, all policies attached to a user, the user's groups, and the user's are 
 used.
   
 ### Defining Policy
+
 Uses [AWS IAM Policy grammar](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html) to 
 define your services permissions.
 For resource names use the same format as [AWS Service NameSpace](https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html).
@@ -166,6 +184,7 @@ In the same way AWS IAM provides [context keys available to all services](https:
 - `fus:user_email` - is the email of the user. This can be used to restrict permission based on the users email.
 
 ## Specifics For DCP
+
 The fusillade staging environment should be used for developing other DCP components. For components using the 
 fusillade staging environment to test your dev environment, append all roles and groups created with *dev*. For example
 For example DSS_ADMIN wouldbe DSS_ADMIN_DEV. This is to prevent name collisions between dev and staging. 
@@ -174,6 +193,7 @@ For example DSS_ADMIN wouldbe DSS_ADMIN_DEV. This is to prevent name collisions 
 staging and dev environment.
 
 ### Resource
+
 For resource set the *partition* to `hca`, set your *service* name to the name of your component, and set the 
 *account-id* to the deployment stage. All other fields can be used as needed or use \* for wild cards. resource names
  are case sensitive.
@@ -198,6 +218,7 @@ For resource set the *partition* to `hca`, set your *service* name to the name o
 ### GCP
 
 # Service access control
+
 To use Fusillade, your service must itself be authenticated and authorized. The access control model for this depends on
 how you're using Fusillade.
 
@@ -214,9 +235,11 @@ write permissions data. The Fusillade service administrator configures the Fusil
 service configuration.
 
 # How To
+
 ## Upgrade Cloud Directory Schema
-1. Run `make check_directory_schema` to check if your local schema matches the the published schema.
-1. If the published schema does not match your local run `make upgrade_directory_schema`
+
+1. Run `make check_directory_schema` to check if your local schema matches the published schema.
+1. If the published schema does not match your local, run `make upgrade_directory_schema`.
 
 ## Links
 
@@ -225,9 +248,11 @@ service configuration.
 * [Package distribution (PyPI)](https://pypi.python.org/pypi/fusillade)
 
 # Bugs
+
 Please report bugs, issues, feature requests, etc. on [GitHub](https://github.com/HumanCellAtlas/fusillade/issues).
 
 # License
+
 Licensed under the terms of the [MIT License](https://opensource.org/licenses/MIT).
 
 [![Travis CI](https://travis-ci.org/HumanCellAtlas/fusillade.svg)](https://travis-ci.org/HumanCellAtlas/fusillade)
