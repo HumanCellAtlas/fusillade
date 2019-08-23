@@ -648,10 +648,6 @@ class CloudDirectory:
             for parent_ref, link_name in
             self.list_object_parents(**params)])
         self.batch_write([
-            self.batch_detach_object(parent_ref, link_name)
-            for parent_ref, link_name in
-            self.list_object_parents(**params)])
-        self.batch_write([
             self.batch_detach_typed_link(i)
             for i in
             self.list_incoming_typed_links(**params)])
