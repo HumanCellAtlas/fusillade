@@ -1757,7 +1757,7 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
             self.cd.batch_write(operations)
             logger.info(dict(message="Adding users to group",
                              object=dict(type=self.object_type, path_name=self._path_name),
-                             users=[user for user in users]))
+                             users=users))
 
     def remove_users(self, users: List[str]) -> None:
         """
