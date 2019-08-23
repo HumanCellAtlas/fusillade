@@ -689,7 +689,7 @@ paths:
       tags:
         - group
     put:
-      summary: Add or remove a group from user(s).
+      summary: Add or remove a user(s) from a group.
       description: Modify the user(s) assigned to a group.
       operationId: fusillade.api.groups.put_groups_users
       security:

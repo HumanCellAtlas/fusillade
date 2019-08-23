@@ -343,7 +343,7 @@ class CloudDirectory:
             kwargs["NextToken"] = next_token
         if paged:
             resp = func(**kwargs)
-            return [i for i in resp[key]], resp.get("NextToken")
+            return list(resp[key]), resp.get("NextToken")
         else:
             return _paging_loop(func, key, **kwargs)
 
@@ -1753,7 +1753,7 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
 
     def add_users(self, users: List[str]) -> None:
         if users:
-            operations = [i for i in itertools.chain(*[User(user).add_groups([self.name], False) for user in users])]
+            operations = list(itertools.chain(*[User(user).add_groups([self.name], False) for user in users]))
             self.cd.batch_write(operations)
             logger.info(dict(message="Adding users to group",
                              object=dict(type=self.object_type, path_name=self._path_name),
@@ -1767,7 +1767,7 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
         :return:
         """
         if users:
-            operations = [i for i in itertools.chain(*[User(user).remove_groups([self.name], False) for user in users])]
+            operations = list(itertools.chain(*[User(user).remove_groups([self.name], False) for user in users]))
             self.cd.batch_write(operations)
             logger.info(dict(message="Removing users from group",
                              object=dict(type=self.object_type, path_name=self._path_name),
