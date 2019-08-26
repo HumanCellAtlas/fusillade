@@ -280,26 +280,15 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
             }
         ]
         for i, test in enumerate(tests):
-            test = tests[i]
-            group_id = f"Group{i}"
+            group_id = Group.create(f"Group{i}").name
             with self.subTest(test['json_request_body']):
                 data = json.dumps(test['json_request_body'])
                 headers = {'Content-Type': "application/json"}
                 headers.update(get_auth_header(service_accounts['admin']))
-                url = furl(f'/v1/group/{group_id}/users/')
-                query_params = {
-                    'group_id': group_id,
-                    'action': test['action']
-                }
-                url.add(query_params=query_params)
-                group = Group.create(group_id)
                 if test['action'] == 'remove':
-                    _url = furl(f'/v1/group/{group_id}/users/',
-                                query_params={
-                                    'group_id': group_id,
-                                    'action': 'add'
-                                })
-                    resp = self.app.put(_url.url, headers=headers, data=data)
+                    url = furl(f'/v1/group/{group_id}/users', query_params={'action': 'add'})
+                    resp = self.app.put(url.url, headers=headers, data=data)
+                url = furl(f'/v1/group/{group_id}/users', query_params={'action': test['action']})
                 resp = self.app.put(url.url, headers=headers, data=data)
                 self.assertEqual(test['responses'][0]['code'], resp.status_code)
                 resp = self.app.put(url.url, headers=headers, data=data)
