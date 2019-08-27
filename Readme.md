@@ -105,7 +105,8 @@ $ ./scripts/populate_deployment_environment.py example -f ./deployments/example/
 ## Deploy Fusillade
 
 ```
-make deploy
+$ scripts/populate_deployment_environment.py example -p > environment.local
+$ make deploy
 ```
 
 ## Deploy Infrastructure 
