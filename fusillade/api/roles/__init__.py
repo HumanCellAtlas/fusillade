@@ -2,14 +2,14 @@ from flask import request, make_response, jsonify
 
 from fusillade import Role, Config
 from fusillade.api.paging import get_next_token, get_page
-from fusillade.utils.authorize import authorize
+from fusillade.utils.authorize import authorize, get_email_claim
 
 
 @authorize(['fus:PostRole'], ['arn:hca:fus:*:*:role'])
 def post_role(token_info: dict):
     json_body = request.json
     Role.create(json_body['role_id'], statement=json_body.get('policy'),
-                creator=token_info[Config.oidc_email_claim])
+                creator=get_email_claim(token_info))
     return make_response(f"New role {json_body['role_id']} created.", 201)
 
 
