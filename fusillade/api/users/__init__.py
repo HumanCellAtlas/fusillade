@@ -3,14 +3,14 @@ from flask import request, make_response, jsonify
 from fusillade import User, Config
 from fusillade.api._helper import _modify_roles, _modify_groups
 from fusillade.api.paging import get_next_token, get_page
-from fusillade.utils.authorize import authorize
+from fusillade.utils.authorize import authorize, get_email_claim
 
 
 @authorize(['fus:PostUser'], ['arn:hca:fus:*:*:user'])
 def post_user(token_info: dict):
     json_body = request.json
     User.provision_user(json_body['user_id'], statement=json_body.get('policy'),
-                        creator=token_info[Config.oidc_email_claim],
+                        creator=get_email_claim(token_info),
                         groups=json_body.get('groups', []),
                         roles=json_body.get('roles', []))
     return make_response(jsonify({'msg': f"{json_body['user_id']} created."}), 201)
