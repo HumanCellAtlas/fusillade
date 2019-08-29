@@ -65,6 +65,6 @@ def _modify_users(cloud_node, request):
         resp['msg'] = ex.response['Error']['Message']
         code = 304
     else:
-        resp['msg'] = f"{cloud_node.object_type}'s groups successfully modified."
+        resp['msg'] = f"{cloud_node.object_type}'s users successfully modified."
         code = 200
     return resp, code
