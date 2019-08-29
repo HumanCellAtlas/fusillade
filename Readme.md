@@ -82,7 +82,7 @@ To do this, your application should define an access control model consisting of
 ## Set Secrets
 Fusillade uses AWS Secret Store for its secrets. You can set secrets using *./scripts/set_secrets*. For example:
 
-```
+```bash
 $ cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/oauth2_config.json | ./scripts/set_secret.py --secret-name oauth2_config
 ```
  
@@ -97,15 +97,26 @@ $ cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/oauth2_config.json | ./scripts/set_s
 
 ## Set Parameter Stores
 
-```
+Upload parameter used in the lambdas to AWS SSM.
+```bash
 $ ./scripts/populate_lambda_ssm_parameters.py
-$ ./scripts/populate_deployment_environment.py example -f ./deployments/example/environment.local
+```
+
+Upload a file containing the environment variables used for a specific deployment to AWS SSM.  
+```bash
+$ ./scripts/populate_deployment_environment.py example --file ./deployments/example/environment.local
 ```
 
 ## Deploy Fusillade
-
+Before running `make deploy`, populate your environment with the correct deployment variables from AWS SSM. You can run:
+```bash
+$ scripts/populate_deployment_environment.py example --print > environment.local
 ```
-make deploy
+which will pull down the environment variables stored in `dcp/fusillade/{FUS_DEPLOYMENT_STAGE}/deployment_environment` 
+in AWS SSM, and save it to `enviroment.local`. This environment will be used when you call:
+
+```bash
+$ make deploy
 ```
 
 ## Deploy Infrastructure 
