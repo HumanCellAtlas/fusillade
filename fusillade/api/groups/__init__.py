@@ -61,7 +61,10 @@ def delete_group(token_info: dict, group_id):
     return make_response(f"{group_id} deleted.", 200)
 
 
-@authorize(['fus:PutGroupUsers'], ['arn:hca:fus:*:*:group/{group_id}/'], ['group_id'], {'fus:group_id': 'group_id'})
+@authorize(['fus:PutGroupUsers'],
+           ['arn:hca:fus:*:*:group/{group_id}/users'],
+           ['group_id'],
+           {'fus:group_id': 'group_id'})
 def put_groups_users(token_info: dict, group_id):
     group = Group(group_id)
     resp, code = _modify_users(group, request)
