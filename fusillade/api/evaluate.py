@@ -17,14 +17,14 @@ def evaluate_policy_api(token_info, body):  # TODO allow context variables to be
         try:
             authz_params = User(body['principal']).get_authz_params()
         except AuthorizationException:
-            result = False
+            response = {'result': False}
         else:
-            result = evaluate_policy(body['principal'],
+            response = evaluate_policy(body['principal'],
                                      body['action'],
                                      body['resource'],
                                      authz_params['policies'],
                                      context_entries=restricted_context_entries(authz_params))
-    return make_response(jsonify(**body, result=result), 200)
+    return make_response(jsonify(**body, **response), 200)
 
 
 class AuthorizeThread:

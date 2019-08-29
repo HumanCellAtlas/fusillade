@@ -1,7 +1,7 @@
 import functools
 import json
 import logging
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Any
 
 from dcplib.aws import clients as aws_clients
 
@@ -18,7 +18,7 @@ def evaluate_policy(
         resources: List[str],
         policies: List[str],
         context_entries: List[Dict] = None
-) -> bool:
+) -> Dict[str, Any]:
     logger.debug(dict(policies=policies))
     context_entries = context_entries if context_entries else []
     response = iam.simulate_custom_policy(
@@ -33,14 +33,15 @@ def evaluate_policy(
             }, *context_entries
         ]
     )
-    logger.debug(json.dumps(response))
+    logger.debug(response.pop('ResponseMetadata'))
     results = [result['EvalDecision'] for result in response['EvaluationResults']]
     if 'explicitDeny' in results:
-        return False
+        response['result'] = False
     elif 'allowed' in results:
-        return True
+        response['result'] = True
     else:
-        return False
+        response['result'] = False
+    return response
 
 
 def get_email_claim(token_info):
@@ -69,7 +70,7 @@ def assert_authorized(user, actions, resources, context_entries=None):
         raise FusilladeForbiddenException(detail="User must be enabled to make authenticated requests.")
     else:
         context_entries.extend(restricted_context_entries(authz_params))
-        if not evaluate_policy(user, actions, resources, authz_params['policies'], context_entries):
+        if not evaluate_policy(user, actions, resources, authz_params['policies'], context_entries)['result']:
             logger.info(dict(message="User not authorized.", user=u._path_name, action=actions, resources=resources))
             raise FusilladeForbiddenException()
         else:

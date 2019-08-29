@@ -237,7 +237,7 @@ paths:
               schema:
                 type: object
                 properties:
-                  decision:
+                  result:
                     type: boolean
         default:
           description: Unexpected error
