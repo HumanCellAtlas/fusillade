@@ -24,7 +24,7 @@ def login():
 
 def authorize():
     query_params = request.args.copy() if request.args else {}
-    openid_provider = os.environ["OPENID_PROVIDER"]
+    openid_provider = Config.get_openid_provider()
     query_params["openid_provider"] = openid_provider
     client_id = query_params.get("client_id")
     client_id = client_id if client_id != 'None' else None
@@ -40,15 +40,14 @@ def authorize():
     else:
         state = base64.b64encode(json.dumps(query_params).encode()).decode()
         # TODO: set random state
-        # openid_provider = query_params["openid_provider"]
         oauth2_config = Config.get_oauth2_config()
         auth_params = dict(client_id=oauth2_config[openid_provider]["client_id"],
                            response_type="code",
                            scope="openid email profile",
                            redirect_uri=oauth2_config[openid_provider]["redirect_uri"],
                            state=state)
-    dest = furl(get_openid_config(openid_provider)["authorization_endpoint"]).add(query_params=auth_params).url
-    return ConnexionResponse(status_code=requests.codes.found, headers=dict(Location=dest))
+    dest = furl(get_openid_config(openid_provider)["authorization_endpoint"], query_params=auth_params)
+    return ConnexionResponse(status_code=requests.codes.found, headers=dict(Location=dest.url))
 
 
 def proxy_response(dest_url, **extra_query_params):
@@ -74,7 +73,7 @@ def serve_openid_config():
     """
     Part of OIDC
     """
-    openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
+    openid_config = get_openid_config(Config.get_openid_provider())
     auth_host = request.headers['host']
     if auth_host != os.environ["API_DOMAIN_NAME"]:
         raise FusilladeHTTPException(
@@ -89,7 +88,7 @@ def serve_jwks_json():
     """
     Part of OIDC
     """
-    openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
+    openid_config = get_openid_config(Config.get_openid_provider())
     return proxy_response(openid_config["jwks_uri"])
 
 
@@ -98,7 +97,7 @@ def serve_oauth_token():
     Part of OIDC
     """
     # TODO: client id/secret mgmt
-    openid_provider = os.environ["OPENID_PROVIDER"]
+    openid_provider = Config.get_openid_provider()
     openid_config = get_openid_config(openid_provider)
     return proxy_response(openid_config["token_endpoint"])
 
@@ -107,7 +106,7 @@ def revoke():
     """
     Part of OIDC
     """
-    openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
+    openid_config = get_openid_config(Config.get_openid_provider())
     return proxy_response(openid_config["revocation_endpoint"])
 
 
@@ -115,7 +114,7 @@ def userinfo(token_info):
     """
     Part of OIDC
     """
-    openid_config = get_openid_config(os.environ["OPENID_PROVIDER"])
+    openid_config = get_openid_config(Config.get_openid_provider())
     return proxy_response(openid_config["userinfo_endpoint"])
 
 
@@ -139,7 +138,7 @@ def cb():
     """
     query_params = request.args
     state = json.loads(base64.b64decode(query_params["state"]))
-    openid_provider = os.environ["OPENID_PROVIDER"]
+    openid_provider = Config.get_openid_provider()
     openid_config = get_openid_config(openid_provider)
     token_endpoint = openid_config["token_endpoint"]
 
