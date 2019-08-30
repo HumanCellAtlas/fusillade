@@ -17,7 +17,7 @@ def evaluate_policy_api(token_info, body):  # TODO allow context variables to be
         try:
             authz_params = User(body['principal']).get_authz_params()
         except AuthorizationException:
-            response = {'result': False}
+            response = {'result': False, 'msg': "The user is disabled."}
         else:
             response = evaluate_policy(body['principal'],
                                      body['action'],
