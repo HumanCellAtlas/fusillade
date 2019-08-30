@@ -119,7 +119,7 @@ integration_build:
     - master
   when: manual
 
-staging_prerelease:
+promote_staging:
   extends: .release
   variables:
     RELEASE_COMMAND: scripts/promote.py staging --auto
@@ -127,7 +127,7 @@ staging_prerelease:
     - integration
   when: manual
 
-production_release:
+promote_production:
   extends: .release
   variables:
     RELEASE_COMMAND: scripts/promote.py production --auto
