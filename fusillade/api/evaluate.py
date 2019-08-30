@@ -5,7 +5,7 @@ from threading import Thread
 from flask import make_response, jsonify
 
 from fusillade import User
-from fusillade.errors import AuthorizationException, FusilladeForbiddenException
+from fusillade.errors import AuthorizationException
 from fusillade.utils.authorize import assert_authorized, evaluate_policy, restricted_context_entries, get_email_claim
 
 
@@ -17,14 +17,15 @@ def evaluate_policy_api(token_info, body):  # TODO allow context variables to be
         try:
             authz_params = User(body['principal']).get_authz_params()
         except AuthorizationException:
-            response = {'result': False, 'msg': "The user is disabled."}
+            response = {'result': False, 'reason': "The user is disabled."}
         else:
-            response = evaluate_policy(body['principal'],
-                                     body['action'],
-                                     body['resource'],
-                                     authz_params['policies'],
-                                     context_entries=restricted_context_entries(authz_params))
-    return make_response(jsonify(**body, **response), 200)
+            response = evaluate_policy(
+                body['principal'],
+                body['action'],
+                body['resource'],
+                authz_params['policies'],
+                context_entries=restricted_context_entries(authz_params))
+    return make_response(jsonify(**response), 200)
 
 
 class AuthorizeThread:

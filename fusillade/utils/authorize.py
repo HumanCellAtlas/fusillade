@@ -1,46 +1,74 @@
 import functools
-import json
 import logging
 from typing import List, Dict, Optional, Union, Any
 
 from dcplib.aws import clients as aws_clients
-
 from fusillade import User, Config
 from fusillade.errors import FusilladeForbiddenException, AuthorizationException, FusilladeBadRequestException
 
 logger = logging.getLogger(__name__)
 iam = aws_clients.iam
+simulate_custom_policy_paginator = iam.get_paginator('simulate_custom_policy')
+
+
+def get_policy_statement(evaluation_results, policies):
+    for evaluation_result in evaluation_results:
+        for ms in evaluation_result['MatchedStatements']:
+            policy_index = int(ms['SourcePolicyId'].split('.')[-1]) - 1
+            begin = ms['StartPosition']['Column']
+            end = ms['EndPosition']['Column']
+            policy = policies[policy_index]
+            ms['statement'] = policy['policy'][begin:end]
+            ms['SourcePolicyId'] = policy['name']
+            ms['SourcePolicyType'] = policy['type']
+    return evaluation_results
 
 
 def evaluate_policy(
         principal: str,
         actions: List[str],
         resources: List[str],
-        policies: List[str],
+        policies: List[Dict[str, str]],
         context_entries: List[Dict] = None
 ) -> Dict[str, Any]:
-    logger.debug(dict(policies=policies))
     context_entries = context_entries if context_entries else []
-    response = iam.simulate_custom_policy(
-        PolicyInputList=policies,
-        ActionNames=actions,
-        ResourceArns=resources,
-        ContextEntries=[
-            {
-                'ContextKeyName': 'fus:user_email',
-                'ContextKeyValues': [principal],
-                'ContextKeyType': 'string'
-            }, *context_entries
-        ]
-    )
-    logger.debug(response.pop('ResponseMetadata'))
-    results = [result['EvalDecision'] for result in response['EvaluationResults']]
-    if 'explicitDeny' in results:
-        response['result'] = False
-    elif 'allowed' in results:
-        response['result'] = True
+    eval_results = []
+    for _response in simulate_custom_policy_paginator.paginate(
+            PolicyInputList=[policy['policy'] for policy in policies],
+            ActionNames=actions,
+            ResourceArns=resources,
+            ContextEntries=[
+                {
+                    'ContextKeyName': 'fus:user_email',
+                    'ContextKeyValues': [principal],
+                    'ContextKeyType': 'string'
+                }, *context_entries
+            ],
+            PaginationConfig={
+                'MaxItems': 20,
+                'PageSize': 8
+            }
+    ):
+        logger.info(_response['ResponseMetadata'])
+        logger.debug(_response['EvaluationResults'])
+        eval_results.extend(get_policy_statement(_response['EvaluationResults'], policies))
+    eval_decisions = [er['EvalDecision'] for er in eval_results]
+    if 'explicitDeny' in eval_decisions:
+        response = {
+            'result': False,
+            'reason': 'Permission is explicit denied.',
+        }
+    elif 'allowed' in eval_decisions:
+        response = {
+            'result': True,
+            'reason': 'Permission is allowed denied.',
+        }
     else:
-        response['result'] = False
+        response = {
+            'result': False,
+            'reason': 'Permission was implicitly denied.'
+        }
+    response['evaluation_results'] = eval_results
     return response
 
 
