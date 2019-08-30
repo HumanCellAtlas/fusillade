@@ -73,8 +73,8 @@ def check_diff(src, dst):
     result = _subprocess(['git', '--no-pager', 'log', '--graph', '--abbrev-commit', '--pretty=oneline',
                           '--no-merges', "--", f"{src}", f"^{dst}"])
 
-    if result.stdout:
-        print(f"Warning: the following commits are present on {dst} but not on {src}: \n{result.stdout}")
+    if result:
+        print(f"Warning: the following commits are present on {dst} but not on {src}: \n{result}")
         if args.force:
             print(f"Warning: they will be overwritten on {dst} and discarded.")
         else:
