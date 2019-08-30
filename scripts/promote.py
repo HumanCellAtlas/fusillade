@@ -36,19 +36,32 @@ parser.add_argument('--release', '-r',
 parser.add_argument('--force', '-f',
                     action="store_true")
 parser.add_argument('--release-notes', type=str, required=False,
-                    help="The path to a text file containing the release "
-                         "notes.",
-                    )
+                    help="The path to a text file containing the release notes.")
 parser.add_argument('--dry-run', '-d',
                     action="store_true")
 parser.add_argument('--auto', action="store_false",
                     help="Used for automated deployment. No user interaction is required.")
 args = parser.parse_args()
 
+if args.stage == 'production' and args.release:
+    print(f'Warning: cannot release "production" with a release type.\n'
+          f'Specify no release type to produce a finalized version.')
+    exit(1)
 
-def _subprocess(args, **kwargs) -> str:
+if args.stage == 'staging' and args.release:
+    print(f'Warning: cannot release "staging" with a release type.\n'
+          f'Do not specify a release type.  The version change from integration is not bumped.')
+    exit(1)
+
+
+def _subprocess(args, **kwargs):
     print(f"RUN: {' '.join(args)}")
-    return subprocess.run(args, **kwargs, check=True, stdout=subprocess.PIPE).stdout.decode('utf-8')
+    response = subprocess.run(args, **kwargs, check=True,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
+    if response.sterr:
+        raise RuntimeError(f'RUN FAILED:\n{response.stderr.decode("utf-8")}')
+    return response.stdout.decode('utf-8')
 
 
 def check_diff(src, dst):
@@ -59,8 +72,9 @@ def check_diff(src, dst):
     """
     result = _subprocess(['git', '--no-pager', 'log', '--graph', '--abbrev-commit', '--pretty=oneline',
                           '--no-merges', "--", f"{src}", f"^{dst}"])
-    if result:
-        print(f"Warning: the following commits are present on {dst} but not on {src}: \n{result}")
+
+    if result.stdout:
+        print(f"Warning: the following commits are present on {dst} but not on {src}: \n{result.stdout}")
         if args.force:
             print(f"Warning: they will be overwritten on {dst} and discarded.")
         else:
@@ -122,29 +136,46 @@ def commit(src, dst):
     print(_subprocess(['git', 'push', '--force', 'origin', dst]))
 
 
-def get_current_version() -> semver.VersionInfo:
+def get_current_version(stage: str = None) -> semver.VersionInfo:
     "check the latest release from github"
-    releases = s.get("https://api.github.com/repos/HumancellAtlas/fusillade/releases").json()
-    if releases:
-        latest_version = max([semver.parse_version_info(version['tag_name']) for version in releases])
+    stage = stage if stage else args.stage
+    version_url = 'https://api.github.com/repos/HumancellAtlas/fusillade/releases'
+    releases = s.get(version_url).json()
+
+    # would use version['target_commitish'] to grab the stage, but in use it grabs unexpected stages
+    if releases and stage == 'integration':
+        versions = [semver.parse_version_info(version['tag_name']) for version in releases
+                    if semver.parse_version_info(version['tag_name']).prerelease.startswith('integration')]
+    elif releases and stage == 'staging':
+        versions = [semver.parse_version_info(version['tag_name']) for version in releases
+                    if semver.parse_version_info(version['tag_name']).prerelease.startswith('rc')]
+    elif releases and stage == 'production':
+        versions = [semver.parse_version_info(version['tag_name']) for version in releases
+                    if not semver.parse_version_info(version['tag_name']).prerelease]
     else:
-        latest_version = semver.VersionInfo(0, 0, 0)
-    return latest_version
+        versions = [semver.VersionInfo(0, 0, 0)]
+    return str(max(versions))
 
 
 def update_version() -> str:
     """
     Retrieves the current version from github, bumps the version, and updates the values in service_config.json before
     committing to the dst branch
-    :return: the new version./
+
+    :return: The new version.
     """
-    new_version = cur_version = get_current_version()
-    if args.release:
-        new_version = getattr(semver, f'bump_{args.release}')(str(new_version))
+    cur_version = get_current_version()
+
     if args.stage == "production":
-        new_version = semver.finalize_version(str(new_version))
+        prv_version = get_current_version(stage='staging')
+        new_version = semver.finalize_version(prv_version)
+    elif args.stage == "staging":
+        prv_version = get_current_version(stage='integration')
+        assert '-integration' in cur_version
+        new_version = prv_version.replace('-integration', '-rc')  # don't bump the version number
     else:
-        new_version = str(semver.bump_prerelease(str(new_version), token=args.stage))
+        new_version = getattr(semver, f'bump_{args.release}')(str(cur_version), token=args.stage)
+
     print(f"Upgrading: {cur_version} -> {new_version}")
     return new_version
 
@@ -198,7 +229,8 @@ if __name__ == "__main__":
         try:
             resp.raise_for_status()
         except requests.exceptions.HTTPError as ex:
-            with open(f"release notes for {name}.txt", 'w') as fp:
+            notes_path = os.path.abspath(f"release-notes-{name}.txt")
+            with open(notes_path, 'w') as fp:
                 fp.write(release_notes)
-            print("ERROR: Failed to create release!")
+            print(f"ERROR: Failed to create release!  Check log: {notes_path}")
             raise ex
