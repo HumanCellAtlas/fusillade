@@ -879,8 +879,9 @@ class CloudDirectory:
             **kwargs
         )
 
-    def get_policies(self, policy_paths: List[Dict[str, Any]], policy_type='IAMPolicy') -> Dict[str, Union[List[Dict[
-        str, str]], List[str]]]:
+    def get_policies(self,
+                     policy_paths: List[Dict[str, Any]],
+                     policy_type='IAMPolicy') -> Dict[str, Union[List[Dict[str, str]], List[str]]]:
         # Parse the policyIds from the policies path. Only keep the unique ids
         policy_ids = set(
             [
