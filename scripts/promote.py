@@ -136,7 +136,7 @@ def commit(src, dst):
     print(_subprocess(['git', 'push', '--force', 'origin', dst]))
 
 
-def get_current_version(stage: str = None) -> semver.VersionInfo:
+def get_current_version(stage: str = None) -> str:
     "check the latest release from github"
     stage = stage if stage else args.stage
     version_url = 'https://api.github.com/repos/HumancellAtlas/fusillade/releases'
