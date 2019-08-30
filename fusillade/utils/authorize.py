@@ -68,8 +68,9 @@ def assert_authorized(user, actions, resources, context_entries=None):
     except AuthorizationException:
         raise FusilladeForbiddenException(detail="User must be enabled to make authenticated requests.")
     else:
-        context_entries.extend(restricted_context_entries(authz_params))
-        if not evaluate_policy(user, actions, resources, authz_params['policies'], context_entries):
+        policies = authz_params.pop("policies")
+        context_entries.extend(format_context_entries(authz_params))
+        if not evaluate_policy(user, actions, resources, policies, context_entries):
             logger.info(dict(message="User not authorized.", user=u._path_name, action=actions, resources=resources))
             raise FusilladeForbiddenException()
         else:
@@ -80,7 +81,7 @@ def assert_authorized(user, actions, resources, context_entries=None):
 restricted_set = {'fus:groups', 'fus:roles', 'fus:user_email'}
 
 
-def restricted_context_entries(authz_params):
+def format_restricted_context_entries(authz_params):
     """
     Restricts context_entries from containing reserved entries.
 
@@ -88,7 +89,7 @@ def restricted_context_entries(authz_params):
     :return:
     """
     try:
-        return format_context_entries({'fus:groups': 'group', 'fus:roles': 'role'}, authz_params)
+        return format_restricted_context_entries(authz_params, restricted=restricted_set)
     except KeyError:
         FusilladeBadRequestException("Invalid context entry type.")
 
@@ -122,8 +123,8 @@ context_type_mapping = {
 }
 
 
-def format_context_entries(context_entries: Dict[str, str],
-                           kwargs: Dict[str, Union[List[str], str]],
+def format_context_entries(context_entries: Dict[str, Union[List[str], str]],
+                           kwargs: Dict[str, Union[List[str], str]] = None,
                            restricted: List[str] = None) -> List[Dict]:
     """
     >>> context_entries={"fus:context": "user_name", "fus:groups": "group"}
@@ -133,31 +134,39 @@ def format_context_entries(context_entries: Dict[str, str],
     >>>       {"ContextKeyName": "fus:groups","ContextKeyValues":["g1", "g2"],"ContextKeyType": "stringList"}]
 
     :param context_entries:
-    :param kwargs:
+    :param kwargs: a mapping of key values to to context variables.
     :param restricted: A list of context variables not allowed.
     :return:
     """
-    _ce = []
+    ce = []
     restricted = restricted if restricted else []
+
+    def _format(_key, _v):
+        if _v is None:
+            return
+        elif isinstance(_v, list) and _v:
+            v_type = type(_v[0])
+            if all(isinstance(i, v_type) for i in _v):
+                suffix = "List"
+            else:
+                raise FusilladeBadRequestException("Invalid context entry type.")
+        else:
+            v_type = type(_v)
+            _v = [_v]
+            suffix = ""
+        ce.append({
+            'ContextKeyName': key,
+            'ContextKeyValues': _v,
+            'ContextKeyType': f"{context_type_mapping[v_type]}{suffix}"
+        })
+
     for key, value in context_entries.items():
         if key not in restricted:
-            v = kwargs.get(value)
-            if v is None:
-                continue
-            elif isinstance(v, list) and v:
-                v_type = type(v[0])
-                if all(isinstance(i, v_type) for i in v):
-                    suffix = "List"
+            if kwargs:
+                _format(key, kwargs.get(value))
             else:
-                v_type = type(v)
-                v = [v]
-                suffix = ""
-            _ce.append({
-                'ContextKeyName': key,
-                'ContextKeyValues': v,
-                'ContextKeyType': f"{context_type_mapping[v_type]}{suffix}"
-            })
-    return _ce
+                _format(key, value)
+    return ce
 
 
 def authorize(actions: List[str],

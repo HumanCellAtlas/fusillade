@@ -938,7 +938,7 @@ class CloudDirectory:
                     _type = attrs[0]['Value']['StringValue']
             except KeyError:
                 continue
-            results[_type].append(name)
+            results[f'fus:{_type}'].append(name)
         return results
 
     @retry(**cd_read_retry_parameters)
