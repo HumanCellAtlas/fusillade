@@ -314,8 +314,8 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         role_id = "role_1"
 
         with self.subTest("Role delete with users and groups."):
-            group = "group_0"
-            user = "user_1"
+            group = "group_test_delete_role"
+            user = "user_test_delete_role"
             policy = create_test_statement("policy_04")
 
             resp = self.app.post(f'/v1/role',
@@ -351,7 +351,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
             self.assertNotIn(role_id, roles)
 
         with self.subTest("delete a role that does not exist."):
-            resp = self.app.delete(f'/v1/role/{role_id}', headers=headers)
+            resp = self.app.delete(f'/v1/role/ghost', headers=headers)
             self.assertEqual(resp.status_code, 404)
 
 if __name__ == '__main__':

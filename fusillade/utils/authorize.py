@@ -61,7 +61,7 @@ def evaluate_policy(
     elif 'allowed' in eval_decisions:
         response = {
             'result': True,
-            'reason': 'Permission is allowed denied.',
+            'reason': 'Permission is allowed.',
         }
     else:
         response = {
