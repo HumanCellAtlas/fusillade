@@ -894,7 +894,7 @@ class CloudDirectory:
 
         # retrieve the policies in a single request
         operations = []
-        [
+        for policy_id in policy_ids:
             operations.extend([
                 {
                     'GetObjectAttributes': {
@@ -916,8 +916,6 @@ class CloudDirectory:
                         'AttributeNames': ['name', 'type']
                     }
                 }])
-            for policy_id in policy_ids
-        ]
 
         # parse the policies from the responses
         responses = cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations)['Responses']

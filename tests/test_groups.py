@@ -50,19 +50,19 @@ class TestGroup(unittest.TestCase):
         with self.subTest("Only one policy is attached when lookup policy is called on a group without any roles"):
             policies = group.get_authz_params()['policies']
             self.assertEqual(len(policies), 1)
-            self.assertEqual(policies[0], self.default_group_statement)
+            self.assertEqual(policies[0]['policy'], self.default_group_statement)
 
         group_name = "NewGroup1234"
         statement = create_test_statement(group_name)
         with self.subTest("The group policy changes when satement is set"):
             group.set_policy(statement)
             policies = group.get_authz_params()['policies']
-            self.assertEqual(policies[0], statement)
+            self.assertEqual(policies[0]['policy'], statement)
 
         with self.subTest("error raised when invalid statement assigned to group.get_policy()."):
             with self.assertRaises(FusilladeHTTPException):
                 group.set_policy("invalid statement")
-            self.assertEqual(policies[0], statement)
+            self.assertEqual(policies[0]['policy'], statement)
 
     def test_users(self):
         emails = ["test@test.com", "why@not.com", "hello@world.com"]
@@ -107,7 +107,7 @@ class TestGroup(unittest.TestCase):
             group.add_roles(roles)
             self.assertEqual(len(group.roles), 2)
         with self.subTest("policies inherited from roles are returned when lookup policies is called"):
-            group_policies = sorted(group.get_authz_params()['policies'])
+            group_policies = sorted([authz_params['policy'] for authz_params in group.get_authz_params()['policies']])
             role_policies = sorted([role.get_policy() for role in role_objs] + [self.default_group_statement])
             self.assertListEqual(group_policies, role_policies)
 
