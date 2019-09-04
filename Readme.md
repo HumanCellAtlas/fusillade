@@ -64,23 +64,24 @@ To do this, your application should define an access control model consisting of
 - brew install terraform
 
 - Setup [AWS CLI](https://github.com/aws/aws-cli) with the correct profile, default region, and output format.
-- Local environment variables can be set in *environment.local* for convenience. If you use "source environment" and it 
-  will set environment variables from *environment.local* after *environment* variables have been set, if you choose to 
-  set them. If using multiple deployment with unique *environment.local* files, the *environment.local* file in the top
-  directory of *fusillade* take precedence over *environment.local* in *fusillade/deployments/*
-- Populate `FUS_ADMIN_EMAILS` with a list of admins to assigned upon creating the fusillade deployment. This
-  is only used when fusillade is first deployed to create the first users. Afterwards this variable has no effect. If
+- Local environment variables can be set in `environment.local` for convenience. If you use `source environment` and it 
+  will set environment variables from `environment.local` after `environment` variables have been set, if you choose to 
+  set them. If using multiple deployment with unique `environment.local` files, the `environment.local` file in the top
+  directory of `fusillade` take precedence over `environment.local` in `fusillade/deployments/`
+- Populate `FUS_ADMIN_EMAILS` with a list of admins to assigned upon creating the Fusillade deployment. This
+  is only used when Fusillade is first deployed to create the first users. Afterwards this variable has no effect. If
   more admins are required, then assign a user the admin role.
 - Deployment specific environment variables can be set in `./deployment/${FUS_DEPLOYMENT_STAGE}/environment.local` 
   per deployment for convenience.
-- **Optionally** Before deploying fusillade you can modify the [default policies and roles](../blob/master/policies) 
- to suit your needs. The `default_admin_role.json` is policy attached to the fusillade_admin role created during 
- deployment. The `default_group_policy.json` is assigned to all new group when they are created. The 
- `default_user_role.json` is the role assigned to the group `default_user` which is created during deployment. All of 
- these policies and role can be modified after deployment using the fusillade API.
+- **Optionally** Before deploying Fusillade you can modify the [default policies and roles](../blob/master/policies) 
+  to suit your needs. The `default_admin_role.json` is policy attached to the `fusillade_admin` role created during 
+  deployment. The `default_group_policy.json` is assigned to all new group when they are created. The 
+  `default_user_role.json` is the role assigned to the group `default_user` which is created during deployment. All of 
+  these policies and role can be modified after deployment using the Fusillade API.
 
 ## Set Secrets
-Fusillade uses AWS Secret Store for its secrets. You can set secrets using *./scripts/set_secrets*. For example:
+
+Fusillade uses AWS Secret Store for its secrets. You can set secrets using `./scripts/set_secret.py`. For example:
 
 ```bash
 $ cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/oauth2_config.json | ./scripts/set_secret.py --secret-name oauth2_config
@@ -98,20 +99,25 @@ $ cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/oauth2_config.json | ./scripts/set_s
 ## Set Parameter Stores
 
 Upload parameter used in the lambdas to AWS SSM.
+
 ```bash
 $ ./scripts/populate_lambda_ssm_parameters.py
 ```
 
 Upload a file containing the environment variables used for a specific deployment to AWS SSM.  
+
 ```bash
 $ ./scripts/populate_deployment_environment.py example --file ./deployments/example/environment.local
 ```
 
 ## Deploy Fusillade
+
 Before running `make deploy`, populate your environment with the correct deployment variables from AWS SSM. You can run:
+
 ```bash
 $ scripts/populate_deployment_environment.py example --print > environment.local
 ```
+
 which will pull down the environment variables stored in `dcp/fusillade/{FUS_DEPLOYMENT_STAGE}/deployment_environment` 
 in AWS SSM, and save it to `enviroment.local`. This environment will be used when you call:
 
@@ -127,17 +133,18 @@ If you're ok with the changes run `make deploy-infra`.
 
 ### Environment Variables
 
-- **DEPLOYMENT** - used to set the current deployment of fusillade to target. This determines what deployment 
+- **`DEPLOYMENT`** - used to set the current deployment of Fusillade to target. This determines what deployment 
   variables to source from `environment`. 
-- **GITHUB_TOKEN_PATH** - Point to the location of a file in your local directory containing a github token used for 
-  promoting fusillade branches and publishing new version. If GITHUB_TOKEN_SECRET_NAME is also present, GITHUB_TOKEN_PATH
-  take precedence over GITHUB_TOKEN_SECRET_NAME.
-- **GITHUB_TOKEN_SECRET_NAME** - Point to the location of an AWS parameters key containing a github token used for 
-  promoting fusillade branches and publishing new version.
+- **`GITHUB_TOKEN_PATH`** - Point to the location of a file in your local directory containing a Github token used for 
+  promoting Fusillade branches and publishing new version. If `GITHUB_TOKEN_SECRET_NAME` is also present, `GITHUB_TOKEN_PATH`
+  will take precedence over `GITHUB_TOKEN_SECRET_NAME`.
+- **`GITHUB_TOKEN_SECRET_NAME`** - Point to the location of an AWS parameters key containing a Github token used for 
+  promoting Fusillade branches and publishing new version.
  
 # Using Fusillade as a Service
 
 The following are created on deployment:
+
 * `/role/fusillade_admin` - contains a policy based on `default_admin_role.json`
 * `/role/default_user` - contains a policy based on `default_user_role.json`
 * `/user/{FUS_ADMIN_EMAILS}` - a user is created for each email in `FUS_ADMIN_EMAILS` and assigned 
@@ -147,16 +154,16 @@ The following are created on deployment:
 * `/user/public` -  a user for evaluating policies without an authenticated principle. `/user/public` is apart of 
   `/group/user_default`. Modify the roles attached to `/group/user_default` to modify what unauthenticated user can do.
 
-**Note:** All of these resources can be modified using the fusillade API after deployment.
+**Note:** All of these resources can be modified using the Fusillade API after deployment.
 
-**Note:** New *fusillade_admins* can be assigned using the fusillade API and assigning the role of *fusillade_admin* 
+**Note:** New `fusillade_admins` can be assigned using the Fusillade API and assigning the role of `fusillade_admin`
 to a user.
 
 ## Users
 
 A user can represent a service account, or a personal account. They can be explicitly created or created on demand when
 a user's permissions are first evaluated. A user is automatically added to `/group/user_default` when created. All other
-roles and groups must be added using the fusillade API.
+roles and groups must be added using the Fusillade API.
 
 ## Roles
 
@@ -173,8 +180,8 @@ Policies can attached to a user, group, or role. The preferred method for attach
 that policy then attach that role to a group and assign users to that group. This makes it easier to manage many users
 with fewer policies.
  
-When the permissions of a user is evaluated, all policies attached to a user, the user's groups, and the user's are 
-used.
+When the permissions of a user is evaluated, all policies attached to the user, the user's groups, and the user's roles
+are used.
   
 ### Defining Policy
 
@@ -186,7 +193,7 @@ For resource names use the same format as [AWS Service NameSpace](https://docs.a
 
 In the same way AWS IAM provides [context keys available to all services](https://docs.aws.amazon
 .com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-globally-available)
-, fusillade provides context keys that can be used in your policies.
+, Fusillade provides context keys that can be used in your policies.
 
 - `fus:groups` - is a list of groups the current user belongs. This can be used to restrict permission based on 
   the group association
@@ -196,17 +203,17 @@ In the same way AWS IAM provides [context keys available to all services](https:
 
 ## Specifics For DCP
 
-The fusillade staging environment should be used for developing other DCP components. For components using the 
-fusillade staging environment to test your dev environment, append all roles and groups created with *dev*. For example
-For example DSS_ADMIN wouldbe DSS_ADMIN_DEV. This is to prevent name collisions between dev and staging. 
+The Fusillade staging environment should be used for developing other DCP components. For components using the 
+Fusillade staging environment to test your dev environment, append all roles and groups created with `dev`. For example
+For example `DSS_ADMIN` would be `DSS_ADMIN_DEV`. This is to prevent name collisions between dev and staging. 
 
-**Note:** The fusillade managed group `user_default` and user `public` will be modified for both your components 
+**Note:** The Fusillade managed group `user_default` and user `public` will be modified for both your components 
 staging and dev environment.
 
 ### Resource
 
-For resource set the *partition* to `hca`, set your *service* name to the name of your component, and set the 
-*account-id* to the deployment stage. All other fields can be used as needed or use \* for wild cards. resource names
+For resource set the `partition` to `hca`, set your `service` name to the name of your component, and set the 
+`account-id` to the deployment stage. All other fields can be used as needed or use \* for wild cards. Resource names
  are case sensitive.
 
 #### Examples
@@ -246,6 +253,14 @@ write permissions data. The Fusillade service administrator configures the Fusil
 service configuration.
 
 # How To
+
+## Run Tests
+
+1. Set up the AWS command line utility to link it to the correct AWS account.
+1. Clone a local copy of the repository
+1. Install software required for development using `pip install -r requirements-dev.txt`
+1. Set environment variables using the command `source ./environment`
+1. Run tests by running `make test`
 
 ## Upgrade Cloud Directory Schema
 
