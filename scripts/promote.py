@@ -43,10 +43,12 @@ parser.add_argument('--auto', action="store_false",
                     help="Used for automated deployment. No user interaction is required.")
 args = parser.parse_args()
 
+
 if args.stage == 'production' and args.release:
     print(f'Warning: cannot release "production" with a release type.\n'
           f'Specify no release type to produce a finalized version.')
     exit(1)
+
 
 if args.stage == 'staging' and args.release:
     print(f'Warning: cannot release "staging" with a release type.\n'
@@ -59,8 +61,8 @@ def _subprocess(args, **kwargs):
     response = subprocess.run(args, **kwargs, check=True,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
-    if response.sterr:
-        raise RuntimeError(f'RUN FAILED:\n{response.stderr.decode("utf-8")}')
+    if response.stderr:
+        print(f'RUN STDERR:\n{response.stderr.decode("utf-8")}')
     return response.stdout.decode('utf-8')
 
 
