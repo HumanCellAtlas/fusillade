@@ -38,7 +38,7 @@ class TestApi(BaseAPITest, unittest.TestCase):
             {
                 'json_request_body': {
                     "action": ["fus:GetUser"],
-                    "resource": [f"arn:hca:fus:*:*:user/{email}"],
+                    "resource": [f"arn:hca:fus:*:*:user/{email}/policy"],
                     "principal": email
                 },
                 'response': {
