@@ -939,7 +939,7 @@ class CloudDirectory:
                         'name': name
                     }
                 )
-                results[_type] = name
+                results[f'{_type}s'].append(name)
             except KeyError:
                 results.append(
                     {
