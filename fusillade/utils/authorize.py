@@ -11,7 +11,14 @@ iam = aws_clients.iam
 simulate_custom_policy_paginator = iam.get_paginator('simulate_custom_policy')
 
 
-def get_policy_statement(evaluation_results, policies):
+def get_policy_statement(evaluation_results: List[Dict[str, Any]], policies: List[str]) -> List[Dict[str, Any]]:
+    """
+    Parses the response from simulate_custom_policy and adds the policy statements that matched to the results.
+
+    :param evaluation_results:
+    :param policies:
+    :return:
+    """
     for evaluation_result in evaluation_results:
         for ms in evaluation_result['MatchedStatements']:
             policy_index = int(ms['SourcePolicyId'].split('.')[-1]) - 1

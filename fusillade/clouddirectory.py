@@ -882,6 +882,13 @@ class CloudDirectory:
     def get_policies(self,
                      policy_paths: List[Dict[str, Any]],
                      policy_type='IAMPolicy') -> Dict[str, Union[List[Dict[str, str]], List[str]]]:
+        """
+        Get's policy statements and attributes.
+
+        :param policy_paths: a list of paths leading to policy nodes stored in cloud directory
+        :param policy_type: the type of policies to retrieve from the policy nodes
+        :return: returns the policies of the type IAMPolicy from a list of policy paths.
+        """
         # Parse the policyIds from the policies path. Only keep the unique ids
         policy_ids = set(
             [
@@ -892,7 +899,7 @@ class CloudDirectory:
             ]
         )
 
-        # retrieve the policies in a single request
+        # retrieve the policies and policy attributes in a batched request
         operations = []
         for policy_id in policy_ids:
             operations.extend([
@@ -917,7 +924,7 @@ class CloudDirectory:
                     }
                 }])
 
-        # parse the policies from the responses
+        # parse the policies and attributes from the responses
         responses = cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations)['Responses']
         results = defaultdict(list)
         n = 2
