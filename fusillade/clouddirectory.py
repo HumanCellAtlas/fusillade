@@ -7,7 +7,6 @@ https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/cloud
 """
 import functools
 import hashlib
-import itertools
 import json
 import logging
 import os
@@ -16,8 +15,9 @@ from datetime import datetime
 from enum import Enum, auto
 from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, Type
 
-from dcplib.aws import clients as aws_clients
+import itertools
 
+from dcplib.aws import clients as aws_clients
 from fusillade import Config
 from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException, \
     AuthorizationException, FusilladeLimitException, FusilladeBadRequestException
@@ -879,7 +879,16 @@ class CloudDirectory:
             **kwargs
         )
 
-    def get_policies(self, policy_paths: List[Dict[str, Any]], policy_type='IAMPolicy') -> Dict[str, List[str]]:
+    def get_policies(self,
+                     policy_paths: List[Dict[str, Any]],
+                     policy_type='IAMPolicy') -> Dict[str, Union[List[Dict[str, str]], List[str]]]:
+        """
+        Get's policy statements and attributes.
+
+        :param policy_paths: a list of paths leading to policy nodes stored in cloud directory
+        :param policy_type: the type of policies to retrieve from the policy nodes
+        :return: returns the policies of the type IAMPolicy from a list of policy paths.
+        """
         # Parse the policyIds from the policies path. Only keep the unique ids
         policy_ids = set(
             [
@@ -890,55 +899,62 @@ class CloudDirectory:
             ]
         )
 
-        # retrieve the policies in a single request
-        operations = [
-            {
-                'GetObjectAttributes': {
-                    'ObjectReference': {'Selector': f'${policy_id}'},
-                    'SchemaFacet': {
-                        'SchemaArn': self.node_schema,
-                        'FacetName': 'POLICY'
-                    },
-                    'AttributeNames': ['policy_document']
-                }
-            }
-            for policy_id in policy_ids
-        ]
-        operations.extend([
-            {
-                'GetObjectAttributes': {
-                    'ObjectReference': {'Selector': f'${policy_id}'},
-                    'SchemaFacet': {
-                        'SchemaArn': self._schema,
-                        'FacetName': 'IAMPolicy'
-                    },
-                    'AttributeNames': ['name', 'type']
-                }
-            }
-            for policy_id in policy_ids
-        ])
+        # retrieve the policies and policy attributes in a batched request
+        operations = []
+        for policy_id in policy_ids:
+            operations.extend([
+                {
+                    'GetObjectAttributes': {
+                        'ObjectReference': {'Selector': f'${policy_id}'},
+                        'SchemaFacet': {
+                            'SchemaArn': self.node_schema,
+                            'FacetName': 'POLICY'
+                        },
+                        'AttributeNames': ['policy_document']
+                    }
+                },
+                {
+                    'GetObjectAttributes': {
+                        'ObjectReference': {'Selector': f'${policy_id}'},
+                        'SchemaFacet': {
+                            'SchemaArn': self._schema,
+                            'FacetName': 'IAMPolicy'
+                        },
+                        'AttributeNames': ['name', 'type']
+                    }
+                }])
 
-        # parse the policies from the responses
+        # parse the policies and attributes from the responses
         responses = cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations)['Responses']
-        middle = len(responses) // 2
         results = defaultdict(list)
-        results['policies'].extend([
-            response['SuccessfulResponse']['GetObjectAttributes']['Attributes'][0]['Value']['BinaryValue'].decode(
-                'utf-8')
-            for response in responses[:middle]]
-        )
-        for response in responses[middle:]:
+        n = 2
+        for p, a in [responses[i:i + n] for i in range(0, len(responses), n)]:
+            policy = p['SuccessfulResponse']['GetObjectAttributes']['Attributes'][0]['Value'][
+                'BinaryValue'].decode('utf-8')
             try:
-                attrs = response['SuccessfulResponse']['GetObjectAttributes']['Attributes']
+                attrs = a['SuccessfulResponse']['GetObjectAttributes']['Attributes']
                 if attrs[0]['Key']['Name'] == 'name':
                     name = attrs[0]['Value']['StringValue']
                     _type = attrs[1]['Value']['StringValue']
                 else:
                     name = attrs[1]['Value']['StringValue']
                     _type = attrs[0]['Value']['StringValue']
+                results['policies'].append(
+                    {
+                        'policy': policy,
+                        'type': _type,
+                        'name': name
+                    }
+                )
+                results[f'{_type}s'].append(name)
             except KeyError:
-                continue
-            results[_type].append(name)
+                results.append(
+                    {
+                        'policy': policy,
+                        'type': None,
+                        'name': None
+                    }
+                )
         return results
 
     @retry(**cd_read_retry_parameters)
@@ -1227,7 +1243,7 @@ class PolicyMixin:
     """Adds policy support to a cloudNode"""
     allowed_policy_types = ['IAMPolicy']
 
-    def get_authz_params(self) -> Dict[str, List[str]]:
+    def get_authz_params(self) -> Dict[str, Union[List[Dict[str, str]], List[str]]]:
         policy_paths = self.cd.lookup_policy(self.object_ref)
         return self.cd.get_policies(policy_paths)
 
@@ -1517,7 +1533,7 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         self._groups: Optional[List[str]] = None
         self._roles: Optional[List[str]] = None
 
-    def get_authz_params(self) -> Dict[str, List[str]]:
+    def get_authz_params(self) -> Dict[str, Union[List[Dict[str, str]], List[str]]]:
         if self.is_enabled():
             policy_paths = self.lookup_policies_batched()
         else:

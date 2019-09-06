@@ -54,8 +54,8 @@ class TestApi(BaseAPITest, unittest.TestCase):
         def _run_test(test):
             data = json.dumps(test['json_request_body'])
             resp = self.app.post('/v1/policies/evaluate', headers=headers, data=data)
-            self.assertEqual(test['response']['code'], resp.status_code)
-            self.assertEqual(test['response']['result'], json.loads(resp.body)['result'])
+            self.assertEqual(test['response']['code'], resp.status_code, test['response'])
+            self.assertEqual(test['response']['result'], json.loads(resp.body)['result'], msg=json.loads(resp.body))
 
         self._test_custom_claim(self.app.post,
                                 '/v1/policies/evaluate',
@@ -74,7 +74,7 @@ class TestApi(BaseAPITest, unittest.TestCase):
             resp = self.app.post('/v1/policies/evaluate', headers=headers,
                                  data=json.dumps(tests[1]['json_request_body']))
             self.assertEqual(200, resp.status_code)
-            self.assertEqual(False, json.loads(resp.body)['result'])
+            self.assertEqual(False, json.loads(resp.body)['result'], msg=json.loads(resp.body))
 
     def test_serve_swagger_ui(self):
         routes = ['/swagger.json', '/']

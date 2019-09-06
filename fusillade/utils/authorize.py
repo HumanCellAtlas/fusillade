@@ -1,46 +1,82 @@
 import functools
-import json
 import logging
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Any
 
 from dcplib.aws import clients as aws_clients
-
 from fusillade import User, Config
 from fusillade.errors import FusilladeForbiddenException, AuthorizationException, FusilladeBadRequestException
 
 logger = logging.getLogger(__name__)
 iam = aws_clients.iam
+simulate_custom_policy_paginator = iam.get_paginator('simulate_custom_policy')
+
+
+def get_policy_statement(evaluation_results: List[Dict[str, Any]], policies: List[str]) -> List[Dict[str, Any]]:
+    """
+    Parses the response from simulate_custom_policy and adds the policy statements that matched to the results.
+
+    :param evaluation_results:
+    :param policies:
+    :return:
+    """
+    for evaluation_result in evaluation_results:
+        for ms in evaluation_result['MatchedStatements']:
+            policy_index = int(ms['SourcePolicyId'].split('.')[-1]) - 1
+            begin = ms['StartPosition']['Column']
+            end = ms['EndPosition']['Column']
+            policy = policies[policy_index]
+            ms['statement'] = policy['policy'][begin:end]
+            ms['SourcePolicyId'] = policy['name']
+            ms['SourcePolicyType'] = policy['type']
+    return evaluation_results
 
 
 def evaluate_policy(
         principal: str,
         actions: List[str],
         resources: List[str],
-        policies: List[str],
+        policies: List[Dict[str, str]],
         context_entries: List[Dict] = None
-) -> bool:
-    logger.debug(dict(policies=policies))
+) -> Dict[str, Any]:
     context_entries = context_entries if context_entries else []
-    response = iam.simulate_custom_policy(
-        PolicyInputList=policies,
-        ActionNames=actions,
-        ResourceArns=resources,
-        ContextEntries=[
-            {
-                'ContextKeyName': 'fus:user_email',
-                'ContextKeyValues': [principal],
-                'ContextKeyType': 'string'
-            }, *context_entries
-        ]
-    )
-    logger.debug(json.dumps(response))
-    results = [result['EvalDecision'] for result in response['EvaluationResults']]
-    if 'explicitDeny' in results:
-        return False
-    elif 'allowed' in results:
-        return True
+    eval_results = []
+    for _response in simulate_custom_policy_paginator.paginate(
+            PolicyInputList=[policy['policy'] for policy in policies],
+            ActionNames=actions,
+            ResourceArns=resources,
+            ContextEntries=[
+                {
+                    'ContextKeyName': 'fus:user_email',
+                    'ContextKeyValues': [principal],
+                    'ContextKeyType': 'string'
+                }, *context_entries
+            ],
+            PaginationConfig={
+                'MaxItems': 20,
+                'PageSize': 8
+            }
+    ):
+        logger.info(_response['ResponseMetadata'])
+        logger.debug(_response['EvaluationResults'])
+        eval_results.extend(get_policy_statement(_response['EvaluationResults'], policies))
+    eval_decisions = [er['EvalDecision'] for er in eval_results]
+    if 'explicitDeny' in eval_decisions:
+        response = {
+            'result': False,
+            'reason': 'Permission is explicit denied.',
+        }
+    elif 'allowed' in eval_decisions:
+        response = {
+            'result': True,
+            'reason': 'Permission is allowed.',
+        }
     else:
-        return False
+        response = {
+            'result': False,
+            'reason': 'Permission was implicitly denied.'
+        }
+    response['evaluation_results'] = eval_results
+    return response
 
 
 def get_email_claim(token_info):
@@ -69,7 +105,7 @@ def assert_authorized(user, actions, resources, context_entries=None):
         raise FusilladeForbiddenException(detail="User must be enabled to make authenticated requests.")
     else:
         context_entries.extend(restricted_context_entries(authz_params))
-        if not evaluate_policy(user, actions, resources, authz_params['policies'], context_entries):
+        if not evaluate_policy(user, actions, resources, authz_params['policies'], context_entries)['result']:
             logger.info(dict(message="User not authorized.", user=u._path_name, action=actions, resources=resources))
             raise FusilladeForbiddenException()
         else:

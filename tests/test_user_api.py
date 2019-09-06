@@ -234,7 +234,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'name': "test_put_user_group0@email.com",
                 'action': 'add',
                 'json_request_body': {
-                    "groups": [Group.create("group_0").name]
+                    "groups": [Group.create("test_put_username_groups_0").name]
                 },
                 'responses': [
                     {'code': 200},
@@ -245,7 +245,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'name': "test_put_user_group1@email.com",
                 'action': 'remove',
                 'json_request_body': {
-                    "groups": [Group.create("group_1").name]
+                    "groups": [Group.create("test_put_username_groups_1").name]
                 },
                 'responses': [
                     {'code': 200},
@@ -273,7 +273,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 self.assertEqual(test['responses'][1]['code'], resp.status_code)
 
     def test_user_group_limit(self):
-        groups = [Group.create(f"group_{i}").name for i in range(10)]
+        groups = [Group.create(f"test_user_group_limit{i}").name for i in range(10)]
         name = "test_put_user_group0@email.com"
         user = User.provision_user(name)
         tests = [
@@ -321,7 +321,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         user = User.provision_user(name)
         resp = self.app.get(f'/v1/user/{name}/groups', headers=headers)
         self.assertEqual(1, len(json.loads(resp.body)[key]))
-        groups = [Group.create(f"group_{i}").name for i in range(8)]
+        groups = [Group.create(f"test_get_username_groups_{i}").name for i in range(8)]
         user.add_groups(groups)
         self._test_paging(f'/v1/user/{name}/groups', headers, 5, key)
 
