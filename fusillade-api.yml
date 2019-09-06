@@ -11,13 +11,15 @@ info:
     # Pagination
     The Fusillade API supports pagination in a manner consistent with the
     [GitHub API](https://developer.github.com/v3/guides/traversing-with-pagination/),
-    which is based on [RFC 5988](https://tools.ietf.org/html/rfc5988). When the results of an API call exceed the
-    page size specified, the HTTP response will contain a `Link` header of the following form:
+    which is based on [RFC 5988](https://tools.ietf.org/html/rfc5988). When the
+    results of an API call exceed the page size specified, the HTTP response will
+    contain a `Link` header of the following form:
     `Link: <https://auth.data.humancellatlas.org/v1/users?per_page=30&next_token=123>; rel="next"`.
-    The URL in the header refers to the next page of the results to be fetched; if no `Link rel="next"` URL is
-    included, then all results have been fetched. The client should recognize and parse the `Link` header
-    appropriately according to RFC 5988, and retrieve the next page if requested by the user, or if all results
-    are being retrieved.
+    The URL in the header refers to the next page of the results to be fetched;
+    if no `Link rel="next"` URL is included, then all results have been fetched.
+    The client should recognize and parse the `Link` header appropriately according
+    to RFC 5988, and retrieve the next page if requested by the user, or if all
+    results are being retrieved.
 
   version: "0.0.1"
 servers:
@@ -26,32 +28,34 @@ paths:
   /login:
     get:
       summary: Establish the users identity using the OIDC provider
-      description: Send the user agent to an identity provider selector and generate a user account to establish the
-       user's identity. This is a redirect endpoint.
+      description: Send the user agent to an identity provider selector and
+       generate a user account to establish the user's identity. This is a
+       redirect endpoint.
       operationId: fusillade.api.oauth.login
       tags:
         - oauth
       parameters:
         - name: redirect_uri
-          description: where to redirect to once login is complete
+          description: Where to redirect to once login is complete.
           in: query
           required: true
           schema:
             type: string
         - name: state
-          description: an opaque paramater that is returned back to the redirect_uri
+          description: An opaque parameter that is returned back to the `redirect_uri`.
           in: query
           schema:
             type: string
       responses:
         301:
-          description: OK
+          description: OK.
         default:
-          description: Unexpected error
+          description: Unexpected error.
   /.well-known/openid-configuration:
     get:
-      summary: see documentation https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
-      description: This endpoint is part of OIDC see documentation
+      summary: See documentation at
+       https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
+      description: This endpoint is part of OIDC, see documentation at
        https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
       tags:
         - oauth
@@ -61,11 +65,11 @@ paths:
           schema:
             type: string
           required: true
-          description: Must be $API_DOMAIN_NAME
+          description: Must be `$API_DOMAIN_NAME`.
       operationId: fusillade.api.oauth.serve_openid_config
       responses:
         200:
-          description: Returns the supported openid endpoints
+          description: Returns the supported openid endpoints.
   /.well-known/jwks.json:
     get:
       summary: This endpoint is part of OIDC
@@ -74,12 +78,12 @@ paths:
       operationId: fusillade.api.oauth.serve_jwks_json
       responses:
         200:
-          description: Returns the well known jwks
+          description: Returns the well known jwks.
   /oauth/authorize:
     get:
-      summary: see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
-      description: This endpoint is part of OIDC and is used to redirect to an openid provider
-       see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+      summary: See https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+      description: This endpoint is part of OIDC and is used to redirect to an openid provider.
+       See https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
       operationId: fusillade.api.oauth.authorize
       tags:
         - oauth
@@ -106,18 +110,18 @@ paths:
             type: string
       responses:
         302:
-          description: redirecting to authentication server
+          description: Redirecting to authentication server.
           headers:
             Location:
               schema:
                 type: string
         default:
-          description: Unexpected error
+          description: Unexpected error.
   /oauth/token:
     post:
       summary: Retrieve the authentications token
-      description: This endpoint is part of OIDC and is used to redirect to an openid
-       provider see https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint, and
+      description: This endpoint is part of OIDC and is used to redirect to an openid provider.
+        See https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint, and
         https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens
       operationId: fusillade.api.oauth.serve_oauth_token
       requestBody:
@@ -127,13 +131,13 @@ paths:
               type: object
               properties:
                 redirect_uri:
-                  description: where to redirect to once login is complete
+                  description: Where to redirect to once login is complete.
                   type: string
                 code:
-                  description: the code used to retrive an access token from OIDC authentication flow.
+                  description: The code used to retrieve an access token from OIDC authentication flow.
                   type: string
                 grant_type:
-                  description: the type of grant requested.
+                  description: The type of grant requested.
                   type: string
                 client_id:
                   type: string
@@ -148,7 +152,7 @@ paths:
         - oauth
       responses:
         302:
-          description: OK
+          description: OK.
           headers:
             Cache-Control:
               schema:
@@ -161,12 +165,12 @@ paths:
               schema:
                 type: object
         default:
-          description: Unexpected error
+          description: Unexpected error.
   /oauth/userinfo:
     get:
-      summary: see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
-      description: This endpoint is part of OIDC and is used to redirect to an openid provider
-        see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      summary: See https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      description: This endpoint is part of OIDC and is used to redirect to an openid provider.
+        See https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
       operationId: fusillade.api.oauth.get_userinfo
       security:
         - BearerAuth: []
@@ -174,13 +178,13 @@ paths:
         - oauth
       responses:
         200:
-          description: OK
+          description: OK.
         401:
           $ref: '#/components/responses/401'
     post:
-      summary: see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
-      description: This endpoint is part of OIDC and is used to redirect to an openid provider
-        see https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      summary: See https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      description: This endpoint is part of OIDC and is used to redirect to an openid provider.
+        See https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
       operationId: fusillade.api.oauth.post_userinfo
       security:
         - BearerAuth: []
@@ -188,21 +192,22 @@ paths:
         - oauth
       responses:
         200:
-          description: OK
+          description: OK.
         401:
           $ref: '#/components/responses/401'
   /echo:
     get:
-      summary: echos the response
-      description: echos the response back
+      summary: echoes the response
+      description: Echoes the response back.
       operationId: fusillade.api.internal.echo
       responses:
         200:
-          description: echo
+          description: Echo.
   /v1/policies/evaluate:
     post:
-      summary: Evaluate a user's permissions.
-      description: Given a set of principals, actions, and resources return a set of access control decisions.
+      summary: Evaluate a user's permissions
+      description: Given a set of principals, actions, and resources, return a
+       set of access control decisions.
       operationId: fusillade.api.evaluate.evaluate_policy_api
       security:
         - BearerAuth: []
@@ -217,21 +222,21 @@ paths:
               type: object
               properties:
                 principal:
-                  description: Attested user identifier
+                  description: Attested user identifier.
                   type: string
                 action:
-                  description: The action the principal is attempting to perform
+                  description: The action the principal is attempting to perform.
                   type: array
                   items:
                     type: string
                 resource:
-                  description: The resource the principal will perform the action against
+                  description: The resource the principal will perform the action against.
                   type: array
                   items:
                     type: string
       responses:
         200:
-          description: The result of the policy evaluation
+          description: The result of the policy evaluation.
           content:
             application/json:
               schema:
@@ -242,7 +247,7 @@ paths:
                   reason:
                     type: string
         default:
-          description: Unexpected error
+          description: Unexpected error.
   /v1/users:
     get:
       summary: List users
@@ -255,7 +260,7 @@ paths:
         - $ref: '#/components/parameters/per_page'
       responses:
         200:
-          description: all users have been returned
+          description: All users have been returned.
           content:
             application/json:
               schema:
@@ -265,7 +270,7 @@ paths:
         404:
           $ref: '#/components/responses/404'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - user
   /v1/user:
@@ -299,11 +304,11 @@ paths:
         - user
       responses:
         201:
-          description: User was created
+          description: User was created.
         401:
           $ref: '#/components/responses/401'
         default:
-          description: Unexpected error
+          description: Unexpected error.
   /v1/user/{user_id}:
     get:
       summary: Retrieve information about a user
@@ -317,7 +322,7 @@ paths:
         - user
       responses:
         200:
-          description: Information about the user is returned
+          description: Information about the user is returned.
           content:
             application/json:
               schema:
@@ -325,11 +330,11 @@ paths:
         404:
           $ref: '#/components/responses/404'
         default:
-          description: Unexpected error
+          description: Unexpected error.
     put:
-      summary: Modify the users status
-      description: Enable or disable a user. A disabled user will be return false for all evaluations with this user
-       as principal.
+      summary: Modify user status
+      description: Enable or disable a user. A disabled user will return false
+        for all evaluations with that user as principal.
       operationId: fusillade.api.users.put_user
       security:
         - BearerAuth: []
@@ -340,15 +345,15 @@ paths:
         - user
       responses:
         200:
-          description: Status set
+          description: Status set.
         401:
           $ref: '#/components/responses/401'
         default:
-          description: Unexpected error
+          description: Unexpected error.
   /v1/user/{user_id}/owns:
     get:
       summary: Retrieve the resources owned by the user
-      description: Paginate through a list of resource own by a user.
+      description: Paginate through a list of resources owned by a user.
       operationId: fusillade.api.users.get_users_owns
       security:
         - BearerAuth: []
@@ -373,11 +378,11 @@ paths:
         404:
           $ref: '#/components/responses/404'
         default:
-          description: Unexpected error
+          description: Unexpected error.
   /v1/user/{user_id}/groups:
     get:
-      summary: Retrieve group(s) a user is in.
-      description: Paginate through a list of groups a user is has membership.
+      summary: Retrieve group(s) for a user
+      description: Paginate through a list of groups of which a user is a member.
       operationId: fusillade.api.users.get_users_groups
       security:
         - BearerAuth: []
@@ -389,7 +394,7 @@ paths:
         - user
       responses:
         200:
-          description: all groups have been returned
+          description: All groups have been returned.
           content:
             application/json:
               schema:
@@ -399,10 +404,10 @@ paths:
         404:
           $ref: '#/components/responses/404'
         default:
-          description: Unexpected error
+          description: Unexpected error.
     put:
       summary: Add or remove a user from group(s)
-      description: Modify which group(s) a user is a member.
+      description: Modify group(s) in which a user is a member.
       operationId: fusillade.api.users.put_users_groups
       security:
         - BearerAuth: []
@@ -423,17 +428,17 @@ paths:
         - user
       responses:
         200:
-          description: Action successful
+          description: Action successful.
         401:
           $ref: '#/components/responses/401'
         304:
-          description: The user is already a part of the group
+          description: The user is already a member of this group.
         default:
-          description: Unexpected error
+          description: Unexpected error.
   /v1/user/{user_id}/roles:
     get:
-      summary: Retrieve roles a user is in.
-      description: Paginate through all roles a user is directly assigned.
+      summary: Retrieve roles a user is in
+      description: Paginate through all roles attached to a user.
       operationId: fusillade.api.users.get_users_roles
       security:
         - BearerAuth: []
@@ -445,7 +450,7 @@ paths:
         - user
       responses:
         200:
-          description: all roles have been returned
+          description: All roles have been returned.
           content:
             application/json:
               schema:
@@ -455,10 +460,10 @@ paths:
         404:
           $ref: '#/components/responses/404'
         default:
-          description: Unexpected error
+          description: Unexpected error.
     put:
       summary: Add or remove user from role(s)
-      description: Modify the role(s) a user is assigned.
+      description: Modify the role(s) attached to a user.
       operationId: fusillade.api.users.put_users_roles
       security:
         - BearerAuth: []
@@ -479,13 +484,13 @@ paths:
         - user
       responses:
         200:
-          description: Action successful
+          description: Action successful.
         401:
           $ref: '#/components/responses/401'
         304:
-          description: The user is already apart of the role
+          description: The user already has this role attached.
         default:
-          description: Unexpected error
+          description: Unexpected error.
   /v1/user/{user_id}/policy:
     put:
       summary: Modify policy
@@ -505,11 +510,11 @@ paths:
                   type: string
       responses:
         200:
-          description: policy modified
+          description: Policy modified.
         401:
           $ref: '#/components/responses/401'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - user
   /v1/groups:
@@ -524,7 +529,7 @@ paths:
         - $ref: '#/components/parameters/per_page'
       responses:
         200:
-          description: all groups have been returned
+          description: All groups have been returned.
           content:
             application/json:
               schema:
@@ -534,13 +539,13 @@ paths:
         404:
           $ref: '#/components/responses/404'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - group
   /v1/group:
     post:
       summary: Create a new group
-      description: Create a new group, attach an IAM policy and assign roles.
+      description: Create a new group, attach an IAM policy, and assign roles.
       operationId: fusillade.api.groups.post_group
       security:
         - BearerAuth: []
@@ -562,17 +567,17 @@ paths:
                     type: string
       responses:
         201:
-          description: Group was created
+          description: Group was successfully created.
         401:
           $ref: '#/components/responses/401'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - group
   /v1/group/{group_id}:
     get:
       summary: Get properties of a group
-      description: Get properties of a group. This includes the groups IAM policy.
+      description: Get properties of a group, including the group's IAM policy.
       operationId: fusillade.api.groups.get_group
       security:
         - BearerAuth: []
@@ -580,7 +585,7 @@ paths:
         - $ref: '#/components/parameters/group_id'
       responses:
         200:
-          description: Information about the group is returned
+          description: Information about the group was successfully returned.
           content:
             application/json:
               schema:
@@ -588,11 +593,11 @@ paths:
         404:
           $ref: '#/components/responses/404'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - group
     delete:
-      summary: Remove Group from the system.
+      summary: Remove a group from the system
       description: Remove all users, policies, and roles from the group, and delete the group.
       operationId: fusillade.api.groups.delete_group
       security:
@@ -601,16 +606,16 @@ paths:
         - $ref: '#/components/parameters/group_id'
       responses:
         200:
-          description: Group was deleted
+          description: Group was successfully deleted.
         401:
           $ref: '#/components/responses/401'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - group
   /v1/group/{group_id}/roles:
     get:
-      summary: Retrieve role(s) a group is in.
+      summary: Retrieve role(s) for a group
       description: Paginate through all roles assigned to the group.
       operationId: fusillade.api.groups.get_groups_roles
       security:
@@ -621,7 +626,7 @@ paths:
         - $ref: '#/components/parameters/per_page'
       responses:
         200:
-          description: all roles have been returned
+          description: All roles have been successfully returned.
           content:
             application/json:
               schema:
@@ -631,11 +636,11 @@ paths:
         404:
           $ref: '#/components/responses/404'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - group
     put:
-      summary: Add or remove a group from role(s).
+      summary: Add or remove a group from role(s)
       description: Modify the role(s) assigned to a group.
       operationId: fusillade.api.groups.put_groups_roles
       security:
@@ -655,18 +660,18 @@ paths:
                     type: string
       responses:
         200:
-          description: Action successful
+          description: Action successful.
         401:
           $ref: '#/components/responses/401'
         304:
-          description: The group is already apart of the role
+          description: The group already has this role attached.
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - group
   /v1/group/{group_id}/users:
     get:
-      summary: Retrieve user in a group.
+      summary: Retrieve user(s) in a group
       description: Paginate through all users in a group.
       operationId: fusillade.api.groups.get_group_users
       security:
@@ -677,7 +682,7 @@ paths:
         - $ref: '#/components/parameters/per_page'
       responses:
         200:
-          description: all users have been returned
+          description: All users have been returned.
           content:
             application/json:
               schema:
@@ -687,11 +692,11 @@ paths:
         404:
           $ref: '#/components/responses/404'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - group
     put:
-      summary: Add or remove a user(s) from a group.
+      summary: Add or remove user(s) from a group
       description: Modify the user(s) assigned to a group.
       operationId: fusillade.api.groups.put_groups_users
       security:
@@ -713,13 +718,13 @@ paths:
                     type: string
       responses:
         200:
-          description: Action successful
+          description: Action successful.
         401:
           $ref: '#/components/responses/401'
         304:
-          description: One or more users is already in the group.
+          description: One or more users is already in this group.
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - group
   /v1/group/{group_id}/policy:
@@ -741,11 +746,11 @@ paths:
                   type: string
       responses:
         200:
-          description: policy modified
+          description: Policy modified.
         401:
           $ref: '#/components/responses/401'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - group
   /v1/roles:
@@ -760,7 +765,7 @@ paths:
         - $ref: '#/components/parameters/per_page'
       responses:
         200:
-          description: all roles have been returned
+          description: All roles have been returned.
           content:
             application/json:
               schema:
@@ -770,13 +775,13 @@ paths:
         404:
           $ref: '#/components/responses/404'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - role
   /v1/role:
     post:
       summary: Create a new role
-      description: Create a new role and attach a IAM policy
+      description: Create a new role and attach a IAM policy.
       operationId: fusillade.api.roles.post_role
       security:
         - BearerAuth: []
@@ -795,7 +800,7 @@ paths:
                   type: string
       responses:
         201:
-          description: Role was created
+          description: Role was created.
         401:
           $ref: '#/components/responses/401'
         403:
@@ -803,7 +808,7 @@ paths:
         409:
           $ref: '#/components/responses/409'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - role
   /v1/role/{role_id}:
@@ -817,7 +822,7 @@ paths:
         - $ref: '#/components/parameters/role_id'
       responses:
         200:
-          description: Information about the role is returned
+          description: Information about the role is returned.
           content:
             application/json:
               schema:
@@ -825,11 +830,11 @@ paths:
         404:
           $ref: '#/components/responses/404'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - role
     delete:
-      summary: Remove Role from the system.
+      summary: Remove a role from the system
       description: Remove the role from all users and groups, and finally delete the role.
       operationId: fusillade.api.roles.delete_role
       security:
@@ -838,11 +843,11 @@ paths:
         - $ref: '#/components/parameters/role_id'
       responses:
         200:
-          description: Role was deleted
+          description: Role was deleted.
         401:
           $ref: '#/components/responses/401'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - role
   /v1/role/{role_id}/policy:
@@ -864,11 +869,11 @@ paths:
                   type: string
       responses:
         200:
-          description: policy modified
+          description: Policy modified.
         401:
           $ref: '#/components/responses/401'
         default:
-          description: Unexpected error
+          description: Unexpected error.
       tags:
         - role
 components:
@@ -877,20 +882,20 @@ components:
       name: user_id
       in: path
       required: true
-      description: User ID (email)
+      description: User ID (email).
       schema:
         $ref: '#/components/schemas/custom_identifier'
     role_id:
       name: role_id
       in: path
-      description: The name of the role
+      description: The name of the role.
       required: true
       schema:
         $ref: '#/components/schemas/custom_identifier'
     group_id:
       name: group_id
       in: path
-      description: The name of the group
+      description: The name of the group.
       required: true
       schema:
         $ref: '#/components/schemas/custom_identifier'
@@ -951,7 +956,7 @@ components:
         users:
           $ref: '#/components/schemas/paged_results'
     custom_identifier:
-      description: used to identify users, groups, and roles.
+      description: Used to identify users, groups, and roles.
       type: string
       minLength: 1
       maxLength: 128
@@ -1007,7 +1012,8 @@ components:
     401:
       description: The users credentials failed to authenticate.
     403:
-      description: The user is not authorized because they do not have adequate permission to perform the action.
+      description: The user is not authorized because they do not have adequate
+       permission to perform the action.
     404:
       description: Resource not found.
     409:

@@ -1,8 +1,8 @@
 openapi: 3.0.0
 info:
-  title: Fusillade interal api documentation
+  title: Fusillade Internal API Documentation
   description: |
-    Human Cell Atlas Data Coordination Platform Fusillade internal api's.
+    Human Cell Atlas Data Coordination Platform Fusillade internal APIs.
   version: "0.0.1"
 servers:
   - url: https://$API_DOMAIN_NAME/internal
@@ -15,19 +15,19 @@ paths:
       operationId: fusillade.api.oauth.cb
       responses:
         200:
-          description: return a authorization token
+          description: Returned a authorization token.
   /version:
     get:
-      summary: return the version of the deployed system
+      summary: Return the version of the deployed system
       operationId: fusillade.api.internal.version
       responses:
         200:
-          description: Version returned
+          description: Version returned.
 
   /health:
     get:
-      summary: return the health status of the deployed system
+      summary: Return the health status of the deployed system
       operationId: fusillade.api.internal.health_check
       responses:
         200:
-          description: health status returned
+          description: Health status returned.
