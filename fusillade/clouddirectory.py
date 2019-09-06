@@ -1281,7 +1281,6 @@ class PolicyMixin:
                              ))
         else:
             return operations
-        return policy_ref
 
     def get_policy_name(self, policy_type):
         return self.hash_name(f"{self._path_name}{self.object_type}{policy_type}")
