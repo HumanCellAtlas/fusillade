@@ -1381,24 +1381,30 @@ class CreateMixin(PolicyMixin):
     """Adds creation support to a cloudNode"""
 
     @classmethod
-    def create(cls, name: str, statement: Optional[str] = None,
-               creator=None) -> Type['CloudNode']:
-        if not statement:
-            statement = get_json_file(cls._default_policy_path)
-        cls._verify_statement(statement)
-        _creator = creator if creator else "fusillade"
+    def create(cls,
+               name: str,
+               statement: Optional[str] = None,
+               creator=None,
+               **kwargs) -> Type['CloudNode']:
         ops = []
         new_node = cls(name)
-
+        _creator = creator if creator else "fusillade"
         ops.append(new_node.cd.batch_create_object(
             new_node.cd.get_obj_type_path(cls.object_type),
             new_node.hash_name(name),
             new_node._facet,
-            new_node.cd.get_object_attribute_list(facet=new_node._facet, name=name, created_by=_creator)
+            new_node.cd.get_object_attribute_list(facet=new_node._facet, name=name, created_by=_creator, **kwargs)
         ))
         if creator:
             ops.append(User(name=creator).batch_add_ownership(new_node))
-        ops.extend(new_node.create_policy(statement, run=False, type=new_node.object_type, name=new_node.name))
+        if not statement and not getattr(cls, '_default_policy_path', None):
+            pass
+        else:
+            if statement:
+                cls._verify_statement(statement)
+            elif getattr(cls, '_default_policy_path'):
+                statement = get_json_file(cls._default_policy_path)
+            ops.extend(new_node.create_policy(statement, run=False, type=new_node.object_type, name=new_node.name))
 
         try:
             new_node.cd.batch_write(ops)
@@ -1540,7 +1546,7 @@ class OwnershipMixin:
                 return self.list_owned(Role, **kwargs)
 
 
-class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
+class User(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
     """
     Represents a user in CloudDirectory
     """
@@ -1651,39 +1657,21 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         :return:
         """
         user = cls(name)
-        _creator = creator if creator else "fusillade"
+        _creator = creator if creator else None
 
         # verify parameters
         if roles:
             Role.exists(roles)
         if groups:
             Group.exists(groups)
-        if statement:
-            user._verify_statement(statement)
 
-        try:
-            user.cd.create_object(user._path_name,
-                                  user._facet,
-                                  name=user.name,
-                                  status='Enabled',
-                                  obj_type=cls.object_type,
-                                  created_by=_creator
-                                  )
-        except cd_client.exceptions.LinkNameAlreadyInUseException:
-            raise FusilladeHTTPException(
-                status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists. "
-                f"{cls.object_type} was not modified.")
-        else:
-            logger.info(dict(message=f"{user.object_ref} created by {_creator}",
-                             object=dict(type=user.object_type, path_name=user._path_name)))
+        user = User.create(name, statement, creator=_creator, status='Enabled')
+
         roles = roles + cls.default_roles if roles else cls.default_roles
         user.add_roles(roles)
 
         groups = groups + cls.default_groups if groups else cls.default_groups
         user.add_groups(groups)
-
-        if statement:  # TODO make using user default configurable
-            user.set_policy(statement)
         return user
 
     @property
