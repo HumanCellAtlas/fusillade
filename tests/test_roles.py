@@ -54,11 +54,11 @@ class TestRole(unittest.TestCase):
             self.assertEqual(role.get_policy(), statement)
 
         statement = create_test_statements(150)
-        with self.subTest("an error is returned when a policy exceed 10 Kb"):
+        with self.subTest("an error is returned when a policy that exceeds 10 Kb for a pre-existing role"):
             with self.assertRaises(FusilladeHTTPException) as ex:
                 role.set_policy(statement)
 
-        with self.subTest("an error is returned when a policy exceed 10 Kb"):
+        with self.subTest("an error is returned when a policy that exceeds 10 Kb for a new role"):
             with self.assertRaises(FusilladeHTTPException) as ex:
                 Role.create("test_role_specified_2", statement)
 
