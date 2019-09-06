@@ -55,7 +55,7 @@ paths:
     get:
       summary: See documentation at
        https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
-      description: This endpoint is part of OIDC: see documentation at.
+      description: This endpoint is part of OIDC, see documentation at
        https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
       tags:
         - oauth
