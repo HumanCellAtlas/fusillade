@@ -678,26 +678,28 @@ class CloudDirectory:
             }
         }
 
-    def batch_create_object(self, parent: str,
-                            name: str,
+    def batch_create_object(self,
+                            parent: str,
+                            link_name: str,
                             facet_name: str,
                             object_attribute_list: List[str]) -> Dict[str, Any]:
         """
         A helper function to format a batch create_object operation
         """
-        return {'CreateObject': {
-            'SchemaFacet': [
-                {
-                    'SchemaArn': self.schema,
-                    'FacetName': facet_name
+        return {
+            'CreateObject': {
+                'SchemaFacet': [
+                    {
+                        'SchemaArn': self.schema,
+                        'FacetName': facet_name
+                    },
+                ],
+                'ObjectAttributeList': object_attribute_list,
+                'ParentReference': {
+                    'Selector': parent
                 },
-            ],
-            'ObjectAttributeList': object_attribute_list,
-            'ParentReference': {
-                'Selector': parent
-            },
-            'LinkName': name,
-        }
+                'LinkName': link_name,
+            }
         }
 
     def batch_get_attributes(self, obj_ref, facet, attributes: List[str], schema=None) -> Dict[str, Any]:
@@ -826,7 +828,7 @@ class CloudDirectory:
         except cd_client.exceptions.BatchWriteException as ex:
             failed_batch = operations[i:i + self._batch_write_max]
             failed_op = failed_batch[int(ex.response['Error']['Message'].split(" ")[1])]
-            logger.debug(
+            logger.warning(
                 {
                     "message": ex,
                     "response": ex.response,
@@ -1247,7 +1249,7 @@ class PolicyMixin:
         policy_paths = self.cd.lookup_policy(self.object_ref)
         return self.cd.get_policies(policy_paths)
 
-    def create_policy(self, statement: str, policy_type='IAMPolicy', **kwargs) -> str:
+    def create_policy(self, statement: str, policy_type='IAMPolicy', run=True, **kwargs) -> Union[List, None]:
         """
         Create a policy object and attach it to the CloudNode
         :param statement: Json string that follow AWS IAM Policy Grammar.
@@ -1282,17 +1284,19 @@ class PolicyMixin:
         policy_ref = parent_path + policy_link_name
 
         operations.append(self.cd.batch_attach_policy(policy_ref, self.object_ref))
-        self.cd.batch_write(operations)
-        logger.info(dict(message="Policy created",
-                         object=dict(
-                             type=self.object_type,
-                             path_name=self._path_name
-                         ),
-                         policy=dict(
-                             link_name=policy_link_name,
-                             policy_type=policy_type)
-                         ))
-        return policy_ref
+        if run:
+            self.cd.batch_write(operations)
+            logger.info(dict(message="Policy created",
+                             object=dict(
+                                 type=self.object_type,
+                                 path_name=self._path_name
+                             ),
+                             policy=dict(
+                                 link_name=policy_link_name,
+                                 policy_type=policy_type)
+                             ))
+        else:
+            return operations
 
     def get_policy_name(self, policy_type):
         return self.hash_name(f"{self._path_name}{self.object_type}{policy_type}")
@@ -1392,25 +1396,54 @@ class CreateMixin(PolicyMixin):
     """Adds creation support to a cloudNode"""
 
     @classmethod
-    def create(cls, name: str, statement: Optional[str] = None,
-               creator=None) -> Type['CloudNode']:
-        if not statement:
-            statement = get_json_file(cls._default_policy_path)
-        cls._verify_statement(statement)
-        _creator = creator if creator else "fusillade"
-        try:
-            Config.get_directory().create_object(cls.hash_name(name), cls._facet, name=name, obj_type=cls.object_type,
-                                                 created_by=_creator)
-        except cd_client.exceptions.LinkNameAlreadyInUseException:
-            raise FusilladeHTTPException(
-                status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists.")
+    def create(cls,
+               name: str,
+               statement: Optional[str] = None,
+               creator=None,
+               **kwargs) -> Type['CloudNode']:
+        ops = []
         new_node = cls(name)
+        _creator = creator if creator else "fusillade"
+        ops.append(new_node.cd.batch_create_object(
+            new_node.cd.get_obj_type_path(cls.object_type),
+            new_node.hash_name(name),
+            new_node._facet,
+            new_node.cd.get_object_attribute_list(facet=new_node._facet, name=name, created_by=_creator, **kwargs)
+        ))
         if creator:
-            User(name=creator).add_ownership(new_node)
-        logger.info(dict(message=f"{cls.object_type} created by {_creator}",
-                         object=dict(type=new_node.object_type, path_name=new_node._path_name)))
-        new_node.set_policy(statement)
-        return new_node
+            ops.append(User(name=creator).batch_add_ownership(new_node))
+        if not statement and not getattr(cls, '_default_policy_path', None):
+            pass
+        else:
+            if statement:
+                cls._verify_statement(statement)
+            elif getattr(cls, '_default_policy_path'):
+                statement = get_json_file(cls._default_policy_path)
+            ops.extend(new_node.create_policy(statement, run=False, type=new_node.object_type, name=new_node.name))
+
+        try:
+            new_node.cd.batch_write(ops)
+        except cd_client.exceptions.BatchWriteException as ex:
+            if 'LinkNameAlreadyInUseException' in ex.response['Error']['Message']:
+                raise FusilladeHTTPException(
+                    status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists. "
+                    f"{cls.object_type} was not modified.")
+            else:
+                raise FusilladeHTTPException(ex)
+        else:
+            new_node.cd.get_object_information(new_node.object_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
+            logger.info(dict(message=f"{new_node.object_type} created by {_creator}",
+                             object=dict(type=new_node.object_type, path_name=new_node._path_name)))
+            logger.info(dict(message="Policy updated",
+                             object=dict(
+                                 type=new_node.object_type,
+                                 path_name=new_node._path_name
+                             ),
+                             policy=dict(
+                                 link_name=new_node.get_policy_name('IAMPolicy'),
+                                 policy_type='IAMPolicy')
+                             ))
+            return new_node
 
 
 class RolesMixin:
@@ -1473,6 +1506,14 @@ class OwnershipMixin:
             'ownership_link',
             {'owner_of': node.object_type})
 
+    def batch_add_ownership(self, node: Type['CloudNode']) -> Dict:
+        return self.cd.batch_attach_typed_link(
+            self.object_ref,
+            node.object_ref,
+            'ownership_link',
+            {'owner_of': node.object_type}
+        )
+
     def remove_ownership(self, node: Type['CloudNode']):
         typed_link_specifier = self.cd.make_typed_link_specifier(
             self.object_ref,
@@ -1481,6 +1522,15 @@ class OwnershipMixin:
             {'owner_of': node.object_type}
         )
         self.cd.detach_typed_link(typed_link_specifier)
+
+    def batch_remove_ownership(self, node: Type['CloudNode']) -> Dict:
+        typed_link_specifier = self.cd.make_typed_link_specifier(
+            self.object_ref,
+            node.object_ref,
+            'ownership_link',
+            {'owner_of': node.object_type}
+        )
+        return self.cd.batch_detach_typed_link(typed_link_specifier)
 
     def is_owner(self, node: Type['CloudNode']):
         tls = self.cd.make_typed_link_specifier(
@@ -1512,7 +1562,7 @@ class OwnershipMixin:
                 return self.list_owned(Role, **kwargs)
 
 
-class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
+class User(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
     """
     Represents a user in CloudDirectory
     """
@@ -1623,39 +1673,21 @@ class User(CloudNode, RolesMixin, PolicyMixin, OwnershipMixin):
         :return:
         """
         user = cls(name)
-        _creator = creator if creator else "fusillade"
+        _creator = creator if creator else None
 
         # verify parameters
         if roles:
             Role.exists(roles)
         if groups:
             Group.exists(groups)
-        if statement:
-            user._verify_statement(statement)
 
-        try:
-            user.cd.create_object(user._path_name,
-                                  user._facet,
-                                  name=user.name,
-                                  status='Enabled',
-                                  obj_type=cls.object_type,
-                                  created_by=_creator
-                                  )
-        except cd_client.exceptions.LinkNameAlreadyInUseException:
-            raise FusilladeHTTPException(
-                status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists. "
-                f"{cls.object_type} was not modified.")
-        else:
-            logger.info(dict(message=f"{user.object_ref} created by {_creator}",
-                             object=dict(type=user.object_type, path_name=user._path_name)))
+        user = User.create(name, statement, creator=_creator, status='Enabled')
+
         roles = roles + cls.default_roles if roles else cls.default_roles
         user.add_roles(roles)
 
         groups = groups + cls.default_groups if groups else cls.default_groups
         user.add_groups(groups)
-
-        if statement:  # TODO make using user default configurable
-            user.set_policy(statement)
         return user
 
     @property
