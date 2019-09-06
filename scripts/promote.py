@@ -43,12 +43,10 @@ parser.add_argument('--auto', action="store_false",
                     help="Used for automated deployment. No user interaction is required.")
 args = parser.parse_args()
 
-
 if args.stage == 'production' and args.release:
     print(f'Warning: cannot release "production" with a release type.\n'
           f'Specify no release type to produce a finalized version.')
     exit(1)
-
 
 if args.stage == 'staging' and args.release:
     print(f'Warning: cannot release "staging" with a release type.\n'
@@ -176,7 +174,8 @@ def update_version() -> str:
         assert '-integration' in cur_version
         new_version = prv_version.replace('-integration', '-rc')  # don't bump the version number
     else:
-        new_version = getattr(semver, f'bump_{args.release}')(str(cur_version), token=args.stage)
+        new_version = semver.bump_prerelease(
+            str(getattr(semver, f'bump_{args.release}')(str(cur_version))), token=args.stage)
 
     print(f"Upgrading: {cur_version} -> {new_version}")
     return new_version
