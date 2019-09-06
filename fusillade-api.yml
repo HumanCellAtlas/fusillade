@@ -237,8 +237,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  decision:
+                  result:
                     type: boolean
+                  reason:
+                    type: string
         default:
           description: Unexpected error
   /v1/users:
