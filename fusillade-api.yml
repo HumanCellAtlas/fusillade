@@ -6,7 +6,7 @@ info:
 
     Log in: [Auth0](/login?state=ABC&redirect_uri=https://$API_DOMAIN_NAME/internal/echo)
 
-    OIDC spec https://openid.net/specs/openid-connect-core-1_0.html#toc
+    [OIDC spec](https://openid.net/specs/openid-connect-core-1_0.html#toc)
 
     # Pagination
     The Fusillade API supports pagination in a manner consistent with the
@@ -54,9 +54,9 @@ paths:
   /.well-known/openid-configuration:
     get:
       summary: See documentation at
-       https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
+       [Provider Config](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
       description: This endpoint is part of OIDC, see documentation at
-       https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
+       [Provider Config](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
       tags:
         - oauth
       parameters:
@@ -81,9 +81,9 @@ paths:
           description: Returns the well known jwks.
   /oauth/authorize:
     get:
-      summary: See https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+      summary: See [Auth Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
       description: This endpoint is part of OIDC and is used to redirect to an openid provider.
-       See https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+       See [Auth Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
       operationId: fusillade.api.oauth.authorize
       tags:
         - oauth
@@ -121,8 +121,8 @@ paths:
     post:
       summary: Retrieve the authentications token
       description: This endpoint is part of OIDC and is used to redirect to an openid provider.
-        See https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint, and
-        https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens
+        See [Token Endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint), and
+        [Refresh Tokens](https://openid.net/specs/openid-connect-core-1_0.html#RefreshTokens)
       operationId: fusillade.api.oauth.serve_oauth_token
       requestBody:
         content:
@@ -168,9 +168,9 @@ paths:
           description: Unexpected error.
   /oauth/userinfo:
     get:
-      summary: See https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      summary: See [User Info](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)
       description: This endpoint is part of OIDC and is used to redirect to an openid provider.
-        See https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+        See [User Info](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)
       operationId: fusillade.api.oauth.get_userinfo
       security:
         - BearerAuth: []
@@ -182,9 +182,9 @@ paths:
         401:
           $ref: '#/components/responses/401'
     post:
-      summary: See https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+      summary: See [User Info](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)
       description: This endpoint is part of OIDC and is used to redirect to an openid provider.
-        See https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
+        See [User Info](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)
       operationId: fusillade.api.oauth.post_userinfo
       security:
         - BearerAuth: []
