@@ -199,6 +199,7 @@ if __name__ == "__main__":
     release_notes = make_release_notes(src, dst)
     new_version = update_version()
     if not args.dry_run:
+        old_branch = _subprocess(['git', 'rev-parse', dst])
         commit(src, dst)
         body = dict(
             tag_name=str(new_version),
@@ -218,4 +219,6 @@ if __name__ == "__main__":
             resp.raise_for_status()
         except requests.exceptions.HTTPError as ex:
             print(f"ERROR: Failed to create release!  Changes were:\n{release_notes}")
+            print(f"Rolling back changes:")
+            commit(old_branch, dst)
             raise ex
