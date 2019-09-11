@@ -131,7 +131,7 @@ def get_current_version(stage: str = None) -> str:
     "check the latest release from github"
     stage = stage if stage else args.stage
     version_url = 'https://api.github.com/repos/HumancellAtlas/fusillade/releases'
-    releases = requests.Session().get(version_url).json()
+    releases = requests.get(version_url).json()
 
     # would use version['target_commitish'] to grab the stage, but in use it grabs unexpected stages
     if releases and stage == 'integration':
@@ -210,7 +210,7 @@ if __name__ == "__main__":
             body=release_notes
         )
 
-        resp = requests.Session().post(
+        resp = requests.post(
             f"https://api.github.com/repos/HumancellAtlas/fusillade/releases",
             headers={"Authorization": f"token {token}"},
             data=json.dumps(body)
