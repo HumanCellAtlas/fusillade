@@ -90,7 +90,7 @@ integration_test:
 integration_major:
   extends: .release
   script:
-    - scripts/promote.py integration --auto --release major
+    - scripts/promote.py integration --release major
   only:
     - master
   when: manual
@@ -98,7 +98,7 @@ integration_major:
 integration_minor:
   extends: .release
   variables:
-    RELEASE_COMMAND: scripts/promote.py integration --auto --release minor
+    RELEASE_COMMAND: scripts/promote.py integration --release minor
   only:
     - master
   when: manual
@@ -106,7 +106,7 @@ integration_minor:
 integration_patch:
   extends: .release
   variables:
-    RELEASE_COMMAND: scripts/promote.py integration --auto --release patch
+    RELEASE_COMMAND: scripts/promote.py integration --release patch
   only:
     - master
   when: manual
@@ -114,7 +114,7 @@ integration_patch:
 integration_build:
   extends: .release
   variables:
-    RELEASE_COMMAND: scripts/promote.py integration --auto --release build
+    RELEASE_COMMAND: scripts/promote.py integration --release build
   only:
     - master
   when: manual
@@ -122,7 +122,7 @@ integration_build:
 promote_staging:
   extends: .release
   variables:
-    RELEASE_COMMAND: scripts/promote.py staging --auto
+    RELEASE_COMMAND: scripts/promote.py staging
   only:
     - integration
   when: manual
@@ -130,7 +130,7 @@ promote_staging:
 promote_production:
   extends: .release
   variables:
-    RELEASE_COMMAND: scripts/promote.py production --auto
+    RELEASE_COMMAND: scripts/promote.py production
   only:
     - staging
   when: manual
