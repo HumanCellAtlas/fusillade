@@ -107,7 +107,7 @@ def make_release_notes(src, dst) -> str:
     Produce release notes by retrieving the different commits from src to dst.
     :param src: the source branch
     :param dst: the destination branch
-    :return list:
+    :return:
     """
     result = _subprocess(['git', 'log', '--pretty=format:"%s"', f"origin/{src}...origin/{dst}"])
     commits = "\n".join([f"- {i[1:-1]}" for i in result.split("\n")])
