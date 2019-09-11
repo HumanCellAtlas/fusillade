@@ -16,8 +16,6 @@ import argparse
 import json
 import os
 import subprocess
-import tempfile
-
 import requests
 import semver
 
@@ -39,8 +37,6 @@ parser.add_argument('--release-notes', type=str, required=False,
                     help="The path to a text file containing the release notes.")
 parser.add_argument('--dry-run', '-d',
                     action="store_true")
-parser.add_argument('--auto', action="store_false",
-                    help="Used for automated deployment. No user interaction is required.")
 args = parser.parse_args()
 
 if args.stage == 'production' and args.release:
@@ -59,8 +55,11 @@ def _subprocess(args, **kwargs):
     response = subprocess.run(args, **kwargs, check=True,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
+    if response.stdout:
+        print(f'RUN STDOUT:\n{response.stdout.decode("utf-8")}')
     if response.stderr:
         print(f'RUN STDERR:\n{response.stderr.decode("utf-8")}')
+    print('\n')
     return response.stdout.decode('utf-8')
 
 
@@ -105,34 +104,26 @@ def check_requirements():
 
 def make_release_notes(src, dst) -> str:
     """
-    produce release notes by retrieving the different commits from src to dst.
+    Produce release notes by retrieving the different commits from src to dst.
     :param src: the source branch
     :param dst: the destination branch
     :return:
     """
+    result = _subprocess(['git', 'log', '--pretty=format:"%s"', f"origin/{src}...origin/{dst}"])
+    commits = "\n".join([f"- {i[1:-1]}" for i in result.split("\n")])
+
     if args.release_notes:
-        subprocess.call([os.environ.get('EDITOR', 'vim'), args.release_notes])
-        with open(args.release_notes, 'r') as file:
-            r_notes = file.read()
-    else:
-        result = _subprocess(['git', 'log', '--pretty=format:"%s"', f"origin/{src}...origin/{dst}"])
-        r_notes = "\n".join([f"- {i[1:-1]}" for i in result.split("\n")])
-        if args.auto:
-            with tempfile.TemporaryDirectory() as temp_path:
-                temp_file = f"{temp_path}/release_notes.txt"
-                with open(temp_file, 'w') as file:
-                    file.write(r_notes)
-                    subprocess.call([os.environ.get('EDITOR', 'vim'), temp_file])
-                with open(temp_file, 'r') as file:
-                    r_notes = file.read()
-    return r_notes
+        with open(args.release_notes, 'w') as f:
+            f.write(commits)
+
+    return commits
 
 
 def commit(src, dst):
     print(_subprocess(['git', 'remote', 'set-url', 'origin',
                        f'https://{token}@github.com/HumanCellAtlas/fusillade.git']))
     print(_subprocess(['git', '-c', 'advice.detachedHead=false', 'checkout', f'origin/{src}']))
-    print(_subprocess(['git', 'checkout', '-B', dst]))
+    print(_subprocess(['git', 'checkout', dst]))
     print(_subprocess(['git', 'push', '--force', 'origin', dst]))
 
 
@@ -140,7 +131,7 @@ def get_current_version(stage: str = None) -> str:
     "check the latest release from github"
     stage = stage if stage else args.stage
     version_url = 'https://api.github.com/repos/HumancellAtlas/fusillade/releases'
-    releases = s.get(version_url).json()
+    releases = requests.get(version_url).json()
 
     # would use version['target_commitish'] to grab the stage, but in use it grabs unexpected stages
     if releases and stage == 'integration':
@@ -181,48 +172,44 @@ def update_version() -> str:
     return new_version
 
 
-Release_msg = "Releasing {src} to {dst}"
-if args.dry_run:
-    Release_msg = Release_msg + " (dry run)"
-Release_name = "{dst} {new_version}"
-release_map = {
-    "integration": ("master", "integration", True),
-    "staging": ("integration", "staging", True),
-    "production": ("staging", "production", False)
-}
-
-s = requests.Session()
-token_path = os.environ.get('GITHUB_TOKEN_PATH')
-if token_path and token_path != 'None':
-    with open(os.path.expanduser(token_path), 'r') as fp:
-        token = fp.read().strip()
-else:
-    secret_id = os.environ['GITHUB_TOKEN_SECRET_NAME']
-    import boto3
-
-    SM = boto3.client('secretsmanager')
-    token = SM.get_secret_value(SecretId=secret_id)['SecretString']
-
 if __name__ == "__main__":
+    release_map = {
+        "integration": ("master", "integration", True),
+        "staging": ("integration", "staging", True),
+        "production": ("staging", "production", False)
+    }
+
+    token_path = os.environ.get('GITHUB_TOKEN_PATH')
+    if token_path and token_path != 'None':
+        with open(os.path.expanduser(token_path), 'r') as fp:
+            token = fp.read().strip()
+    else:
+        secret_id = os.environ['GITHUB_TOKEN_SECRET_NAME']
+        import boto3
+
+        SM = boto3.client('secretsmanager')
+        token = SM.get_secret_value(SecretId=secret_id)['SecretString']
+
     src, dst, prerelease = release_map[args.stage]
-    print(Release_msg.format(src=src, dst=dst))
-    print(_subprocess(['git', 'fetch', '--all']))
+    dry_run = "(dry run)" if args.dry_run else ""
+    print(f"Releasing {src} to {dst} {dry_run}")
     check_working_tree()
     check_diff(src, dst)
     release_notes = make_release_notes(src, dst)
     new_version = update_version()
     if not args.dry_run:
+        old_branch = _subprocess(['git', 'rev-parse', f'origin/{dst}'])
         commit(src, dst)
-        name = Release_name.format(dst=dst, new_version=new_version)
         body = dict(
             tag_name=str(new_version),
-            name=name,
+            name="{dst} {new_version}".format(dst=dst, new_version=new_version),
             prerelease=prerelease,
             draft=False,
             target_commitish=dst,
             body=release_notes
         )
-        resp = s.post(
+
+        resp = requests.post(
             f"https://api.github.com/repos/HumancellAtlas/fusillade/releases",
             headers={"Authorization": f"token {token}"},
             data=json.dumps(body)
@@ -230,8 +217,7 @@ if __name__ == "__main__":
         try:
             resp.raise_for_status()
         except requests.exceptions.HTTPError as ex:
-            notes_path = os.path.abspath(f"release-notes-{name}.txt")
-            with open(notes_path, 'w') as fp:
-                fp.write(release_notes)
-            print(f"ERROR: Failed to create release!  Check log: {notes_path}")
+            print(f"ERROR: Failed to create release!  Changes were:\n{release_notes}")
+            print(f"Rolling back changes:")
+            commit(old_branch, dst)
             raise ex
