@@ -123,7 +123,7 @@ def commit(src, dst):
     print(_subprocess(['git', 'remote', 'set-url', 'origin',
                        f'https://{token}@github.com/HumanCellAtlas/fusillade.git']))
     print(_subprocess(['git', '-c', 'advice.detachedHead=false', 'checkout', f'origin/{src}']))
-    print(_subprocess(['git', 'checkout', dst]))
+    print(_subprocess(['git', 'checkout', '-B', dst]))
     print(_subprocess(['git', 'push', '--force', 'origin', dst]))
 
 

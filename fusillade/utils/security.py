@@ -78,17 +78,24 @@ def verify_jwt(token: str) -> typing.Optional[typing.Mapping]:
     """
     try:
         unverified_token = jwt.decode(token, verify=False)
+        token_header = jwt.get_unverified_header(token)
     except jwt.DecodeError:
         logger.debug({"msg": "Failed to decode token."}, exc_info=True)
         raise FusilladeHTTPException(401, 'Unauthorized', 'Failed to decode token.')
 
     issuer = unverified_token['iss']
     public_keys = get_public_keys(issuer)
-
     try:
-        token_header = jwt.get_unverified_header(token)
+        public_key = public_keys[token_header["kid"]]
+    except KeyError:
+        logger.error({"message": "Failed to fetched public key from openid provider.",
+                      "public_keys": public_keys,
+                      "issuer": issuer,
+                      "kid": token_header["kid"]})
+        raise FusilladeHTTPException(503, 'Service Unavailable', "Failed to fetched public key from openid provider.")
+    try:
         verified_tok = jwt.decode(token,
-                                  key=public_keys[token_header["kid"]],
+                                  key=public_key,
                                   issuer=issuer,
                                   audience=Config.get_audience(),
                                   algorithms=allowed_algorithms,
