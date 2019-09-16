@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import subprocess
+
 import requests
 import semver
 
@@ -27,7 +28,7 @@ parser.add_argument('stage',
                     choices=["integration", "staging", "production"])
 parser.add_argument('--release', '-r',
                     type=str,
-                    choices=["major", "minor", "patch", "prerelease", "build"],
+                    choices=["major", "minor", "patch", "prerelease"],
                     default=None,
                     required=False,
                     help="The type of release to produce.")
@@ -38,6 +39,8 @@ parser.add_argument('--release-notes', type=str, required=False,
 parser.add_argument('--dry-run', '-d',
                     action="store_true")
 args = parser.parse_args()
+
+repo = 'HumanCellAtlas/fusillade'
 
 if args.stage == 'production' and args.release:
     print(f'Warning: cannot release "production" with a release type.\n'
@@ -121,7 +124,7 @@ def make_release_notes(src, dst) -> str:
 
 def commit(src, dst):
     print(_subprocess(['git', 'remote', 'set-url', 'origin',
-                       f'https://{token}@github.com/HumanCellAtlas/fusillade.git']))
+                       f'https://{token}@github.com/{repo}.git']))
     print(_subprocess(['git', '-c', 'advice.detachedHead=false', 'checkout', f'origin/{src}']))
     print(_subprocess(['git', 'checkout', '-B', dst]))
     print(_subprocess(['git', 'push', '--force', 'origin', dst]))
@@ -130,16 +133,19 @@ def commit(src, dst):
 def get_current_version(stage: str = None) -> str:
     "check the latest release from github"
     stage = stage if stage else args.stage
-    version_url = 'https://api.github.com/repos/HumancellAtlas/fusillade/releases'
+    version_url = f'https://api.github.com/repos/{repo}/releases'
     releases = requests.get(version_url).json()
 
     # would use version['target_commitish'] to grab the stage, but in use it grabs unexpected stages
     if releases and stage == 'integration':
         versions = [semver.parse_version_info(version['tag_name']) for version in releases
-                    if semver.parse_version_info(version['tag_name']).prerelease.startswith('integration')]
+                    if semver.parse_version_info(version['tag_name']).prerelease
+                    and semver.parse_version_info(version['tag_name']).prerelease.startswith('integration')]
     elif releases and stage == 'staging':
         versions = [semver.parse_version_info(version['tag_name']) for version in releases
-                    if semver.parse_version_info(version['tag_name']).prerelease.startswith('rc')]
+                    if semver.parse_version_info(version['tag_name']).prerelease
+                    and semver.parse_version_info(version['tag_name']).prerelease.startswith('rc')] \
+                   or get_current_version('integration')
     elif releases and stage == 'production':
         versions = [semver.parse_version_info(version['tag_name']) for version in releases
                     if not semver.parse_version_info(version['tag_name']).prerelease]
@@ -152,24 +158,28 @@ def update_version() -> str:
     """
     Retrieves the current version from github, bumps the version, and updates the values in service_config.json before
     committing to the dst branch
-
     :return: The new version.
     """
-    cur_version = get_current_version()
+    cur_version = get_current_version(args.stage)
 
     if args.stage == "production":
         prv_version = get_current_version(stage='staging')
         new_version = semver.finalize_version(prv_version)
     elif args.stage == "staging":
         prv_version = get_current_version(stage='integration')
-        assert '-integration' in cur_version
+        assert '-integration' in prv_version
         new_version = prv_version.replace('-integration', '-rc')  # don't bump the version number
     else:
-        new_version = semver.bump_prerelease(
-            str(getattr(semver, f'bump_{args.release}')(str(cur_version))), token=args.stage)
+        new_version = getattr(semver, f'bump_{args.release}')(str(cur_version))
+        new_version = new_version if semver.parse_version_info(new_version).prerelease \
+            else semver.bump_prerelease(new_version, token='integration')
 
-    print(f"Upgrading: {cur_version} -> {new_version}")
-    return new_version
+    if cur_version == new_version:
+        print("Nothing to promote")
+        exit(0)
+    else:
+        print(f"Upgrading: {cur_version} -> {new_version}")
+        return new_version
 
 
 if __name__ == "__main__":
@@ -210,7 +220,7 @@ if __name__ == "__main__":
         )
 
         resp = requests.post(
-            f"https://api.github.com/repos/HumancellAtlas/fusillade/releases",
+            f"https://api.github.com/repos/{repo}/releases",
             headers={"Authorization": f"token {token}"},
             data=json.dumps(body)
         )
