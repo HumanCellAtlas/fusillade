@@ -113,7 +113,7 @@ integration_patch:
 integration_build:
   extends: .release
   variables:
-    RELEASE_COMMAND: scripts/promote.py integration --release build
+    RELEASE_COMMAND: scripts/promote.py integration --release prerelease
   only:
     - master
   when: manual
