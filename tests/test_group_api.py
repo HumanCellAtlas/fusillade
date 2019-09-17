@@ -31,7 +31,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
             {
                 'name': f'201 returned when creating a group',
                 'json_request_body': {
-                    "group_id": "Group0"
+                    "group_id": "test_post_group_Group0"
 
                 },
                 'response': {
@@ -41,8 +41,8 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
             {
                 'name': f'201 returned when creating a group with role only',
                 'json_request_body': {
-                    "group_id": "Group1",
-                    "roles": [Role.create("role_02").name]
+                    "group_id": "test_post_group_Group1",
+                    "roles": [Role.create("test_post_group_role_02").name]
                 },
                 'response': {
                     'code': 201
@@ -51,7 +51,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
             {
                 'name': f'201 returned when creating a group with policy only',
                 'json_request_body': {
-                    "group_id": "Group2",
+                    "group_id": "test_post_group_Group2",
                     "policy": create_test_statement("policy_03")
                 },
                 'response': {
@@ -61,8 +61,8 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
             {
                 'name': f'201 returned when creating a group with role and policy',
                 'json_request_body': {
-                    "group_id": "Group3",
-                    "roles": [Role.create("role_04").name],
+                    "group_id": "test_post_group_Group3",
+                    "roles": [Role.create("test_post_group_role_04").name],
                     "policy": create_test_statement("policy_04")
                 },
                 'response': {
@@ -72,7 +72,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
             {
                 'name': f'400 returned when creating a group without group_id',
                 'json_request_body': {
-                    "roles": [Role.create("role_05").name],
+                    "roles": [Role.create("test_post_group_role_05").name],
                     "policy": create_test_statement("policy_05")
                 },
                 'response': {
@@ -82,7 +82,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
             {
                 'name': f'409 returned when creating a group that already exists',
                 'json_request_body': {
-                    "group_id": "Group3"
+                    "group_id": "test_post_group_Group3"
                 },
                 'response': {
                     'code': 409
@@ -124,7 +124,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
     def test_get_group(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
-        name = "Groupx"
+        name = "test_get_group_Groupx"
         resp = self.app.get(f'/v1/group/{name}/', headers=headers)
         self.assertEqual(404, resp.status_code)
         Group.create(name)
@@ -139,7 +139,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
             resp = self.app.post(
                 '/v1/group',
                 headers=headers,
-                data=json.dumps({"group_id": f"test_put_group{i}",
+                data=json.dumps({"group_id": f"test_get_groups_{i}",
                                  'policy': create_test_statement("test_group")})
 
             )
@@ -149,7 +149,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
     def test_put_group_roles(self):
         tests = [
             {
-                'group_id': "Group1",
+                'group_id': "test_put_group_roles_Group1",
                 'action': 'add',
                 'json_request_body': {
                     "roles": [Role.create("role_0").name]
@@ -160,7 +160,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
                 ]
             },
             {
-                'group_id': "Group2",
+                'group_id': "test_put_group_roles_Group2",
                 'action': 'remove',
                 'json_request_body': {
                     "roles": [Role.create("role_1").name]
@@ -193,30 +193,30 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
     def test_get_group_roles(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
-        name = "Group1"
+        name = "test_get_group_roles_group"
         key = 'roles'
         group = Group.create(name)
         resp = self.app.get(f'/v1/group/{name}/roles', headers=headers)
         group_role_names = [Role(None, role).name for role in group.roles]
         self.assertEqual(0, len(json.loads(resp.body)[key]))
-        roles = [Role.create(f"role_{i}").name for i in range(10)]
+        roles = [Role.create(f"test_get_group_roles_role_{i}").name for i in range(10)]
         group.add_roles(roles)
         self._test_paging(f'/v1/group/{name}/roles', headers, 5, key)
 
     def test_get_group_users(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
-        name = "Group1"
+        name = "test_get_group_users_group"
         key = 'users'
         group = Group.create(name)
         resp = self.app.get(f'/v1/group/{name}/users', headers=headers)
         group_user_names = [User(user).name for user in group.get_users_iter()]
         self.assertEqual(0, len(json.loads(resp.body)[key]))
-        users = [User.provision_user(f"user_{i}", groups=[name]).name for i in range(10)]
+        users = [User.provision_user(f"test_get_group_user_{i}", groups=[name]).name for i in range(10)]
         self._test_paging(f'/v1/group/{name}/users', headers, 5, key)
 
     def test_put_users(self):
-        users = [User.provision_user(f"user_{i}").name for i in range(11)]
+        users = [User.provision_user(f"test_put_user_{i}").name for i in range(11)]
         tests = [
             {
                 'action': 'add',
@@ -312,10 +312,10 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
 
-        role = Role.create("role_0").name
-        user = User.provision_user("user_1").name
-        policy = create_test_statement("policy_04")
-        group_id = "group_1"
+        role = Role.create("test_delete_group_role").name
+        user = User.provision_user("test_delete_group_user").name
+        policy = create_test_statement("test_delete_group_policy")
+        group_id = "test_delete_group_group"
 
         with self.subTest("Group delete with users and roles."):
 

@@ -43,6 +43,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
         scopes_combination = [i for y in range(1, len(scopes) + 1) for i in combinations(scopes, y)]
         tests = product(states, scopes_combination)
         OPENID_PROVIDER = os.environ["OPENID_PROVIDER"]
+        redirect_url_host = [OPENID_PROVIDER, os.environ["API_DOMAIN_NAME"]]
         query_params_client_id = {
             "response_type": "code",
             "redirect_uri": REDIRECT_URI,
@@ -66,7 +67,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
                 self.assertEqual(redirect_url.args["state"], state)
                 self.assertEqual(redirect_url.args["redirect_uri"], REDIRECT_URI)
                 self.assertEqual(redirect_url.args["scope"], _scope)
-                self.assertEqual(redirect_url.host, OPENID_PROVIDER)
+                self.assertIn(redirect_url.host, redirect_url_host)
                 self.assertEqual(redirect_url.path, '/authorize')
 
             query_params.update(scope=_scope, state=state)
@@ -83,7 +84,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
                 redirect_uri = furl(redirect_url.args["redirect_uri"])
                 self.assertTrue(redirect_uri.pathstr.endswith('/cb'))
                 self.assertEqual(redirect_url.args["scope"], "openid email profile")
-                self.assertEqual(redirect_url.host, OPENID_PROVIDER)
+                self.assertIn(redirect_url.host, redirect_url_host)
                 self.assertEqual(redirect_url.path, '/authorize')
 
     def test_well_know_openid_configuration(self):

@@ -43,7 +43,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'name': f'201 returned when creating a user with group only',
                 'json_request_body': {
                     "user_id": "test_post_user1@email.com",
-                    "groups": [Group.create("group_01").name]
+                    "groups": [Group.create("test_post_new_user_group_01").name]
                 },
                 'response': {
                     'code': 201
@@ -53,7 +53,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'name': f'201 returned when creating a user with role only',
                 'json_request_body': {
                     "user_id": "test_post_user2@email.com",
-                    "roles": [Role.create("role_02").name]
+                    "roles": [Role.create("test_post_new_user_role_02").name]
                 },
                 'response': {
                     'code': 201
@@ -73,8 +73,8 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'name': f'201 returned when creating a user with group, role and policy',
                 'json_request_body': {
                     "user_id": "test_post_user4@email.com",
-                    "groups": [Group.create("group_04").name],
-                    "roles": [Role.create("role_04").name],
+                    "groups": [Group.create("test_post_new_user_group_04").name],
+                    "roles": [Role.create("test_post_new_user_role_04").name],
                     "policy": create_test_statement("policy_04")
                 },
                 'response': {
@@ -84,8 +84,8 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
             {
                 'name': f'400 returned when creating a user without username',
                 'json_request_body': {
-                    "groups": [Group.create("group_05").name],
-                    "roles": [Role.create("role_05").name],
+                    "groups": [Group.create("test_post_new_user_group_05").name],
+                    "roles": [Role.create("test_post_new_user_role_05").name],
                     "policy": create_test_statement("policy_05")
                 },
                 'response': {
@@ -331,7 +331,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'name': "test_put_user_role0@email.com",
                 'action': 'add',
                 'json_request_body': {
-                    "roles": [Role.create("role_0").name]
+                    "roles": [Role.create("test_put_username_roles_role_0").name]
                 },
                 'responses': [
                     {'code': 200},
@@ -342,7 +342,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'name': "test_put_user_role1@email.com",
                 'action': 'remove',
                 'json_request_body': {
-                    "roles": [Role.create("role_1").name]
+                    "roles": [Role.create("test_put_username_roles_role_1").name]
                 },
                 'responses': [
                     {'code': 200},
@@ -378,7 +378,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         resp = self.app.get(f'/v1/user/{name}/roles', headers=headers)
         user_role_names = [Role(None, role).name for role in user.roles]
         self.assertEqual(0, len(json.loads(resp.body)[key]))
-        roles = [Role.create(f"role_{i}").name for i in range(11)]
+        roles = [Role.create(f"test_get_username_role_{i}").name for i in range(11)]
         user.add_roles(roles)
         self._test_paging(f'/v1/user/{name}/roles', headers, 6, key)
 
@@ -390,9 +390,9 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         user = User.provision_user(name)
         url = furl(f"/v1/user/{name}/owns", query_params={'resource_type': 'role'}).url
         resp = self.app.get(url, headers=headers)
-        user_role_names = [Role(None, role).name for role in user.roles]
+        user_role_names = [Role(object_ref=role).name for role in user.roles]
         self.assertEqual(0, len(json.loads(resp.body)[key]))
-        roles = [Role.create(f"role_{i}") for i in range(11)]
+        roles = [Role.create(f"test_user_owned_role_{i}") for i in range(11)]
         user.add_roles([role.name for role in roles])
         [user.add_ownership(role) for role in roles]
         self._test_paging(url, headers, 6, key)
