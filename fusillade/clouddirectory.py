@@ -646,20 +646,20 @@ class CloudDirectory:
         self.batch_write([
             self.batch_detach_object(parent_ref, link_name)
             for parent_ref, link_name in
-            self.list_object_parents(**params)])
+            self.list_object_parents(**params)], allowed_errors=['ResourceNotFoundException'])
         self.batch_write([
             self.batch_detach_typed_link(i)
             for i in
-            self.list_incoming_typed_links(**params)])
+            self.list_incoming_typed_links(**params)], allowed_errors=['ResourceNotFoundException'])
         self.batch_write([
             self.batch_detach_typed_link(i)
             for i in
-            self.list_outgoing_typed_links(**params)])
+            self.list_outgoing_typed_links(**params)], allowed_errors=['ResourceNotFoundException'])
         try:
             self.batch_write([
                 self.batch_detach_object(object_id, link_name)
                 for link_name, _ in
-                self.list_object_children(**params)])
+                self.list_object_children(**params)], allowed_errors=['ResourceNotFoundException'])
         except cd_client.exceptions.NotNodeException:
             pass
         retry(**cd_read_retry_parameters)(cd_client.delete_object)(
@@ -814,31 +814,37 @@ class CloudDirectory:
         }
 
     @retry(**cd_write_retry_parameters)
-    def batch_write(self, operations: list) -> List[dict]:
+    def batch_write(self, operations: list, allowed_errors: List[str] = None) -> List[dict]:
         """
         A wrapper around CloudDirectory.Client.batch_write
         """
+        allowed_errors = allowed_errors or []
         responses = []  # contains succesful responses
-        try:
-            for i in range(0, len(operations), self._batch_write_max):
-                responses.extend(
-                    cd_client.batch_write(
-                        DirectoryArn=self._dir_arn,
-                        Operations=operations[i:i + self._batch_write_max])['Responses'])
-        except cd_client.exceptions.BatchWriteException as ex:
-            failed_batch = operations[i:i + self._batch_write_max]
-            failed_op = failed_batch[int(ex.response['Error']['Message'].split(" ")[1])]
-            logger.warning(
-                {
+        while True:
+            try:
+                for i in range(0, len(operations), self._batch_write_max):
+                    ops = operations[i:i + self._batch_write_max]
+                    responses.extend(
+                        cd_client.batch_write(
+                            DirectoryArn=self._dir_arn,
+                            Operations=ops)['Responses'])
+                break
+            except cd_client.exceptions.BatchWriteException as ex:
+                parsed_msg = ex.response['Error']['Message'].split(" ")
+                failed_op_index, error = (int(parsed_msg[1]), parsed_msg[2])
+                logger.warning({
                     "message": ex,
                     "response": ex.response,
                     "operations": {
-                        "failed": failed_op,
+                        "failed": operations.pop(i + failed_op_index),
                         "skipped": len(operations[i:]),
-                        "sucessful": len(operations[:i])
+                        "sucessful": len(operations[:i + failed_op_index])
                     }
                 })
-            raise ex
+                if error in allowed_errors:
+                    operations = operations[i:]
+                else:
+                    raise ex
 
         return responses
 

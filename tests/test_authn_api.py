@@ -68,7 +68,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
                 self.assertEqual(redirect_url.args["redirect_uri"], REDIRECT_URI)
                 self.assertEqual(redirect_url.args["scope"], _scope)
                 self.assertIn(redirect_url.host, redirect_url_host)
-                self.assertEqual(redirect_url.path, '/authorize')
+                self.assertTrue(str(redirect_url.path).endswith('/authorize'))
 
             query_params.update(scope=_scope, state=state)
             with self.subTest(f"without client_id: {state} {scope}"):  # TODO improve description
@@ -85,7 +85,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
                 self.assertTrue(redirect_uri.pathstr.endswith('/cb'))
                 self.assertEqual(redirect_url.args["scope"], "openid email profile")
                 self.assertIn(redirect_url.host, redirect_url_host)
-                self.assertEqual(redirect_url.path, '/authorize')
+                self.assertTrue(str(redirect_url.path).endswith('/authorize'))
 
     def test_well_know_openid_configuration(self):
         expected_keys = ['issuer']
