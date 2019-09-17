@@ -66,7 +66,7 @@ deploy_name:
     - staging
 
 .integration_test:
-  stage: .integration_test
+  stage: integration_test
   script:
     - scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
     - make integration_test
