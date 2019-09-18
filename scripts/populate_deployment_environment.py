@@ -21,7 +21,7 @@ def get_ssm_deployment_environment():
 
 def set_ssm_deployment_environment(parms: str):
     ssm_client.put_parameter(
-        Name=f"/dcp/fusillade/{args.stage}/deployment_environment",
+        Name=f"/{os.environ['FUS_PARAMETER_STORE']}/{args.stage}/deployment_environment",
         Value=parms,
         Type="String",
         Overwrite=True
@@ -33,16 +33,16 @@ if __name__ == "__main__":
     parser.add_argument('stage',
                         metavar='stage',
                         type=str,
-                        help="The stage you would like to upload the environment variables for.",
+                        help="The stage you would like to upload the environment variables for",
                         choices=["master", "testing", "dev", "integration", "staging", "prod"])
     parser.add_argument("-p", "--print",
                         default=False,
                         action="store_true",
-                        help="Display the current environemnt stored in SSM"
+                        help="Display the current environment stored in SSM"
                         )
     parser.add_argument("--file", "-f",
                         type=str,
-                        help="path to the environment file."
+                        help="Path to the environment file"
                         )
     args = parser.parse_args()
 
