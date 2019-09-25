@@ -149,7 +149,7 @@ def get_current_version(stage: str = None) -> str:
     elif releases and stage == 'production':
         versions = [semver.parse_version_info(version['tag_name']) for version in releases
                     if not semver.parse_version_info(version['tag_name']).prerelease]
-    else:
+    if not versions:
         versions = [semver.VersionInfo(0, 0, 0)]
     return str(max(versions))
 
