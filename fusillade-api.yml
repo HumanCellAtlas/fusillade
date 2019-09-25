@@ -108,6 +108,14 @@ paths:
           in: query
           schema:
             type: string
+        - name: nonce
+          in: query
+          schema:
+            type: string
+        - name: prompt
+          in: query
+          schema:
+            type: string
       responses:
         302:
           description: Redirecting to authentication server.
@@ -117,6 +125,23 @@ paths:
                 type: string
         default:
           description: Unexpected error.
+  /oauth/revoke:
+    post:
+      summary: Revoke a refresh token
+      description: Revokes a refresh token from a client making all future token refresh requests fail.
+      operationId: fusillade.api.oauth.revoke
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                client_id:
+                  type: string
+                  description:
+                token:
+                  type: string
+                  description: The refresh token to revoke.
   /oauth/token:
     post:
       summary: Retrieve the authentications token

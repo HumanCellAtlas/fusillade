@@ -26,17 +26,11 @@ def authorize():
     query_params = request.args.copy() if request.args else {}
     openid_provider = Config.get_openid_provider()
     query_params["openid_provider"] = openid_provider
+    query_params['response_type'] = "code"
     client_id = query_params.get("client_id")
     client_id = client_id if client_id != 'None' else None
     if client_id:
-        # TODO: audit this
-        auth_params = dict(client_id=query_params["client_id"],
-                           response_type="code",
-                           scope=query_params["scope"],
-                           redirect_uri=query_params["redirect_uri"],
-                           state=query_params["state"])
-        if "audience" in query_params:
-            auth_params["audience"] = query_params["audience"]
+        auth_params = query_params
     else:
         state = base64.b64encode(json.dumps(query_params).encode()).decode()
         # TODO: set random state
