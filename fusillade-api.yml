@@ -64,6 +64,7 @@ paths:
           name: host
           schema:
             type: string
+            default: $API_DOMAIN_NAME
           required: true
           description: Must be `$API_DOMAIN_NAME`.
       operationId: fusillade.api.oauth.serve_openid_config
@@ -73,6 +74,8 @@ paths:
   /.well-known/jwks.json:
     get:
       summary: This endpoint is part of OIDC
+      description: Provide the public key used to sign all JWTs minted by the OIDC provider.
+       See [JSON Web Key Set](https://auth0.com/docs/jwks) for more info.
       tags:
         - oauth
       operationId: fusillade.api.oauth.serve_jwks_json
