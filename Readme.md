@@ -79,6 +79,13 @@ To do this, your application should define an access control model consisting of
   `default_user_role.json` is the role assigned to the group `default_user` which is created during deployment. All of 
   these policies and role can be modified after deployment using the Fusillade API.
 
+## Open ID Connect (OIDC) Provider Setup
+The OIDC provide handle the OIDC authentication process. [Auth0](https://auth0.com/) is an example of an OIDC provider.
+1. Set OPENID_PROVIDER in environment. This is the domain for the auth provider. 
+1. Set **oauth2_config** in AWS Secrets Manager using `make set_oauth2_config`. **oauth2_config** contains the fields 
+needed to proxy an OIDC provider. Populate this file with the OIDC providers you'd like to use to authenticate users. 
+See [oauth2_config.json](../master/deployment/example/oauth2_config.example.json) for the expected format.
+  
 ## Set Secrets
 
 Fusillade uses AWS Secret Store for its secrets. You can set secrets using `./scripts/set_secret.py`. For example:
@@ -89,9 +96,7 @@ $ cat ./deployments/$(FUS_DEPLOYMENT_STAGE)/oauth2_config.json | ./scripts/set_s
  
  The following secrets are use by Fusillade:
 
-* **oauth2_config** - contains the fields needed to proxy an OIDC provider. Populate this file with the OIDC providers 
-  you'd like to use to authenticate users. See [oauth2_config.json](../master/deployment/example/oauth2_config.example.json) 
-  for the expected format. This secret can also be set using `make set_oauth2_config`.
+* **oauth2_config** - see "OIDC Provider Setup" for more details.
 * **test_service_accounts Optional** - contains google service accounts to test users access and admin access. This 
   only required for running tests See [test_service_accounts.json](../master/deployment/example/oauth2_config.example.json) 
   for the expected format.
