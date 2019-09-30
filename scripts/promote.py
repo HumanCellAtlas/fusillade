@@ -8,7 +8,7 @@ variable `GITHUB_TOKEN_SECRET_NAME` to the path of the AWS secret which contains
 
 `./promote.py integration` promotes master to integration and creates a prerelease in github.
 `./promote.py staging` promotes integration to staging and creates a prerelease in github.
-`./promote.py production` promotes staging to production and creates a release in github.
+`./promote.py prod` promotes staging to prod and creates a release in github.
 
 Versioning follows https://semver.org/ standard
 """
@@ -25,7 +25,7 @@ parser.add_argument('stage',
                     metavar='stage',
                     type=str,
                     help="The stage you would like to create a release to.",
-                    choices=["integration", "staging", "production"])
+                    choices=["integration", "staging", "prod"])
 parser.add_argument('--release', '-r',
                     type=str,
                     choices=["major", "minor", "patch", "prerelease"],
@@ -42,8 +42,8 @@ args = parser.parse_args()
 
 repo = 'HumanCellAtlas/fusillade'
 
-if args.stage == 'production' and args.release:
-    print(f'Warning: cannot release "production" with a release type.\n'
+if args.stage == 'prod' and args.release:
+    print(f'Warning: cannot release "prod" with a release type.\n'
           f'Specify no release type to produce a finalized version.')
     exit(1)
 
@@ -146,7 +146,7 @@ def get_current_version(stage: str = None) -> str:
                     if semver.parse_version_info(version['tag_name']).prerelease
                     and semver.parse_version_info(version['tag_name']).prerelease.startswith('rc')] \
                    or get_current_version('integration')
-    elif releases and stage == 'production':
+    elif releases and stage == 'prod':
         versions = [semver.parse_version_info(version['tag_name']) for version in releases
                     if not semver.parse_version_info(version['tag_name']).prerelease]
     if not versions:
@@ -162,7 +162,7 @@ def update_version() -> str:
     """
     cur_version = get_current_version(args.stage)
 
-    if args.stage == "production":
+    if args.stage == "prod":
         prv_version = get_current_version(stage='staging')
         new_version = semver.finalize_version(prv_version)
     elif args.stage == "staging":
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     release_map = {
         "integration": ("master", "integration", True),
         "staging": ("integration", "staging", True),
-        "production": ("staging", "production", False)
+        "prod": ("staging", "prod", False)
     }
 
     token_path = os.environ.get('GITHUB_TOKEN_PATH')

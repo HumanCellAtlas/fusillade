@@ -60,7 +60,12 @@ else
     fi
 fi
 
+if [[ "${FUS_DEPLOYMENT_STAGE}" == "prod" ]]; then
+    FUS_ZONE_NAME=data.humancellatlas.org
+else
+    export FUS_ZONE_NAME=${FUS_DEPLOYMENT_STAGE}.data.humancellatlas.org
+fi
+
 set -a
-FUS_ZONE_NAME=${FUS_DEPLOYMENT_STAGE}.data.humancellatlas.org
 API_DOMAIN_NAME=auth.${FUS_ZONE_NAME}
 set +a
