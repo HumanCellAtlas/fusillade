@@ -6,7 +6,6 @@ variables:
 
 stages:
   - deploy
-  - integration_test
 
 before_script:
   - export COMMITS_URL=${GITHUB_API}/repos/HumanCellAtlas/fusillade/commits
@@ -26,18 +25,5 @@ deploy_branch:
   script:
     - scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
     - make deploy
-  only:
-    - prod
-
-.integration_test:
-  stage: integration_test
-  except:
-    - schedules
-
-integration_test:
-  extends: .integration_test
-  script:
-    - scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
-    - make integration_test
   only:
     - prod
