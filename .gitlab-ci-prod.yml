@@ -1,0 +1,43 @@
+image: humancellatlas/dss-build-box
+
+variables:
+  GIT_SUBMODULE_STRATEGY: normal
+  GITHUB_API: "https://api.github.com"
+
+stages:
+  - deploy
+  - integration_test
+
+before_script:
+  - export COMMITS_URL=${GITHUB_API}/repos/HumanCellAtlas/fusillade/commits
+  - if not [[ CI_COMMIT_SHA == $(http GET $COMMITS_URL sha==$CI_COMMIT_REF_NAME | jq -r '.[0]["sha"]') ]]; then exit  1; fi
+  - virtualenv ~/venv
+  - source ~/venv/bin/activate
+  - pip install -r requirements-dev.txt
+  - source environment
+
+.deploy:
+  stage: deploy
+  except:
+    - schedules
+
+deploy_branch:
+  extends: .deploy
+  script:
+    - scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
+    - make deploy
+  only:
+    - production
+
+.integration_test:
+  stage: integration_test
+  except:
+    - schedules
+
+integration_test:
+  extends: .integration_test
+  script:
+    - scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
+    - make integration_test
+  only:
+    - production
