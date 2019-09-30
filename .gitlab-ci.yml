@@ -140,7 +140,7 @@ promote_staging:
 promote_production:
   extends: .release
   variables:
-    RELEASE_COMMAND: scripts/promote.py production
+    RELEASE_COMMAND: scripts/promote.py prod
   only:
     - staging
   when: manual
