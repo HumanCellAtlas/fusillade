@@ -143,6 +143,10 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         for admin in admins:
             User.provision_user(admin, roles=['fusillade_admin'])
         User.provision_user('public')
+        logger.info({"message": "Created New Directory",
+                     "schema_arn": schema,
+                     "directory_name": name,
+                     "admins": admins})
         return directory
 
 
