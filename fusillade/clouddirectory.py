@@ -131,7 +131,7 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         return directory
     else:
         # create structure
-        for folder_name in ('group', 'user', 'role', 'policy'):
+        for folder_name in obj_type_path.keys():
             directory.create_folder('/', folder_name)
 
         # create roles
@@ -168,6 +168,15 @@ def list_directories(state: str = 'ENABLED') -> Iterator:
 class UpdateActions(Enum):
     CREATE_OR_UPDATE = auto()
     DELETE = auto()
+
+
+obj_type_path = dict(
+    group='/group/',
+    index='/index/',
+    user='/user/',
+    policy='/policy/',
+    role='/role/'
+)
 
 
 class ValueTypes(Enum):
@@ -862,12 +871,7 @@ class CloudDirectory:
     @staticmethod
     def get_obj_type_path(obj_type: str) -> str:
         obj_type = obj_type.lower()
-        paths = dict(group='/group/',
-                     index='/index/',
-                     user='/user/',
-                     policy='/policy/',
-                     role='/role/')
-        return paths[obj_type]
+        return obj_type_path[obj_type]
 
     def lookup_policy(self, object_id: str) -> List[Dict[str, Any]]:
         # retrieve all of the policies attached to an object and its parents.
