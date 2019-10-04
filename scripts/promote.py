@@ -42,10 +42,12 @@ args = parser.parse_args()
 
 repo = 'HumanCellAtlas/fusillade'
 
-if args.stage == 'prod' and args.release:
-    print(f'Warning: cannot release "prod" with a release type.\n'
-          f'Specify no release type to produce a finalized version.')
-    exit(1)
+if args.stage == 'prod':
+    args.stage = 'production'
+    if args.release:
+        print(f'Warning: cannot release "production" with a release type.\n'
+              f'Specify no release type to produce a finalized version.')
+        exit(1)
 
 if args.stage == 'staging' and args.release:
     print(f'Warning: cannot release "staging" with a release type.\n'
@@ -146,7 +148,7 @@ def get_current_version(stage: str = None) -> str:
                     if semver.parse_version_info(version['tag_name']).prerelease
                     and semver.parse_version_info(version['tag_name']).prerelease.startswith('rc')] \
                    or get_current_version('integration')
-    elif releases and stage == 'prod':
+    elif releases and stage == 'production':
         versions = [semver.parse_version_info(version['tag_name']) for version in releases
                     if not semver.parse_version_info(version['tag_name']).prerelease]
     if not versions:
