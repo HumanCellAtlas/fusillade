@@ -245,4 +245,4 @@ def health_checks() -> typing.Dict[str, str]:
     except Exception:
         return dict(iam_health_status='unhealthy')
     else:
-        dict(iam_health_status='ok')
+        return dict(iam_health_status='ok')
