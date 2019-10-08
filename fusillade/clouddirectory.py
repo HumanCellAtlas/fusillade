@@ -215,12 +215,13 @@ def batch_reference(func):
         If batch_reference is a kwarg, it is added to the batch request as BatchReference. Batch referencing simplify
         the process of referencing objects in another batch request.
         """
-        batch_ref = kwargs.pop('batch_reference')
+        batch_ref = kwargs.pop('batch_reference', None)
         r = func(*args, **kwargs)
         if batch_ref:
             for key in r.keys():
                 r[key]['BatchReference'] = batch_ref
         return r
+    return wrapper
 
 
 class CloudDirectory:
@@ -1430,7 +1431,7 @@ class CreateMixin(PolicyMixin):
             pass
         else:
             if statement:
-                cls._verify_statement(statement)
+                verify_iam_policy(statement)
             elif getattr(cls, '_default_policy_path'):
                 statement = get_json_file(cls._default_policy_path)
             ops.extend(new_node.create_policy(statement, run=False, type=new_node.object_type, name=new_node.name))
