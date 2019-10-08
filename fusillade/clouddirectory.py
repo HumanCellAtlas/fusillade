@@ -835,6 +835,14 @@ class CloudDirectory:
             }
         }
 
+    def batch_get_link_attributes(self, type_link_specifier, attributes: List[str]) -> Dict[str, Any]:
+        return {
+            'GetLinkAttributes': {
+                'TypedLinkSpecifier': type_link_specifier,
+                'AttributeNames': attributes
+            }
+        }
+
     @retry(**cd_write_retry_parameters)
     def batch_write(self, operations: list, allowed_errors: List[str] = None) -> List[dict]:
         """
