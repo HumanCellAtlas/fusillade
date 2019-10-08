@@ -116,22 +116,11 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
         )
         directory = CloudDirectory(response['DirectoryArn'])
         logger.info({"message": "Created new directory", "directory_arn": directory._dir_arn})
-        cd_client.tag_resource(
-            ResourceArn=directory._dir_arn,
-            Tags=[
-                {'Key': 'project', "Value": os.getenv("FUS_PROJECT_TAG", '')},
-                {'Key': 'owner', "Value": os.getenv("FUS_OWNER_TAG", '')},
-                {'Key': 'env', "Value": os.getenv("FUS_DEPLOYMENT_STAGE")},
-                {'Key': 'Name', "Value": "fusillade-directory"},
-                {'Key': 'managedBy', "Value": "manual"}
-            ]
-        )
     except cd_client.exceptions.DirectoryAlreadyExistsException:
         directory = CloudDirectory.from_name(name)
-        return directory
     else:
         # create structure
-        for folder_name in ('group', 'user', 'role', 'policy'):
+        for folder_name in obj_type_path.keys():
             directory.create_folder('/', folder_name)
 
         # create roles
@@ -147,7 +136,27 @@ def create_directory(name: str, schema: str, admins: List[str]) -> 'CloudDirecto
                      "schema_arn": schema,
                      "directory_name": name,
                      "admins": admins})
-        return directory
+    cd_client.tag_resource(
+        ResourceArn=directory._dir_arn,
+        Tags=[
+            {'Key': 'project', "Value": os.getenv("FUS_PROJECT_TAG", '')},
+            {'Key': 'owner', "Value": os.getenv("FUS_OWNER_TAG", '')},
+            {'Key': 'env', "Value": os.getenv("FUS_DEPLOYMENT_STAGE")},
+            {'Key': 'Name', "Value": "fusillade-directory"},
+            {'Key': 'managedBy', "Value": "manual"}
+        ]
+    )
+    verify_directory(directory)
+    return directory
+
+
+def verify_directory(directory: 'CloudDirectory'):
+    """Checks that the directory has the correct paths setup. This is for upgrading existing directories if needed."""
+    for folder_name in obj_type_path.keys():
+        try:
+            directory.get_object_information(f"/{folder_name}")
+        except cd_client.exceptions.ResourceNotFoundException:
+            directory.create_folder('/', folder_name)
 
 
 @retry(**cd_read_retry_parameters, inherit=True)
@@ -168,6 +177,15 @@ def list_directories(state: str = 'ENABLED') -> Iterator:
 class UpdateActions(Enum):
     CREATE_OR_UPDATE = auto()
     DELETE = auto()
+
+
+obj_type_path = dict(
+    group='/group/',
+    index='/index/',
+    user='/user/',
+    policy='/policy/',
+    role='/role/'
+)
 
 
 class ValueTypes(Enum):
@@ -862,12 +880,7 @@ class CloudDirectory:
     @staticmethod
     def get_obj_type_path(obj_type: str) -> str:
         obj_type = obj_type.lower()
-        paths = dict(group='/group/',
-                     index='/index/',
-                     user='/user/',
-                     policy='/policy/',
-                     role='/role/')
-        return paths[obj_type]
+        return obj_type_path[obj_type]
 
     def lookup_policy(self, object_id: str) -> List[Dict[str, Any]]:
         # retrieve all of the policies attached to an object and its parents.
@@ -1021,7 +1034,6 @@ class CloudNode:
     _attributes = ["name"]  # the different attributes of a node stored
     _facet = 'LeafNode'
     object_type = 'node'
-    allowed_policy_types = ('IAMPolicy',)
 
     def __init__(self,
                  name: str = None,
