@@ -1025,7 +1025,6 @@ class CloudDirectory:
         Runs a health check on AWS cloud directory and iam policy simulator
         :return: the status of the services.
         """
-        health_status = {}
         try:
             self.get_object_information('/')['ResponseMetadata']['HTTPStatusCode']
         except Exception:
