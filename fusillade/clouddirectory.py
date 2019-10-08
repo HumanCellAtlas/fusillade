@@ -194,7 +194,7 @@ class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute',
 def batch_reference(func):
     def wrapper(*args, **kwargs):
         """
-        If batch_reference is a kwarg, it is added to the batch request as BatchReference. Batch referencing simplify
+        If batch_reference is a kwarg, it is added to the batch request as BatchReference. Batch referencing simplifies
         the process of referencing objects in another batch request.
         """
         batch_ref = kwargs.pop('batch_reference', None)
