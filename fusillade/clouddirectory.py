@@ -21,7 +21,7 @@ from dcplib.aws import clients as aws_clients
 from fusillade import Config
 from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException, \
     AuthorizationException, FusilladeLimitException, FusilladeBadRequestException
-from fusillade.utils.policy_validator import verify_iam_policy
+from fusillade.policy.validator import verify_iam_policy
 from fusillade.utils.retry import retry
 
 logger = logging.getLogger(__name__)
