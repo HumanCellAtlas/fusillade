@@ -704,7 +704,7 @@ class CloudDirectory:
 
     @staticmethod
     @batch_reference
-    def batch_detach_policy(policy_ref: str, object_ref: str):
+    def batch_detach_policy(policy_ref: str, object_ref: str) -> Dict[str, Any]:
         """
         A helper function to format a batch detach_policy operation
         """
