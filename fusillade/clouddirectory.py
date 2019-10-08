@@ -209,6 +209,16 @@ class UpdateObjectParams(namedtuple("UpdateObjectParams", ['facet', 'attribute',
     pass
 
 
+def batch_reference(func):
+    def wrapper(*args, **kwargs):
+        batch_ref = kwargs.pop('batch_reference')
+        r = func(*args, **kwargs)
+        if batch_ref:
+            for key in r.keys():
+                r[key]['BatchReference'] = batch_ref
+        return r
+
+
 class CloudDirectory:
     _page_limit = 30  # This is the max allowed by AWS
     _batch_write_max = 20  # This is the max allowed by AWS
@@ -689,6 +699,7 @@ class CloudDirectory:
             ObjectReference={'Selector': object_id})
 
     @staticmethod
+    @batch_reference
     def batch_detach_policy(policy_ref: str, object_ref: str):
         """
         A helper function to format a batch detach_policy operation
@@ -700,11 +711,13 @@ class CloudDirectory:
             }
         }
 
+    @batch_reference
     def batch_create_object(self,
                             parent: str,
                             link_name: str,
                             facet_name: str,
-                            object_attribute_list: List[str]) -> Dict[str, Any]:
+                            object_attribute_list: List[str],
+                            ) -> Dict[str, Any]:
         """
         A helper function to format a batch create_object operation
         """
@@ -724,6 +737,7 @@ class CloudDirectory:
             }
         }
 
+    @batch_reference
     def batch_get_attributes(self, obj_ref, facet, attributes: List[str], schema=None) -> Dict[str, Any]:
         """
         A helper function to format a batch get_attributes operation
@@ -742,6 +756,7 @@ class CloudDirectory:
         }
 
     @staticmethod
+    @batch_reference
     def batch_attach_object(parent: str, child: str, name: str) -> Dict[str, Any]:
         """
         A helper function to format a batch attach_object operation
@@ -759,6 +774,7 @@ class CloudDirectory:
         }
 
     @staticmethod
+    @batch_reference
     def batch_detach_object(parent: str, link_name: str) -> Dict[str, Any]:
         """
         A helper function to format a batch detach_object operation
@@ -771,6 +787,7 @@ class CloudDirectory:
         }}
 
     @staticmethod
+    @batch_reference
     def batch_attach_policy(policy: str, object_ref: str) -> Dict[str, Any]:
         """
         A helper function to format a batch attach_policy operation
@@ -786,6 +803,7 @@ class CloudDirectory:
             }
         }
 
+    @batch_reference
     def batch_attach_typed_link(self,
                                 parent: str,
                                 child: str,
@@ -808,6 +826,7 @@ class CloudDirectory:
         }
 
     @staticmethod
+    @batch_reference
     def batch_detach_typed_link(typed_link_specifier) -> Dict[str, Any]:
         return {
             'DetachTypedLink': {
@@ -815,6 +834,7 @@ class CloudDirectory:
             },
         }
 
+    @batch_reference
     def batch_lookup_policy(self, obj_ref: str, next_token: str = None) -> Dict[str, Any]:
         temp = {
             'ObjectReference': {
@@ -826,6 +846,7 @@ class CloudDirectory:
             temp['NextToken'] = next_token
         return {'LookupPolicy': temp}
 
+    @batch_reference
     def batch_get_object_info(self, obj_ref: str):
         return {
             'GetObjectInformation': {
