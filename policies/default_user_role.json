@@ -7,7 +7,20 @@
       "Action": [
         "fus:GetUser"
       ],
-       "Resource": "arn:hca:fus:*:*:user/${fus:user_email}/*"
+      "Resource": "arn:hca:fus:*:*:user/${fus:user_email}/*"
+    },
+    {
+      "Sid": "Default Resource Owner",
+      "Effect": "Allow",
+      "Action": [
+        "fus:GetResource",
+        "fus:PostResource",
+        "fus:DeleteResource"
+      ],
+      "Resource": [
+        "arn:hca:fus:*:*:resource/${fus:resource_type}/${fus:resource_id}/policies",
+        "arn:hca:fus:*:*:resource/${fus:resource_type}/${fus:resource_id}/inline_policy"
+      ]
     }
   ]
 }
