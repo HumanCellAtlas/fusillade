@@ -21,12 +21,12 @@ from dcplib.aws import clients as aws_clients
 from fusillade import Config
 from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException, \
     AuthorizationException, FusilladeLimitException, FusilladeBadRequestException
+from fusillade.utils.policy_validator import verify_iam_policy
 from fusillade.utils.retry import retry
 
 logger = logging.getLogger(__name__)
 
 cd_client = aws_clients.clouddirectory
-iam = aws_clients.iam
 project_arn = "arn:aws:clouddirectory:{}:{}:".format(
     os.getenv('AWS_DEFAULT_REGION'),
     aws_clients.sts.get_caller_identity().get('Account'))
@@ -1016,36 +1016,18 @@ class CloudDirectory:
             **kwargs
         )
 
-    def get_health_status(self) -> dict:
+    def health_checks(self) -> Dict[str, str]:
         """
         Runs a health check on AWS cloud directory and iam policy simulator
         :return: the status of the services.
         """
         health_status = {}
         try:
-            iam.simulate_custom_policy(
-                PolicyInputList=[json.dumps({
-                    "Version": "2012-10-17",
-                    "Statement": [{
-                        "Sid": "DefaultRole",
-                        "Effect": "Deny",
-                        "Action": ["fake:action"],
-                        "Resource": "fake:resource"
-                    }]})],
-                ActionNames=["fake:action"],
-                ResourceArns=["arn:aws:iam::123456789012:user/Bob"])
-        except Exception:
-            health_status.update(iam_health_status='unhealthy')
-        else:
-            health_status.update(iam_health_status='ok')
-
-        try:
             self.get_object_information('/')['ResponseMetadata']['HTTPStatusCode']
         except Exception:
-            health_status.update(clouddirectory_health_status='unhealthy')
+            return dict(clouddirectory_health_status='unhealthy')
         else:
-            health_status.update(clouddirectory_health_status='ok')
-        return health_status
+            return dict(clouddirectory_health_status='ok')
 
 
 class CloudNode:
@@ -1055,7 +1037,6 @@ class CloudNode:
     _attributes = ["name"]  # the different attributes of a node stored
     _facet = 'LeafNode'
     object_type = 'node'
-    allowed_policy_types = ('IAMPolicy',)
 
     def __init__(self,
                  name: str = None,
@@ -1384,7 +1365,7 @@ class PolicyMixin:
             except cd_client.exceptions.ResourceNotFoundException:
                 raise FusilladeNotFoundException(detail="Resource does not exist.")
             else:
-                self._verify_statement(statement)
+                verify_iam_policy(statement)
                 self._set_policy(statement, policy_type)
 
     def _set_policy(self, statement: str, policy_type: str = 'IAMPolicy'):
@@ -1417,20 +1398,6 @@ class PolicyMixin:
                              ))
 
         self.attached_policies[policy_type] = None
-
-    @staticmethod
-    def _verify_statement(statement):
-        """
-        Verifies the policy statement is syntactically correct based on AWS's IAM Policy Grammar.
-        A fake ActionNames and ResourceArns are used to facilitate the simulation of the policy.
-        """
-
-        try:
-            iam.simulate_custom_policy(PolicyInputList=[statement],
-                                       ActionNames=["fake:action"],
-                                       ResourceArns=["arn:aws:iam::123456789012:user/Bob"])
-        except iam.exceptions.InvalidInputException:
-            raise FusilladeHTTPException(status=400, title="Bad Request", detail="Invalid policy format.")
 
     def get_policy_info(self):
         return {'policies': dict([(i, self.get_policy(i)) for i in self.allowed_policy_types if self.get_policy(i)])}
