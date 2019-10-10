@@ -188,7 +188,7 @@ if __name__ == "__main__":
     release_map = {
         "integration": ("master", "integration", True),
         "staging": ("integration", "staging", True),
-        "prod": ("staging", "prod", False)
+        "production": ("staging", "production", False)
     }
 
     token_path = os.environ.get('GITHUB_TOKEN_PATH')
