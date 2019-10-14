@@ -164,7 +164,7 @@ def update_version() -> str:
     """
     cur_version = get_current_version(args.stage)
 
-    if args.stage == "prod":
+    if args.stage == "production":
         prv_version = get_current_version(stage='staging')
         new_version = semver.finalize_version(prv_version)
     elif args.stage == "staging":
