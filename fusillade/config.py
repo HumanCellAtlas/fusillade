@@ -34,7 +34,8 @@ class Config:
                     SecretId=f"{os.environ['FUS_SECRETS_STORE']}/"
                     f"{os.environ['FUS_DEPLOYMENT_STAGE']}/oauth2_config")["SecretString"])
             if 'localhost' in os.getenv('API_DOMAIN_NAME'):
-                cls._oauth2_config[os.getenv('OPENID_PROVIDER')]['redirect_uri'] = f"http://{os.getenv('API_DOMAIN_NAME')}/internal/cb"
+                cls._oauth2_config[os.getenv('OPENID_PROVIDER')]['redirect_uri'] = f"http://" \
+                    f"{os.getenv('API_DOMAIN_NAME')}/internal/cb"
         return cls._oauth2_config
 
     @classmethod

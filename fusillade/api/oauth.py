@@ -7,8 +7,8 @@ import os
 
 import jwt
 import requests
-from flask import json, request, make_response
 from connexion.lifecycle import ConnexionResponse
+from flask import json, request, make_response
 from furl import furl
 
 from fusillade import Config
@@ -25,7 +25,7 @@ def login():
 def logout():
     oauth2_config = Config.get_oauth2_config()
     openid_provider = Config.get_openid_provider()
-    query_params = getattr(Config.app.current_request,'query_params')
+    query_params = getattr(Config.app.current_request, 'query_params')
     client_id = oauth2_config[openid_provider]["client_id"] if not query_params else query_params.get('client_id')
     url = furl(f"https://{openid_provider}/v2/logout",
                query_params=dict(client_id=client_id)).url
@@ -50,8 +50,7 @@ def authorize():
                            scope="openid email profile",
                            redirect_uri=oauth2_config[openid_provider]["redirect_uri"],
                            state=state,
-                           prompt= query_params.get('prompt') if query_params.get('prompt') == 'none' else 'login' )
-
+                           prompt=query_params.get('prompt') if query_params.get('prompt') == 'none' else 'login')
 
     dest = furl(get_openid_config(openid_provider)["authorization_endpoint"], query_params=auth_params)
     return ConnexionResponse(status_code=requests.codes.found, headers=dict(Location=dest.url))
@@ -149,7 +148,6 @@ def cb():
     openid_config = get_openid_config(openid_provider)
     token_endpoint = openid_config["token_endpoint"]
 
-
     client_id = state.get("client_id")
     client_id = client_id if client_id != 'None' else None
 
@@ -160,7 +158,7 @@ def cb():
         if redirect_uri:
             ConnexionResponse(status_code=requests.codes.unauthorized, headers=dict(Location=redirect_uri))
         else:
-           return {
+            return {
                 "query": query_params,
             }
 

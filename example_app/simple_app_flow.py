@@ -21,7 +21,7 @@ from requests_oauthlib import OAuth2Session
 
 app = Flask(__name__)
 
-port=5001
+port = 5001
 domain = "https://auth.dev.data.humancellatlas.org/"  # Point at your desired domain
 authorization_base_url = f'{domain}/oauth/authorize'
 logout_base_url = f'{domain}/logout'
