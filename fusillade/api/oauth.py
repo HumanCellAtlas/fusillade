@@ -22,6 +22,16 @@ def login():
         headers=dict(Location='/oauth/authorize'))
 
 
+def logout():
+    oauth2_config = Config.get_oauth2_config()
+    openid_provider = Config.get_openid_provider()
+    query_params = getattr(Config.app.current_request,'query_params')
+    client_id = oauth2_config[openid_provider]["client_id"] if not query_params else query_params.get('client_id')
+    url = furl(f"https://{openid_provider}/v2/logout",
+               query_params=dict(client_id=client_id)).url
+    return ConnexionResponse(status_code=requests.codes.ok, headers=dict(Location=url))
+
+
 def authorize():
     query_params = request.args.copy() if request.args else {}
     openid_provider = Config.get_openid_provider()
@@ -39,7 +49,10 @@ def authorize():
                            response_type="code",
                            scope="openid email profile",
                            redirect_uri=oauth2_config[openid_provider]["redirect_uri"],
-                           state=state)
+                           state=state,
+                           prompt= query_params.get('prompt') if query_params.get('prompt') == 'none' else 'login' )
+
+
     dest = furl(get_openid_config(openid_provider)["authorization_endpoint"], query_params=auth_params)
     return ConnexionResponse(status_code=requests.codes.found, headers=dict(Location=dest.url))
 
@@ -136,12 +149,22 @@ def cb():
     openid_config = get_openid_config(openid_provider)
     token_endpoint = openid_config["token_endpoint"]
 
+
     client_id = state.get("client_id")
     client_id = client_id if client_id != 'None' else None
 
     redirect_uri = state.get("redirect_uri")
     redirect_uri = redirect_uri if redirect_uri != 'None' else None
-    if redirect_uri and client_id:
+    # TODO need to parse the error message if login is required and redirect to login
+    if query_params.get('error'):
+        if redirect_uri:
+            ConnexionResponse(status_code=requests.codes.unauthorized, headers=dict(Location=redirect_uri))
+        else:
+           return {
+                "query": query_params,
+            }
+
+    elif redirect_uri and client_id:
         # OIDC proxy flow
         resp_params = dict(code=query_params["code"], state=state.get("state"))
         dest = furl(state["redirect_uri"]).add(resp_params).url

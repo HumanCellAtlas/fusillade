@@ -159,6 +159,9 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
         resp = self.app.get('/internal/cb')
         self.assertEqual(400, resp.status_code)  # TODO fix
 
+    def test_logout(self):
+        resp = self.app.get('/logout')
+        self.assertEqual(200, resp.status_code)  # TODO fix
 
 if __name__ == '__main__':
     unittest.main()
