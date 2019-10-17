@@ -37,10 +37,8 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
         CLIENT_ID = "qtMgNk9fqVeclLtZl6WkbdJ59dP3WeAt"
         REDIRECT_URI = "http://localhost:8080"
         path = "/oauth/authorize"
-
-        states = [str(uuid4()), "1", "12", "ABCD", "\n\n"]
-        scopes = ["openid", "email", "profile", "offline"]
-        scopes_combination = [i for y in range(1, len(scopes) + 1) for i in combinations(scopes, y)]
+        states = [str(uuid4()), '\n\n']
+        scopes_combination = [["openid", "email", "profile", "offline"], ["openid", "email", "profile", "offline"]]
         tests = product(states, scopes_combination)
         OPENID_PROVIDER = os.environ["OPENID_PROVIDER"]
         redirect_url_host = [OPENID_PROVIDER, os.environ["API_DOMAIN_NAME"]]
@@ -56,7 +54,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
         for state, scope in tests:
             _scope = ' '.join(scope)
             query_params_client_id.update(scope=_scope, state=state)
-            with self.subTest(f"with client_id: {state} {scope}"):  # TODO improve description
+            with self.subTest(f"with client_id: {state} {scope}"):
                 url = furl(path, query_params=query_params_client_id)
 
                 resp = self.app.get(url.url)
@@ -71,7 +69,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
                 self.assertTrue(str(redirect_url.path).endswith('/authorize'))
 
             query_params.update(scope=_scope, state=state)
-            with self.subTest(f"without client_id: {state} {scope}"):  # TODO improve description
+            with self.subTest(f"without client_id: {state} {scope}"):
                 url = furl(path, query_params=query_params)
 
                 resp = self.app.get(url.url)
