@@ -51,6 +51,25 @@ paths:
           description: OK.
         default:
           description: Unexpected error.
+  /logout:
+    get:
+      summary: Logout the user from current sessions with the OIDC provider.
+      description: Logout the user from current sessions with the OIDC provider. You can log the users out from a
+       specific application if the you know the client_id for the application. Otherwise the user will be logged out
+       of the default application by oauth2_config.
+      operationId: fusillade.api.oauth.logout
+      tags:
+        - oauth
+      parameters:
+        - name: client_id
+          in: query
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK.
+        default:
+          description: Unexpected error.
   /.well-known/openid-configuration:
     get:
       summary: See documentation at
