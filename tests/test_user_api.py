@@ -9,6 +9,7 @@ import os
 import sys
 import unittest
 
+import jmespath
 from furl import furl
 
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
@@ -391,7 +392,8 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         url = furl(f"/v1/user/{name}/owns", query_params={'resource_type': 'role'}).url
         resp = self.app.get(url, headers=headers)
         user_role_names = [Role(object_ref=role).name for role in user.roles]
-        self.assertEqual(0, len(json.loads(resp.body)[key]))
+        length = len(jmespath.search(key, json.load(resp.body)))
+        self.assertEqual(0, length)
         roles = [Role.create(f"test_user_owned_role_{i}") for i in range(11)]
         user.add_roles([role.name for role in roles])
         [user.add_ownership(role) for role in roles]
