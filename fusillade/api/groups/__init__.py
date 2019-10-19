@@ -38,7 +38,7 @@ def put_group_policy(token_info: dict, group_id: str):
 def get_group_users(token_info: dict, group_id: str):
     next_token, per_page = get_next_token(request.args)
     group = Group(group_id)
-    return get_page(group.get_users_page, next_token, per_page,'users')
+    return get_page(group.get_users_page, next_token, per_page, 'users')
 
 
 @authorize(['fus:GetRole'], ['arn:hca:fus:*:*:group/{group_id}/roles'], ['group_id'], {'fus:group_id': 'group_id'})

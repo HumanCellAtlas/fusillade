@@ -2,7 +2,7 @@ from flask import request, make_response, jsonify
 from furl import furl
 
 
-def get_page(func, next_token, per_page, content_key = '', *args, **kwargs):
+def get_page(func, next_token, per_page, content_key='', *args, **kwargs):
     if args:
         result, next_token = func(*args, **kwargs, next_token=next_token, per_page=per_page)
     else:
