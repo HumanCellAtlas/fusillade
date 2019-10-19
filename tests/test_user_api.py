@@ -386,7 +386,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         name = "test_user_role_api@email.com"
-        key = 'roles'
+        key = 'groups || roles'
         user = User.provision_user(name)
         url = furl(f"/v1/user/{name}/owns", query_params={'resource_type': 'role'}).url
         resp = self.app.get(url, headers=headers)

@@ -53,7 +53,7 @@ def get_users_owns(token_info: dict, user_id: str):
     return get_page(user.get_owned,
                     next_token,
                     per_page,
-                    'groups',
+                    'groups || roles',
                     request.args['resource_type'],
                     paged=True)
 
