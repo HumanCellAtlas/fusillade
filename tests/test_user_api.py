@@ -390,7 +390,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         key = 'groups || roles'
         user = User.provision_user(name)
         url = furl(f"/v1/user/{name}/owns", query_params={'resource_type': 'role'}).url
-        resp = self.app.get(url, headers=headers)
+        resp = self.app.request(url, headers=headers)
         user_role_names = [Role(object_ref=role).name for role in user.roles]
         length = len(jmespath.search(key, resp.json()))
         self.assertEqual(0, length)
