@@ -323,6 +323,15 @@ paths:
                 $ref: '#/components/schemas/users'
         206:
           $ref: '#/components/responses/206'
+          headers:
+            Link:
+              type: string
+              description: URL to retrieve the next page of results.
+            X-OpenAPI-Pagination:
+              type: boolean
+            X-OpenAPI-Paginated-Content-Key:
+              type: string
+              description: The JSON response body key containing an array of results that are paginated.
         404:
           $ref: '#/components/responses/404'
         default:
@@ -1054,6 +1063,13 @@ components:
     206:
       description: A single page of results was retrieved.
       headers:
+        X-OpenAPI-Pagination:
+          schema:
+            type: boolean
+        X-OpenAPI-Paginated-Content-Key:
+          schema:
+            type: string
+          description: The JSON response body key containing an array of results that are paginated.
         Link:
           description: URL to retrieve the next page of results.
           schema:
