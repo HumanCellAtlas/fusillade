@@ -327,11 +327,6 @@ paths:
             Link:
               type: string
               description: URL to retrieve the next page of results.
-            X-OpenAPI-Pagination:
-              type: boolean
-            X-OpenAPI-Paginated-Content-Key:
-              type: string
-              description: The JSON response body key containing an array of results that are paginated.
         404:
           $ref: '#/components/responses/404'
         default:
