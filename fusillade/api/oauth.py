@@ -165,6 +165,8 @@ def cb():
     redirect_uri = redirect_uri if redirect_uri != 'None' else None
     # TODO need to parse the error message if login is required and redirect to login
     if query_params.get('error'):
+        # redirect to authorize() if logging required
+        # ConnexionResponse(status_code=requests.codes.found, headers=dict(Location='/oauth/authorize'))
         if redirect_uri:
             ConnexionResponse(status_code=requests.codes.unauthorized, headers=dict(Location=redirect_uri))
         else:
@@ -180,6 +182,7 @@ def cb():
     else:
         # Simple flow
         oauth2_config = Config.get_oauth2_config()
+        # Retrieve Access Token and authenticate user using OIDC
         res = requests.post(token_endpoint, dict(code=query_params["code"],
                                                  client_id=oauth2_config[openid_provider]["client_id"],
                                                  client_secret=oauth2_config[openid_provider]["client_secret"],
@@ -194,18 +197,43 @@ def cb():
         tok = jwt.decode(res.json()["id_token"],
                          key=public_key,
                          audience=oauth2_config[openid_provider]["client_id"])
-        assert tok["email_verified"]
+        assert tok["email_verified"]  # TODO return a specific error when email is not verfied.
+
+        headers = dict()
+        resp = res.json()
+        if state.get('cookie'):
+            # Return the access token as a cookie.
+            headers['set-cookie'] = ';'.join([f"access_token={resp.pop('access_token')}",
+                                              "SameSite=Strict",
+                                              "Domain=humancellatlas.org",
+                                              "Secure",
+                                              "HttpOnly",
+                                              "Max-Age=600",  # in seconds
+                                              "path=/"])
+
         if redirect_uri:
             # Simple flow - redirect with QS
-            resp_params = dict(res.json(), decoded_token=json.dumps(tok), state=state.get("state"))
+            resp_params = dict(resp, decoded_token=json.dumps(tok), state=state.get("state"))
             dest = furl(state["redirect_uri"]).add(resp_params).url
-            return ConnexionResponse(status_code=requests.codes.found, headers=dict(Location=dest))
+            headers['Location'] = dest
+            return ConnexionResponse(status_code=requests.codes.found, headers=headers)
         else:
             # Simple flow - JSON
-            return {
-                "headers": dict(request.headers),
-                "query": query_params,
-                "token_endpoint": token_endpoint,
-                "res": res.json(),
-                "tok": tok,
-            }
+            headers.update(request.headers)
+            return ConnexionResponse(status_code=requests.codes.ok,
+                                     headers=headers,
+                                     body={
+                                         "query": query_params,
+                                         "token_endpoint": token_endpoint,
+                                         "res": resp,
+                                         "tok": tok,
+                                     })
+
+
+"""
+Set-Cookie: key=value; SameSite=Strict; id=a3fWa; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Secure; HttpOnly
+
+https://en.wikipedia.org/wiki/Same-origin_policy
+https://en.wikipedia.org/wiki/Cross-site_request_forgery#Prevention
+https://dev.to/dashbird/how-i-fixed-jwt-security-flaws-in-3-steps-264k
+https://medium.com/@jcbaey/authentication-in-spa-reactjs-and-vuejs-the-right-way-e4a9ac5cd9a3"""

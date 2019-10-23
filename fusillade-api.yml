@@ -141,6 +141,13 @@ paths:
           in: query
           schema:
             type: string
+        - name: cookie
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: If authentication is required for a single page application set this parameter to true. This
+           will return a browser cookie that can be used for future authentication requests.
       responses:
         302:
           description: Redirecting to authentication server.
