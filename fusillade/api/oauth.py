@@ -120,8 +120,10 @@ def userinfo(token_info):
     """
     Part of OIDC
     """
-    openid_config = get_openid_config(Config.get_openid_provider())
-    return proxy_response(openid_config["userinfo_endpoint"])
+    openid_provider = Config.get_openid_provider()
+    openid_config = get_openid_config(openid_provider)
+    return ConnexionResponse(status_code=requests.codes.found,
+                             headers=dict(Location=openid_config["userinfo_endpoint"]))
 
 
 def get_userinfo(token_info):
