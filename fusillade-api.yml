@@ -14,7 +14,7 @@ info:
     which is based on [RFC 5988](https://tools.ietf.org/html/rfc5988). When the
     results of an API call exceed the page size specified, the HTTP response will
     contain a `Link` header of the following form:
-    `Link: <https://auth.data.humancellatlas.org/v1/users?per_page=30&next_token=123>; rel="next"`.
+    `Link: <https://auth.data.humancellatlas.org/users?per_page=30&next_token=123>; rel="next"`.
     The URL in the header refers to the next page of the results to be fetched;
     if no `Link rel="next"` URL is included, then all results have been fetched.
     The client should recognize and parse the `Link` header appropriately according
@@ -23,7 +23,7 @@ info:
 
   version: "0.0.1"
 servers:
-  - url: https://$API_DOMAIN_NAME
+  - url: https://$API_DOMAIN_NAME/v1
 paths:
   /login:
     get:
@@ -259,7 +259,7 @@ paths:
       responses:
         200:
           description: Echo.
-  /v1/policies/evaluate:
+  /policies/evaluate:
     post:
       summary: Evaluate a user's permissions
       description: Given a set of principals, actions, and resources, return a
@@ -304,7 +304,7 @@ paths:
                     type: string
         default:
           description: Unexpected error.
-  /v1/users:
+  /users:
     get:
       summary: List users
       description: Paginate through all users.
@@ -329,7 +329,7 @@ paths:
           description: Unexpected error.
       tags:
         - user
-  /v1/user:
+  /user:
     post:
       summary: Create a new user
       description: Create a new user with the specified groups, roles, and iam policy.
@@ -365,7 +365,7 @@ paths:
           $ref: '#/components/responses/401'
         default:
           description: Unexpected error.
-  /v1/user/{user_id}:
+  /user/{user_id}:
     get:
       summary: Retrieve information about a user
       description: Retrieve information about the user's status and the policies attached.
@@ -406,7 +406,7 @@ paths:
           $ref: '#/components/responses/401'
         default:
           description: Unexpected error.
-  /v1/user/{user_id}/owns:
+  /user/{user_id}/owns:
     get:
       summary: Retrieve the resources owned by the user
       description: Paginate through a list of resources owned by a user.
@@ -435,7 +435,7 @@ paths:
           $ref: '#/components/responses/404'
         default:
           description: Unexpected error.
-  /v1/user/{user_id}/groups:
+  /user/{user_id}/groups:
     get:
       summary: Retrieve group(s) for a user
       description: Paginate through a list of groups of which a user is a member.
@@ -491,7 +491,7 @@ paths:
           description: The user is already a member of this group.
         default:
           description: Unexpected error.
-  /v1/user/{user_id}/roles:
+  /user/{user_id}/roles:
     get:
       summary: Retrieve roles a user is in
       description: Paginate through all roles attached to a user.
@@ -547,7 +547,7 @@ paths:
           description: The user already has this role attached.
         default:
           description: Unexpected error.
-  /v1/user/{user_id}/policy:
+  /user/{user_id}/policy:
     put:
       summary: Modify policy
       description: Modify or add the user's IAM policy.
@@ -573,7 +573,7 @@ paths:
           description: Unexpected error.
       tags:
         - user
-  /v1/groups:
+  /groups:
     get:
       summary: List groups
       description: Paginate through all groups.
@@ -598,7 +598,7 @@ paths:
           description: Unexpected error.
       tags:
         - group
-  /v1/group:
+  /group:
     post:
       summary: Create a new group
       description: Create a new group, attach an IAM policy, and assign roles.
@@ -630,7 +630,7 @@ paths:
           description: Unexpected error.
       tags:
         - group
-  /v1/group/{group_id}:
+  /group/{group_id}:
     get:
       summary: Get properties of a group
       description: Get properties of a group, including the group's IAM policy.
@@ -669,7 +669,7 @@ paths:
           description: Unexpected error.
       tags:
         - group
-  /v1/group/{group_id}/roles:
+  /group/{group_id}/roles:
     get:
       summary: Retrieve role(s) for a group
       description: Paginate through all roles assigned to the group.
@@ -725,7 +725,7 @@ paths:
           description: Unexpected error.
       tags:
         - group
-  /v1/group/{group_id}/users:
+  /group/{group_id}/users:
     get:
       summary: Retrieve user(s) in a group
       description: Paginate through all users in a group.
@@ -783,7 +783,7 @@ paths:
           description: Unexpected error.
       tags:
         - group
-  /v1/group/{group_id}/policy:
+  /group/{group_id}/policy:
     put:
       summary: Modify policy
       description: Modify or create a policy attached to a group.
@@ -809,7 +809,7 @@ paths:
           description: Unexpected error.
       tags:
         - group
-  /v1/roles:
+  /roles:
     get:
       summary: List roles
       description: Paginate through all roles.
@@ -834,7 +834,7 @@ paths:
           description: Unexpected error.
       tags:
         - role
-  /v1/role:
+  /role:
     post:
       summary: Create a new role
       description: Create a new role and attach a IAM policy.
@@ -867,7 +867,7 @@ paths:
           description: Unexpected error.
       tags:
         - role
-  /v1/role/{role_id}:
+  /role/{role_id}:
     get:
       summary: Get properties of a role
       description: Get properties of a role.
@@ -906,7 +906,7 @@ paths:
           description: Unexpected error.
       tags:
         - role
-  /v1/role/{role_id}/policy:
+  /role/{role_id}/policy:
     put:
       summary: Modify policy
       description: Modify the IAM policy attached to the role.
