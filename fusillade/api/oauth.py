@@ -166,14 +166,7 @@ def cb():
     # TODO need to parse the error message if login is required and redirect to login
     if query_params.get('error'):
         # redirect to authorize() if logging required
-        # ConnexionResponse(status_code=requests.codes.found, headers=dict(Location='/oauth/authorize'))
-        if redirect_uri:
-            ConnexionResponse(status_code=requests.codes.unauthorized, headers=dict(Location=redirect_uri))
-        else:
-            return {
-                "query": query_params,
-            }
-
+        ConnexionResponse(status_code=requests.codes.found, headers=dict(Location='/oauth/authorize'))
     elif redirect_uri and client_id:
         # OIDC proxy flow
         resp_params = dict(code=query_params["code"], state=state.get("state"))
