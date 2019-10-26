@@ -13,7 +13,7 @@ from furl import furl
 
 from fusillade import Config
 from fusillade.errors import FusilladeHTTPException
-from fusillade.utils.security import get_openid_config, get_public_keys
+from fusillade.utils.security import get_openid_config, get_public_key
 
 
 def login():
@@ -181,9 +181,9 @@ def cb():
         except requests.exceptions.HTTPError:
             return make_response(res.text, res.status_code, res.headers.items())
         token_header = jwt.get_unverified_header(res.json()["id_token"])
-        public_keys = get_public_keys(openid_provider)
+        public_key = get_public_key(openid_provider, token_header["kid"])
         tok = jwt.decode(res.json()["id_token"],
-                         key=public_keys[token_header["kid"]],
+                         key=public_key,
                          audience=oauth2_config[openid_provider]["client_id"])
         assert tok["email_verified"]
         if redirect_uri:

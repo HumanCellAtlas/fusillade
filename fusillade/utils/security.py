@@ -58,12 +58,30 @@ def get_public_key(issuer, kid: str) -> bytearray:
     :param kid: the key identifier for verifying the JWT
     :return: A Public Key
     """
+    resp = session.get(get_jwks_uri(issuer))
+    try:
+        resp.raise_for_status()
+    except requests.exceptions.HTTPError as ex:
+        logger.error({"message": f"Get {get_jwks_uri(issuer)} Failed",
+                      "text": resp.text,
+                      "status_code": resp.status_code,
+                      "headers": resp.headers
+                      })
+        raise FusilladeHTTPException(503, 'Service Unavailable', "Failed to fetched public key from openid provider.")
+    else:
+        logger.info({
+            "message": f"Get {get_jwks_uri(issuer)}",
+            "response": resp.json(),
+            "header": resp.headers(),
+            "status_code": resp.status_code
+        })
+
     public_keys = {
         key["kid"]: rsa.RSAPublicNumbers(
             e=int.from_bytes(base64.urlsafe_b64decode(key["e"] + "==="), byteorder="big"),
             n=int.from_bytes(base64.urlsafe_b64decode(key["n"] + "==="), byteorder="big")
         ).public_key(backend=default_backend())
-        for key in session.get(get_jwks_uri(issuer)).json()["keys"]
+        for key in resp.json()["keys"]
     }
     try:
         return public_keys[kid]
