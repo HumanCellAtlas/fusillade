@@ -51,12 +51,12 @@ def get_jwks_uri(openid_provider) -> str:
 
 
 @functools.lru_cache(maxsize=32)
-def get_public_key(issuer, kid: str) -> bytearray:
+def get_public_keys(issuer: str) -> typing.Dict[str, bytearray]:
     """
-    Fetches the public key from an OIDC Identity provider to verify the JWT.
+    Fetches the public keys from an OIDC Identity provider to verify the JWT and caching for later use.
     :param issuer: the openid provider's domain.
     :param kid: the key identifier for verifying the JWT
-    :return: A Public Key
+    :return: A Public Keys
     """
     resp = session.get(get_jwks_uri(issuer))
     try:
@@ -65,24 +65,33 @@ def get_public_key(issuer, kid: str) -> bytearray:
         logger.error({"message": f"Get {get_jwks_uri(issuer)} Failed",
                       "text": resp.text,
                       "status_code": resp.status_code,
-                      "headers": resp.headers
                       })
         raise FusilladeHTTPException(503, 'Service Unavailable', "Failed to fetched public key from openid provider.")
     else:
         logger.info({
-            "message": f"Get {get_jwks_uri(issuer)}",
+            "message": f"Get {get_jwks_uri(issuer)} Succeeded",
             "response": resp.json(),
-            "header": resp.headers(),
             "status_code": resp.status_code
         })
 
-    public_keys = {
+    return {
         key["kid"]: rsa.RSAPublicNumbers(
             e=int.from_bytes(base64.urlsafe_b64decode(key["e"] + "==="), byteorder="big"),
             n=int.from_bytes(base64.urlsafe_b64decode(key["n"] + "==="), byteorder="big")
         ).public_key(backend=default_backend())
         for key in resp.json()["keys"]
     }
+
+
+def get_public_key(issuer: str, kid: str) -> bytearray:
+    """
+    Fetches the public keys from an OIDC Identity provider to verify the JWT. If the key is not found in the public
+    key cache, the cache is cleared and a retry is performed.
+    :param issuer: the openid provider's domain.
+    :param kid: the key identifier for verifying the JWT
+    :return: A Public Key
+    """
+    public_keys = get_public_keys(issuer)
     try:
         return public_keys[kid]
     except KeyError:
@@ -90,7 +99,15 @@ def get_public_key(issuer, kid: str) -> bytearray:
                       "public_keys": public_keys,
                       "issuer": issuer,
                       "kid": kid})
-        raise FusilladeHTTPException(503, 'Service Unavailable', "Failed to fetched public key from openid provider.")
+        logger.debug({"message": "Clearing public key cache."})
+        get_public_keys.clear_cache()
+        public_keys = get_public_keys(issuer)
+        try:
+            return public_keys[kid]
+        except KeyError:
+            raise FusilladeHTTPException(401,
+                                         'Unauthorized',
+                                         f"Unable to verify JWT. KID:{kid} does not exists for issuer:{issuer}.")
 
 
 def verify_jwt(token: str) -> typing.Optional[typing.Mapping]:
