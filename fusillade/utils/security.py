@@ -61,7 +61,7 @@ def get_public_key(issuer, kid: str) -> bytearray:
     resp = session.get(get_jwks_uri(issuer))
     try:
         resp.raise_for_status()
-    except requests.exceptions.HTTPError as ex:
+    except requests.exceptions.HTTPError:
         logger.error({"message": f"Get {get_jwks_uri(issuer)} Failed",
                       "text": resp.text,
                       "status_code": resp.status_code,
