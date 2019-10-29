@@ -13,7 +13,7 @@ from fusillade.clouddirectory import cleanup_directory, cleanup_schema, cd_clien
 if __name__ == "__main__":
     for response in cd_client.get_paginator('list_directories').paginate(MaxResults=30, state='ENABLED'):
         for directory in response['Directories']:
-            if 'test' in directory['Name']:
+            if 'test_dir' in directory['Name']:
                 cleanup_directory(directory['DirectoryArn'])
 
     directories = [
