@@ -159,7 +159,11 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
 
     def test_logout(self):
         resp = self.app.get('/logout')
-        self.assertEqual(200, resp.status_code)  # TODO fix
+        self.assertEqual(200, resp.status_code)
+
+    def test_api_key(self):
+        resp = self.app.get('/test', headers={'X-API-KEY': '60c1a63c33b56976a35b4a5f46fdc50220b94c5b2033ca7ff4d57e622b1de887'})
+        self.assertEqual(200, resp.status_code)
 
 if __name__ == '__main__':
     unittest.main()

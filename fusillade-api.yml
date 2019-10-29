@@ -442,6 +442,7 @@ paths:
       operationId: fusillade.api.users.get_users_groups
       security:
         - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - $ref: '#/components/parameters/next_token'
@@ -467,6 +468,7 @@ paths:
       operationId: fusillade.api.users.put_users_groups
       security:
         - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - $ref: '#/components/parameters/action'
@@ -498,6 +500,7 @@ paths:
       operationId: fusillade.api.users.get_users_roles
       security:
         - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - $ref: '#/components/parameters/next_token'
@@ -932,6 +935,21 @@ paths:
           description: Unexpected error.
       tags:
         - role
+  /test:
+    get:
+      summary: For testing authentication methods
+      description: Used for easily testing different securitySchemas easily
+      operationId: fusillade.api.internal.test
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        200:
+          description: Policy modified.
+        401:
+          $ref: '#/components/responses/401'
+        default:
+          description: Unexpected error.
 components:
   parameters:
     user_id:
@@ -1080,3 +1098,8 @@ components:
         scheme: bearer
         bearerFormat: JWT
         x-bearerInfoFunc: fusillade.utils.security.verify_jwt
+      ApiKeyAuth:
+        type: apiKey
+        in: header
+        name: X-API-KEY
+        x-apikeyInfoFunc: fusillade.utils.api_key.verify_api_key
