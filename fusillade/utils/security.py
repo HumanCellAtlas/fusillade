@@ -100,7 +100,7 @@ def get_public_key(issuer: str, kid: str) -> bytearray:
                       "issuer": issuer,
                       "kid": kid})
         logger.debug({"message": "Clearing public key cache."})
-        get_public_keys.clear_cache()
+        get_public_keys.cache_clear()
         public_keys = get_public_keys(issuer)
         try:
             return public_keys[kid]
