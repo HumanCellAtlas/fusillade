@@ -8,6 +8,7 @@ class Config:
     _admin_emails: list = None
     _oauth2_config = None
     app = None
+    default_audience = "https://data.humancellatlas.org/"
     audience = ["https://dev.data.humancellatlas.org/",
                 "https://auth.data.humancellatlas.org/"]
     _openid_provider = None

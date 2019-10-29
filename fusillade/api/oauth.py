@@ -50,7 +50,8 @@ def authorize():
                            scope="openid email profile",
                            redirect_uri=oauth2_config[openid_provider]["redirect_uri"],
                            state=state,
-                           prompt=query_params.get('prompt') if query_params.get('prompt') == 'none' else 'login')
+                           prompt=query_params.get('prompt') if query_params.get('prompt') == 'none' else 'login',
+                           audience=query_params.get('audience', Config.default_audience))
 
     dest = furl(get_openid_config(openid_provider)["authorization_endpoint"], query_params=auth_params)
     return ConnexionResponse(status_code=requests.codes.found, headers=dict(Location=dest.url))
