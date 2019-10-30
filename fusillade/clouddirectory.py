@@ -1279,6 +1279,20 @@ class CloudNode:
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeBadRequestException(f"One or more {cls.object_type} does not exist.")
 
+    @classmethod
+    def get_names(cls, obj_refs: List[str]) -> List[str]:
+        cd = Config.get_directory()
+        operations = [cd.batch_get_attributes(obj_ref, cls._facet, ['name']) for obj_ref in obj_refs]
+        results = []
+        for r in cd.batch_read(operations)['Responses']:
+            if r.get('SuccessfulResponse'):
+                results.append(
+                    r.get('SuccessfulResponse')['GetObjectAttributes']['Attributes'][0]['Value']['StringValue'])
+            else:
+                logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
+        return results
+
+
     def list_owners(self, incoming=True):
         get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
         object_selection = 'SourceObjectReference' if incoming else 'TargetObjectReference'

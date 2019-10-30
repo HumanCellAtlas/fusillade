@@ -12,6 +12,7 @@ import requests
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+from chalicelib.fusillade.errors import FusilladeTooManyRequestsException
 from fusillade import Config
 from fusillade.errors import FusilladeHTTPException
 
@@ -110,6 +111,15 @@ def get_public_key(issuer: str, kid: str) -> bytearray:
                                          f"Unable to verify JWT. KID:{kid} does not exists for issuer:{issuer}.")
 
 
+@functools.lru_cache(32)  # TODO cache in a way that's visible to all lambdas to avoid rate limits.
+def get_tokeninfo(uri, access_token) -> dict:
+    response = requests.get(uri, headers={'Authorization': f"Bearer {access_token}"})
+    if response.status_code == 429:
+        raise FusilladeTooManyRequestsException()
+    else:
+        return response.json()
+
+
 def verify_jwt(token: str) -> typing.Optional[typing.Mapping]:
     """
     Verify the JWT from the request. This is function is referenced in fusillade-api.yml
@@ -139,4 +149,11 @@ def verify_jwt(token: str) -> typing.Optional[typing.Mapping]:
     except jwt.PyJWTError as ex:  # type: ignore
         logger.debug({"message": "Failed to validate token."}, exc_info=True)
         raise FusilladeHTTPException(401, 'Unauthorized', 'Authorization token is invalid') from ex
-    return verified_tok
+    tokeninfo_endpoint = [i for i in verified_tok['aud'] if i.endswith('userinfo') or i.endswith('tokeninfo')]
+    if tokeninfo_endpoint:
+        # Use the OIDC tokeninfo endpoint to get info about the user.
+        return get_tokeninfo(tokeninfo_endpoint[0], token)
+    else:
+        # If No OIDC tokeninfo endpoint is present then this is a google service account and there is no info to
+        # retrieve
+        return verified_tok
