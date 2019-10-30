@@ -139,4 +139,8 @@ def verify_jwt(token: str) -> typing.Optional[typing.Mapping]:
     except jwt.PyJWTError as ex:  # type: ignore
         logger.debug({"message": "Failed to validate token."}, exc_info=True)
         raise FusilladeHTTPException(401, 'Unauthorized', 'Authorization token is invalid') from ex
-    return verified_tok
+    tokeninfo_endpoint = [i for i in verified_tok['aud'] if i.endswith('userinfo') or i.endswith('tokeninfo')]
+    if tokeninfo_endpoint:
+        return requests.get(tokeninfo_endpoint[0], headers={'Authorization': f"Bearer {token}"}).json()
+    else:
+        return verified_tok
