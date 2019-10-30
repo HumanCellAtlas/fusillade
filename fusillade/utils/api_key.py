@@ -4,6 +4,7 @@ Sets the Auth0 API key in AWS secrets manager
 import json
 import logging
 import os
+import typing
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.hashes import SHA256, Hash
@@ -24,7 +25,7 @@ def hash(key: bytearray) -> bytearray:
     return digest.finalize().hex()
 
 
-def generate_api_key():
+def generate_api_key(owner: str) -> typing.Tuple[str, dict]:
     from os import urandom
 
     # Generate key
@@ -35,6 +36,7 @@ def generate_api_key():
         prefix: {
             "description": "API key used to by Auth0 to access Fusillade.",
             "hash": digest,
+            "owner": owner
         }
     }
 

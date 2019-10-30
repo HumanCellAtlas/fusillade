@@ -7,12 +7,18 @@ import json
 import os
 import sys
 
+import argparse
+
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.utils.api_key import generate_api_key, api_keys
 
-key, secret = generate_api_key()
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--owner", required=True)
+args = parser.parse_args()
+
+key, secret = generate_api_key(args.owner)
 print(f"This value will only be visible once. Record it now. API KEY: '{key}'")
 print(secret)
 
