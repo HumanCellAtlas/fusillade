@@ -14,10 +14,13 @@ from fusillade.errors import FusilladeHTTPException
 
 logger = logging.getLogger(__name__)
 
+# TODO if the api_key is not found, retrieve the secret and try again.
 api_keys = AwsSecret('/'.join([os.environ['FUS_SECRETS_STORE'],
                                os.environ['FUS_DEPLOYMENT_STAGE'],
                                'api_keys']))
-
+# TODO store the API keys in cloud directory and associate then with a specific user. Create an front end API so user
+#  can manage their own api tokens.
+# TODO track when an api token is used.
 
 def hash(key: bytearray) -> bytearray:
     digest = Hash(SHA256(), backend=default_backend())
