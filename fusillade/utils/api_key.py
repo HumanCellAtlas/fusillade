@@ -41,9 +41,14 @@ def generate_api_key(owner: str) -> typing.Tuple[str, dict]:
     }
 
 
-def verify_api_key(key: str):
+def verify_api_key(key: str, required_scopes) -> dict:
+    """
+    :param key:
+    :param required_scopes:
+    :return: token info
+    """
     try:
-        expected = json.loads(api_keys.value)[key[:7]]['hash']
+        expected = json.loads(api_keys.value)[key[:7]]
     except RuntimeError as ex:
         logger.debug({"message": "Failed to validate token. Secret does not exist."}, exc_info=True)
         raise FusilladeHTTPException(401, 'Unauthorized', 'Authorization token is invalid') from ex
@@ -51,6 +56,8 @@ def verify_api_key(key: str):
         logger.debug({"message": "Failed to validate token. Key does not exist."}, exc_info=True)
         raise FusilladeHTTPException(401, 'Unauthorized', 'Authorization token is invalid') from ex
     else:
-        if expected != bytearray.fromhex(key):
+        if expected['hash'] != hash(bytearray.fromhex(key)):
             logger.debug({"message": "Failed to validate token. Invalid API key"}, exc_info=True)
             raise FusilladeHTTPException(401, 'Unauthorized', 'Authorization token is invalid')
+        else:
+            return {'email': expected['owner']}
