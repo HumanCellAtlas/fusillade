@@ -141,6 +141,9 @@ def verify_jwt(token: str) -> typing.Optional[typing.Mapping]:
         raise FusilladeHTTPException(401, 'Unauthorized', 'Authorization token is invalid') from ex
     tokeninfo_endpoint = [i for i in verified_tok['aud'] if i.endswith('userinfo') or i.endswith('tokeninfo')]
     if tokeninfo_endpoint:
+        # Use the OIDC tokeninfo endpoint to get info about the user.
         return requests.get(tokeninfo_endpoint[0], headers={'Authorization': f"Bearer {token}"}).json()
     else:
+        # If No OIDC tokeninfo endpoint is present then this is a google service account and there is no info to
+        # retrieve
         return verified_tok
