@@ -85,6 +85,17 @@ The OIDC provide handle the OIDC authentication process. [Auth0](https://auth0.c
 1. Set **oauth2_config** in AWS Secrets Manager using `make set_oauth2_config`. **oauth2_config** contains the fields 
 needed to proxy an OIDC provider. Populate this file with the OIDC providers you'd like to use to authenticate users. 
 See [oauth2_config.json](../master/deployment/example/oauth2_config.example.json) for the expected format.
+
+### Fusillade API key for OIDC provider
+You can generate API keys to provide fusillade access to your OIDC provider. This can be helpful if you want to 
+adding information from fusillade into the tokens signed by the OIDC provider.
+
+#### Generate an API Key
+1. Run `$ ./scripts/generate_api_key.py --owner {user email}`
+1. record the API key presented in the console.
+
+Owner will be used to determine the access privilages for the API. You must have permissions to create and modify
+secrets in the AWS project fusillade is running on to use this script.
   
 ## Set Secrets
 

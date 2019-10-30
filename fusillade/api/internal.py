@@ -53,3 +53,7 @@ def get_openip_health_status() -> dict:
 
 def echo():
     return str(request.__dict__)
+
+
+def test():
+    return ConnexionResponse(status_code=200)

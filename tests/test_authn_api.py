@@ -159,7 +159,13 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
 
     def test_logout(self):
         resp = self.app.get('/logout')
-        self.assertEqual(200, resp.status_code)  # TODO fix
+        self.assertEqual(200, resp.status_code)
+
+    @unittest.skipIf(os.environ['FUS_DEPLOYMENT_STAGE'] != 'dev',
+                     f"No TEST API Key generated for os.environ['FUS_DEPLOYMENT_STAGE']")
+    def test_api_key(self):
+        resp = self.app.get('/test', headers={'X-API-KEY': 'b1eec29e9789a7174afee76ea8a35c04d302ecd4e9be2a4cd12848fcaa51c292'})
+        self.assertEqual(200, resp.status_code)
 
 if __name__ == '__main__':
     unittest.main()
