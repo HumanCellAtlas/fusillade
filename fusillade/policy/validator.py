@@ -19,3 +19,12 @@ def verify_iam_policy(policy: str):
                                    ResourceArns=["arn:aws:iam::123456789012:user/Bob"])
     except iam.exceptions.InvalidInputException:
         raise FusilladeHTTPException(title="Bad Request", detail="Invalid iam policy format.")
+
+
+_policy_func = {
+    "IAMPolicy": verify_iam_policy,
+}
+
+
+def verify_policy(policy: str, policy_type):
+    _policy_func[policy_type](policy)

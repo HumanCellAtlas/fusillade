@@ -21,7 +21,7 @@ from dcplib.aws import clients as aws_clients
 from fusillade import Config
 from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException, \
     AuthorizationException, FusilladeLimitException, FusilladeBadRequestException
-from fusillade.policy.validator import verify_iam_policy
+from fusillade.policy.validator import verify_policy
 from fusillade.utils.retry import retry
 
 logger = logging.getLogger(__name__)
@@ -1286,6 +1286,7 @@ class PolicyMixin:
         :return:
         """
         operations = list()
+        verify_policy(statement, policy_type)
         object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement, **kwargs)
         policy_link_name = self.get_policy_name(policy_type)
         parent_path = self.cd.get_obj_type_path('policy')
@@ -1369,7 +1370,7 @@ class PolicyMixin:
             except cd_client.exceptions.ResourceNotFoundException:
                 raise FusilladeNotFoundException(detail="Resource does not exist.")
             else:
-                verify_iam_policy(statement)
+                verify_policy(statement, policy_type)
                 self._set_policy(statement, policy_type)
 
     def _set_policy(self, statement: str, policy_type: str = 'IAMPolicy'):
@@ -1431,7 +1432,7 @@ class CreateMixin(PolicyMixin):
             pass
         else:
             if statement:
-                verify_iam_policy(statement)
+                verify_policy(statement, 'IAMPolicy')
             elif getattr(cls, '_default_policy_path'):
                 statement = get_json_file(cls._default_policy_path)
             ops.extend(new_node.create_policy(statement, run=False, type=new_node.object_type, name=new_node.name))
