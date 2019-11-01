@@ -221,6 +221,7 @@ def batch_reference(func):
             for key in r.keys():
                 r[key]['BatchReferenceName'] = batch_ref
         return r
+
     return wrapper
 
 
@@ -1852,7 +1853,6 @@ class Role(CloudNode, CreateMixin):
     _facet: str = 'NodeFacet'
     object_type: str = 'role'
     _default_policy_path: str = default_role_path
-
 
     def get_info(self):
         info = super(Role, self).get_info()
