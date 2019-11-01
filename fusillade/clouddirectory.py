@@ -219,7 +219,7 @@ def batch_reference(func):
         r = func(*args, **kwargs)
         if batch_ref:
             for key in r.keys():
-                r[key]['BatchReference'] = batch_ref
+                r[key]['BatchReferenceName'] = batch_ref
         return r
     return wrapper
 
@@ -721,7 +721,7 @@ class CloudDirectory:
                             parent: str,
                             link_name: str,
                             facet_name: str,
-                            object_attribute_list: List[str],
+                            object_attribute_list: List[Dict[str, Any]],
                             ) -> Dict[str, Any]:
         """
         A helper function to format a batch create_object operation
@@ -889,7 +889,7 @@ class CloudDirectory:
                         "sucessful": len(operations[:i + failed_op_index])
                     }
                 })
-                if error in allowed_errors:
+                if error[:-1] in allowed_errors:
                     operations = operations[i:]
                 else:
                     raise ex
@@ -1783,7 +1783,6 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
         :param name:
         """
         super(Group, self).__init__(name=name, object_ref=object_ref)
-        self._groups: Optional[List[str]] = None
         self._roles: Optional[List[str]] = None
 
     def get_users_iter(self) -> Tuple[Dict[str, Union[list, Any]], Any]:
@@ -1854,8 +1853,6 @@ class Role(CloudNode, CreateMixin):
     object_type: str = 'role'
     _default_policy_path: str = default_role_path
 
-    def __init__(self, name: str = None, object_ref: str = None):
-        super(Role, self).__init__(name=name, object_ref=object_ref)
 
     def get_info(self):
         info = super(Role, self).get_info()

@@ -60,7 +60,7 @@ def create_test_statements(length=1):
     return json.dumps(statement)
 
 
-def new_test_directory(directory_name=None) -> typing.Tuple[CloudDirectory, str, str]:
+def new_test_directory(directory_name=None) -> typing.Tuple[CloudDirectory, str]:
     directory_name = directory_name if directory_name else "test_dir_" + random_hex_string()
     schema_arn = publish_schema(schema_name, 'T' + random_hex_string())
     Config._directory = None
