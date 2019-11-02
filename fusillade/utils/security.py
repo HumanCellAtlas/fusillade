@@ -2,16 +2,15 @@
 """
 Used by connexion to verify the JWT in Authorization header of the request.
 """
-import functools, base64, typing
-
-import requests
-import jwt
+import base64
+import functools
 import logging
+import typing
 
-from cryptography.hazmat.primitives.asymmetric import rsa
+import jwt
+import requests
 from cryptography.hazmat.backends import default_backend
-
-from furl import furl
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 from fusillade import Config
 from fusillade.errors import FusilladeHTTPException
@@ -25,7 +24,6 @@ gserviceaccount_domain = "iam.gserviceaccount.com"
 session = requests.Session()
 
 
-# Had to remove the LRU from this function because it was cause error with too many redirects.
 def get_openid_config(openid_provider: str) -> dict:
     """
 
