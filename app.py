@@ -23,7 +23,8 @@ with open(os.path.join(pkg_root, "service_config.json")) as fh:
 
 swagger_spec_path = os.path.join(pkg_root, "fusillade-api.yml")
 swagger_internal_spec_path = os.path.join(pkg_root, "fusillade-internal-api.yml")
-app = FusilladeServer(app_name='fusillade', swagger_spec_path=swagger_spec_path,
+fus_stage = os.getenv('FUS_DEPLOYMENT_STAGE')
+app = FusilladeServer(app_name=f'fusillade-{fus_stage}', swagger_spec_path=swagger_spec_path,
                       swagger_internal_spec_path=swagger_internal_spec_path)
 Config.app = app
 

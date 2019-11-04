@@ -38,6 +38,8 @@ else
            .$stage.lambda_functions = {}" > "$deployed_json"
 fi
 
+cat "$config_json" | jq ".stages.$stage.app_name=lambda_name" | sponge "$config_json"
+
 export DEPLOY_ORIGIN="$(whoami)-$(hostname)-$(git describe --tags --always)-$(date -u +'%Y-%m-%d-%H-%M-%S').deploy"
 export Name=fusillade-api-$stage
 cat "$config_json" | jq ".stages.$stage.tags.FUS_DEPLOY_ORIGIN=env.DEPLOY_ORIGIN | \
