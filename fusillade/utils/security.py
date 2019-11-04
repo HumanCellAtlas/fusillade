@@ -2,16 +2,15 @@
 """
 Used by connexion to verify the JWT in Authorization header of the request.
 """
-import functools, base64, typing
-
-import requests
-import jwt
+import base64
+import functools
 import logging
+import typing
 
-from cryptography.hazmat.primitives.asymmetric import rsa
+import jwt
+import requests
 from cryptography.hazmat.backends import default_backend
-
-from furl import furl
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 from fusillade import Config
 from fusillade.errors import FusilladeHTTPException
@@ -25,19 +24,16 @@ gserviceaccount_domain = "iam.gserviceaccount.com"
 session = requests.Session()
 
 
-@functools.lru_cache(maxsize=32)
-def get_openid_config(openid_provider=None) -> dict:
+def get_openid_config(openid_provider: str) -> dict:
     """
 
     :param openid_provider: the openid provider's domain.
     :return: the openid configuration
     """
-    if not openid_provider:
-        openid_provider = Config.get_openid_provider()
-    elif openid_provider.endswith(gserviceaccount_domain):
+    if openid_provider.endswith(gserviceaccount_domain):
         openid_provider = 'accounts.google.com'
-    elif openid_provider.startswith("https://"):
-        openid_provider = furl(openid_provider).host
+    else:
+        openid_provider = Config.get_openid_provider()
     res = requests.get(f"https://{openid_provider}/.well-known/openid-configuration")
     res.raise_for_status()
     return res.json()
