@@ -13,7 +13,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from fusillade import Config
-from fusillade.errors import FusilladeHTTPException
+from fusillade.errors import FusilladeHTTPException, FusilladeTooManyRequestsException
 
 logger = logging.getLogger(__name__)
 
