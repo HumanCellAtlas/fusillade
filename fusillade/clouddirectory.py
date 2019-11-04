@@ -1270,6 +1270,15 @@ class CloudNode:
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeBadRequestException(f"One or more {cls.object_type} does not exist.")
 
+    def list_owners(self, incoming=True):
+        get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
+        object_selection = 'SourceObjectReference' if incoming else 'TargetObjectReference'
+        return [
+            type_link[object_selection]['Selector']
+            for type_link in
+            get_links(self.object_ref, filter_typed_link='ownership_link')
+        ]
+
 
 class PolicyMixin:
     """Adds policy support to a cloudNode"""
