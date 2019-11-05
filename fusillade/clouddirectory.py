@@ -1674,7 +1674,7 @@ class User(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
         statements = list(itertools.chain.from_iterable(
             [json.loads(p['policy'])['Statement'] for p in self.get_authz_params()['policies']]))
         actions = list(itertools.chain.from_iterable([s['Action'] for s in statements if s['Effect'] == 'Allow']))
-        
+
         # Need to handle cases where the actions has a wildcard. All actions that match the wildcard are removed and
         # only the wildcard value will remain.
         prefixes = []
