@@ -80,14 +80,14 @@ def serve_openid_config():
     """
     Part of OIDC
     """
-    openid_config = get_openid_config(Config.get_openid_provider())
     auth_host = request.headers['host']
     if auth_host != os.environ["API_DOMAIN_NAME"]:
         raise FusilladeHTTPException(
             status=400,
             title="Bad Request",
             detail=f"host: {auth_host}, is not supported. host must be {os.environ['API_DOMAIN_NAME']}.")
-    openid_config.update(**proxied_endpoints)
+    openid_config = get_openid_config(Config.get_openid_provider()).copy()
+    openid_config.update(**proxied_endpoints) 
     return ConnexionResponse(body=openid_config, status_code=requests.codes.ok)
 
 
