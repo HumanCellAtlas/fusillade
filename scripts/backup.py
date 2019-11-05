@@ -29,7 +29,9 @@ def format_owners(owned_node: CloudNode) -> typing.List[typing.Dict[str, str]]:
     for u in owned_node.list_owners():
         node = CloudNode(object_ref=u)
         owners.append({
-            'type': [i for i in [p.split('/')[1] for p in node.get_info()['paths']] if i != 'role'][0],
+            'type': [i for i in
+                     [p['Path'].split('/')[1]
+                      for p in node.cd.list_object_parent_paths(node.object_ref)] if i != 'role'][0],
             'name': node.name
         })
     return owners
