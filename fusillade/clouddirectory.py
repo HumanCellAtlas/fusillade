@@ -1266,6 +1266,7 @@ class CloudNode:
     def get_info(self) -> Dict[str, Any]:
         info = dict(**self.get_attributes(self._attributes))
         info[f'{self.object_type}_id'] = info.pop('name')
+        info['paths'] = [i['Path'] for i in self.cd.list_object_parent_paths(self.object_ref)]
         return info
 
     @classmethod
@@ -1374,7 +1375,7 @@ class PolicyMixin:
                     self.attached_policies[policy_type] = attrs['policy_document'].decode("utf-8")
                 except cd_client.exceptions.ResourceNotFoundException:
                     pass
-            return self.attached_policies.get(policy_type, '{}')
+            return self.attached_policies.get(policy_type, '')
         else:
             FusilladeHTTPException(
                 title='Bad Request',

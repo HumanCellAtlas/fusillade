@@ -1,15 +1,38 @@
 #!/usr/bin/env python
 """
-Create a backup of Clouddirectory in AWS S3.
+Create a backup of Clouddirectory and output the file ro backup.json
 """
+
 import json
 import os
 import sys
+import typing
 
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
-from fusillade.clouddirectory import User, Group, Role
+from fusillade.clouddirectory import User, Group, Role, CloudNode
+
+
+def format_policies(policies: typing.List[typing.Tuple[str, str]]) -> typing.Dict[str, str]:
+    rv = dict()
+    for t, p in policies:
+        if not p:
+            continue
+        else:
+            rv[t] = json.loads(p)
+    return rv
+
+
+def format_owners(owned_node: CloudNode) -> typing.List[typing.Dict[str, str]]:
+    owners = []
+    for u in owned_node.list_owners():
+        node = CloudNode(object_ref=u)
+        owners.append({
+            'type': [i for i in [p.split('/')[1] for p in node.get_info()['paths']] if i != 'role'][0],
+            'name': node.name
+        })
+    return owners
 
 
 def list_node(node, field):
@@ -30,7 +53,7 @@ def backup_users():
         info = {
             'name': user.name,
             'status': user.status,
-            'policies': [{p: json.loads(user.get_policy(p))} for p in user.allowed_policy_types],
+            'policies': format_policies([(p, user.get_policy(p)) for p in user.allowed_policy_types]),
             'roles': [Role(object_ref=r).name for r in user.roles]
         }
         users.append(info)
@@ -45,8 +68,8 @@ def backup_groups():
         info = {
             'name': group.name,
             'members': [User(object_ref=u).name for u in group.get_users_iter()],
-            'policies': [{p: json.loads(group.get_policy(p))} for p in group.allowed_policy_types],
-            'owners': [User(object_ref=u).name for u in group.list_owners()],
+            'policies': format_policies([(p, group.get_policy(p)) for p in group.allowed_policy_types]),
+            'owners': format_owners(group),
             'roles': [Role(object_ref=r).name for r in group.roles]
         }
         groups.append(info)
@@ -60,8 +83,8 @@ def backup_roles():
         role = Role(name)
         info = {
             'name': role.name,
-            'owners': [User(object_ref=u).name for u in role.list_owners()],
-            'policies': [{p: json.loads(role.get_policy(p))} for p in role.allowed_policy_types]
+            'policies': format_policies([(p, role.get_policy(p)) for p in role.allowed_policy_types]),
+            'owners': format_owners(role)
         }
         roles.append(info)
     print("ROLES:", *roles, sep='\n\t')
