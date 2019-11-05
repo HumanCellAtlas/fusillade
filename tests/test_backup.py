@@ -26,6 +26,9 @@ class Test_Backup(unittest.TestCase):
         self.directory.clear()
 
     def test_default(self):
+        """
+        Test the backup file is correct after a basic fusillade directory is initialized
+        """
         backup.backup()
         with open('/'.join([pkg_root, 'tests', 'backup.json']), 'r') as fp:
             contents = json.load(fp)
