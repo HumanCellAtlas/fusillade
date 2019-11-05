@@ -1266,7 +1266,6 @@ class CloudNode:
     def get_info(self) -> Dict[str, Any]:
         info = dict(**self.get_attributes(self._attributes))
         info[f'{self.object_type}_id'] = info.pop('name')
-        info['paths'] = [i['Path'] for i in self.cd.list_object_parent_paths(self.object_ref)]
         return info
 
     @classmethod
@@ -1283,11 +1282,21 @@ class CloudNode:
     def list_owners(self, incoming=True):
         get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
         object_selection = 'SourceObjectReference' if incoming else 'TargetObjectReference'
-        return [
+        _owners = [
             type_link[object_selection]['Selector']
             for type_link in
             get_links(self.object_ref, filter_typed_link='ownership_link')
         ]
+        owners = []
+        for owner in _owners:
+            node = CloudNode(object_ref=owner)
+            owners.append({
+                'type': [i for i in
+                         [p['Path'].split('/')[1]
+                          for p in node.cd.list_object_parent_paths(node.object_ref)] if i != 'role'][0],
+                'name': node.name
+            })
+        return owners
 
 
 class PolicyMixin:

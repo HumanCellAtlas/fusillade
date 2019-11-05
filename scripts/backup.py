@@ -24,19 +24,6 @@ def format_policies(policies: typing.List[typing.Tuple[str, str]]) -> typing.Dic
     return rv
 
 
-def format_owners(owned_node: CloudNode) -> typing.List[typing.Dict[str, str]]:
-    owners = []
-    for u in owned_node.list_owners():
-        node = CloudNode(object_ref=u)
-        owners.append({
-            'type': [i for i in
-                     [p['Path'].split('/')[1]
-                      for p in node.cd.list_object_parent_paths(node.object_ref)] if i != 'role'][0],
-            'name': node.name
-        })
-    return owners
-
-
 def list_node(node, field):
     result, next_token = node.list_all(None, None)
     while True:
@@ -71,7 +58,7 @@ def backup_groups():
             'name': group.name,
             'members': [User(object_ref=u).name for u in group.get_users_iter()],
             'policies': format_policies([(p, group.get_policy(p)) for p in group.allowed_policy_types]),
-            'owners': format_owners(group),
+            'owners': group.list_owners(),
             'roles': [Role(object_ref=r).name for r in group.roles]
         }
         groups.append(info)
@@ -86,7 +73,7 @@ def backup_roles():
         info = {
             'name': role.name,
             'policies': format_policies([(p, role.get_policy(p)) for p in role.allowed_policy_types]),
-            'owners': format_owners(role)
+            'owners': role.list_owners()
         }
         roles.append(info)
     print("ROLES:", *roles, sep='\n\t')
