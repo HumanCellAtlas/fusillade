@@ -25,6 +25,7 @@ session = requests.Session()
 
 openid_config = dict()
 
+
 def get_openid_config(openid_provider: str) -> dict:
     """
 
@@ -39,7 +40,9 @@ def get_openid_config(openid_provider: str) -> dict:
         res = requests.get(f"https://{openid_provider}/.well-known/openid-configuration")
         res.raise_for_status()
         openid_config[openid_provider] = res.json()
-        logger.info({'message': "caching", 'openid_provider': {openid_provider: openid_config[openid_provider]}})
+        logger.info({'message': "caching missed", 'openid_provider': {openid_provider: openid_config[openid_provider]}})
+    else:
+        logger.info({'message': "caching hit", 'openid_provider': {openid_provider: openid_config[openid_provider]}})
     return openid_config[openid_provider]
 
 
