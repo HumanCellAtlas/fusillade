@@ -1607,14 +1607,20 @@ class OwnershipMixin:
                 return self.list_owned(Role, **kwargs)
 
 
-class User(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
+class Principal(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
+    """
+    Represents a principal in CloudDirectory. A principal is any one who can assume roles, and own resources.
+    """
+    _facet = 'LeafFacet'
+
+
+class User(Principal):
     """
     Represents a user in CloudDirectory
     """
     _attributes = ['status'] + CloudNode._attributes
     default_roles = []  # TODO: make configurable
     default_groups = ['user_default']  # TODO: make configurable
-    _facet = 'LeafFacet'
     object_type = 'user'
 
     def __init__(self, name: str = None, object_ref: str = None):
@@ -1799,11 +1805,10 @@ class User(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
         cls._exists(users)
 
 
-class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
+class Group(Principal):
     """
     Represents a group in CloudDirectory
     """
-    _facet = 'LeafFacet'
     object_type = 'group'
     _default_policy_path = default_group_policy_path
 
