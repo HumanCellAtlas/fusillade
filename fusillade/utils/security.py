@@ -25,21 +25,21 @@ session = requests.Session()
 
 openid_config = dict()
 
+
+@functools.lru_cache(maxsize=32)
 def get_openid_config(openid_provider: str) -> dict:
     """
 
     :param openid_provider: the openid provider's domain.
     :return: the openid configuration
     """
-    if openid_provider not in openid_config:
-        if openid_provider.endswith(gserviceaccount_domain):
-            openid_provider = 'accounts.google.com'
-        else:
-            openid_provider = Config.get_openid_provider()
-        res = requests.get(f"https://{openid_provider}/.well-known/openid-configuration")
-        res.raise_for_status()
-        openid_config[openid_provider] = res.json()
-        logger.info({'message': "caching", 'openid_provider': {openid_provider: openid_config[openid_provider]}})
+    if openid_provider.endswith(gserviceaccount_domain):
+        openid_provider = 'accounts.google.com'
+    else:
+        openid_provider = Config.get_openid_provider()
+    res = requests.get(f"https://{openid_provider}/.well-known/openid-configuration")
+    res.raise_for_status()
+    openid_config[openid_provider] = res.json()
     return openid_config[openid_provider]
 
 
