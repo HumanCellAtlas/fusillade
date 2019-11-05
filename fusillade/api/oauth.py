@@ -127,7 +127,8 @@ def userinfo(token_info):
     token_info[f"https://{os.environ['API_DOMAIN_NAME']}/app_metadata"] = {
         'authorization': {
             'groups': Group.get_names(user.groups),
-            'roles': Role.get_names(user.roles)
+            'roles': Role.get_names(user.roles),
+            'actions': User.get_actions()
         }
     }
     return ConnexionResponse(status_code=requests.codes.ok, body=token_info)

@@ -13,7 +13,7 @@ import os
 from collections import namedtuple, defaultdict
 from datetime import datetime
 from enum import Enum, auto
-from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, Type
+from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, Type, Set
 
 import itertools
 
@@ -1292,7 +1292,6 @@ class CloudNode:
                 logger.error({"message": "Batch Request Failed", "response": r})  # log error request failed
         return results
 
-
     def list_owners(self, incoming=True):
         get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
         object_selection = 'SourceObjectReference' if incoming else 'TargetObjectReference'
@@ -1666,6 +1665,34 @@ class User(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
             if not operations:
                 break
         return all_results
+
+    def get_actions(self) -> Set[str]:
+        """
+        Retrieve the actions the user is allowed to perform
+        :return: a set of actions the users can perform
+        """
+        statements = list(itertools.chain.from_iterable(
+            [json.loads(p['policy'])['Statement'] for p in self.get_authz_params()['policies']]))
+        actions = list(itertools.chain.from_iterable([s['Action'] for s in statements if s['Effect'] == 'Allow']))
+        
+        # Need to handle cases where the actions has a wildcard. All actions that match the wildcard are removed and
+        # only the wildcard value will remain.
+        prefixes = []
+        for a in actions:
+            if a.endswith('*'):
+                prefixes.append(a)
+        prefixes.sort(key=len, reverse=True)
+        if prefixes:
+            for prefix in prefixes:
+                i = 0
+                while i < len(actions):
+                    if prefix == actions[i]:
+                        i += 1
+                    elif actions[i].startswith(prefix[:-1]):
+                        actions.pop(i)
+                    else:
+                        i += 1
+        return set(actions)
 
     @property
     def status(self):
