@@ -87,7 +87,7 @@ def serve_openid_config():
             title="Bad Request",
             detail=f"host: {auth_host}, is not supported. host must be {os.environ['API_DOMAIN_NAME']}.")
     openid_config = get_openid_config(Config.get_openid_provider()).copy()
-    openid_config.update(**proxied_endpoints) 
+    openid_config.update(**proxied_endpoints)
     return ConnexionResponse(body=openid_config, status_code=requests.codes.ok)
 
 
