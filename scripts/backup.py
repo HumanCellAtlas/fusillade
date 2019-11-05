@@ -91,4 +91,5 @@ def backup():
             indent=2)
 
 
-backup()
+add if __name__ == "__main__":
+    backup()
