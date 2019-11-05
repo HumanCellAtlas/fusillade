@@ -354,6 +354,15 @@ class CloudDirectory:
                             **kwargs
                             )
 
+    def list_object_parent_paths(self, object_ref: str, **kwargs) -> Iterator[str]:
+        return _paging_loop(cd_client.list_object_parent_paths,
+                            'PathToObjectIdentifiersList',
+                            DirectoryArn=self._dir_arn,
+                            ObjectReference={'Selector': object_ref},
+                            MaxResults=self._page_limit,
+                            **kwargs
+                            )
+
     @retry(**cd_read_retry_parameters)
     def _list_typed_links(self,
                           func: Callable,
@@ -423,7 +432,7 @@ class CloudDirectory:
 
     @staticmethod
     def _make_ref(i):
-        return '$' + i
+        return i if i[0] == '$' else '$' + i
 
     def create_object(self, link_name: str, facet_type: str, obj_type: str, **kwargs) -> str:
         """
@@ -1040,7 +1049,7 @@ class CloudNode:
     Contains shared code across the different types of nodes stored in Fusillade CloudDirectory
     """
     _attributes = ["name"]  # the different attributes of a node stored
-    _facet = 'LeafNode'
+    _facet = 'LeafFacet'
     object_type = 'node'
 
     def __init__(self,
@@ -1269,6 +1278,25 @@ class CloudNode:
             directory.batch_read(operations)
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeBadRequestException(f"One or more {cls.object_type} does not exist.")
+
+    def list_owners(self, incoming=True):
+        get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
+        object_selection = 'SourceObjectReference' if incoming else 'TargetObjectReference'
+        _owners = [
+            type_link[object_selection]['Selector']
+            for type_link in
+            get_links(self.object_ref, filter_typed_link='ownership_link')
+        ]
+        owners = []
+        for owner in _owners:
+            node = CloudNode(object_ref=owner)
+            owners.append({
+                'type': [i for i in
+                         [p['Path'].split('/')[1]
+                          for p in node.cd.list_object_parent_paths(node.object_ref)] if i != 'role'][0],
+                'name': node.name
+            })
+        return owners
 
 
 class PolicyMixin:
