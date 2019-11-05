@@ -354,6 +354,15 @@ class CloudDirectory:
                             **kwargs
                             )
 
+    def list_object_parent_paths(self, object_ref: str, **kwargs) -> Iterator[str]:
+        return _paging_loop(cd_client.list_object_parent_paths,
+                            'PathToObjectIdentifiersList',
+                            DirectoryArn=self._dir_arn,
+                            ObjectReference={'Selector': object_ref},
+                            MaxResults=self._page_limit,
+                            **kwargs
+                            )
+
     @retry(**cd_read_retry_parameters)
     def _list_typed_links(self,
                           func: Callable,
@@ -423,7 +432,7 @@ class CloudDirectory:
 
     @staticmethod
     def _make_ref(i):
-        return '$' + i
+        return i if i[0] == '$' else '$' + i
 
     def create_object(self, link_name: str, facet_type: str, obj_type: str, **kwargs) -> str:
         """
@@ -1040,7 +1049,7 @@ class CloudNode:
     Contains shared code across the different types of nodes stored in Fusillade CloudDirectory
     """
     _attributes = ["name"]  # the different attributes of a node stored
-    _facet = 'LeafNode'
+    _facet = 'LeafFacet'
     object_type = 'node'
 
     def __init__(self,
@@ -1365,7 +1374,7 @@ class PolicyMixin:
                     self.attached_policies[policy_type] = attrs['policy_document'].decode("utf-8")
                 except cd_client.exceptions.ResourceNotFoundException:
                     pass
-            return self.attached_policies.get(policy_type, '')
+            return self.attached_policies.get(policy_type, '{}')
         else:
             FusilladeHTTPException(
                 title='Bad Request',

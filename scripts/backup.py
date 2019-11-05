@@ -2,6 +2,7 @@
 """
 Create a backup of Clouddirectory in AWS S3.
 """
+import json
 import os
 import sys
 
@@ -24,15 +25,16 @@ def list_node(node, field):
 
 def backup_users():
     users = []
-    # TODO list all users
     for name in list_node(User, 'users'):
         user = User(name)
         info = {
             'name': user.name,
             'status': user.status,
-            'policies': user.attached_policies}
+            'policies': [{p: json.loads(user.get_policy(p))} for p in user.allowed_policy_types],
+            'roles': [Role(object_ref=r).name for r in user.roles]
+        }
         users.append(info)
-        print(info)
+    print("USERS:", *users, sep='\n\t')
     return users
 
 
@@ -43,32 +45,38 @@ def backup_groups():
         info = {
             'name': group.name,
             'members': [User(object_ref=u).name for u in group.get_users_iter()],
-            'policies': group.attached_policies,
-            'owners': [User(object_ref=u).name for u in group.list_owners()]
+            'policies': [{p: json.loads(group.get_policy(p))} for p in group.allowed_policy_types],
+            'owners': [User(object_ref=u).name for u in group.list_owners()],
+            'roles': [Role(object_ref=r).name for r in group.roles]
         }
         groups.append(info)
-        print(info)
+    print("GROUPS:", *groups, sep='\n\t')
     return groups
+
 
 def backup_roles():
     roles = []
     for name in list_node(Role, 'roles'):
         role = Role(name)
-        members = role.cd.list_object_children(role.object_ref)
-        for member in members:
-
         info = {
             'name': role.name,
-            'owners': role.list_owners(),
+            'owners': [User(object_ref=u).name for u in role.list_owners()],
+            'policies': [{p: json.loads(role.get_policy(p))} for p in role.allowed_policy_types]
         }
+        roles.append(info)
+    print("ROLES:", *roles, sep='\n\t')
+    return roles
+
 
 def backup():
-    # users = backup_users()
-    # groups = backup_groups()
+    with open('backup.json', 'w') as fp:
+        json.dump(
+            dict(
+                users=backup_users(),
+                groups=backup_groups(),
+                roles=backup_roles()),
+            fp,
+            indent=2)
 
-    # TODO backup roles
-
-# TODO we need backup format
-# TODO we need a location to backup too
 
 backup()
