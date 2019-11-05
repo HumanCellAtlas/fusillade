@@ -11,7 +11,7 @@ import typing
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
-from fusillade.clouddirectory import User, Group, Role, CloudNode
+from fusillade.clouddirectory import User, Group, Role
 
 
 def format_policies(policies: typing.List[typing.Tuple[str, str]]) -> typing.Dict[str, str]:
@@ -81,14 +81,16 @@ def backup_roles():
 
 
 def backup():
+    contents = dict(
+        users=backup_users(),
+        groups=backup_groups(),
+        roles=backup_roles())
     with open('backup.json', 'w') as fp:
         json.dump(
-            dict(
-                users=backup_users(),
-                groups=backup_groups(),
-                roles=backup_roles()),
+            contents,
             fp,
             indent=2)
+    return contents
 
 
 if __name__ == "__main__":

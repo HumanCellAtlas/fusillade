@@ -29,9 +29,9 @@ class Test_Backup(unittest.TestCase):
         """
         Test the backup file is correct after a basic fusillade directory is initialized
         """
-        backup.backup()
-        with open('/'.join([pkg_root, 'tests', 'backup.json']), 'r') as fp:
-            contents = json.load(fp)
+        contents = backup.backup()
+        # check that it is jsonifyable
+        json.dumps(contents)
         # check public exists in users
         self.AssertInListDict(contents['users'], {'name': 'public', 'status': 'enabled'})
         # check the default_public groups exists
