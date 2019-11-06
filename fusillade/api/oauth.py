@@ -121,10 +121,17 @@ def userinfo(token_info):
     """
     Part of OIDC
     """
-    openid_provider = Config.get_openid_provider()
-    openid_config = get_openid_config(openid_provider)
-    return ConnexionResponse(status_code=requests.codes.found,
-                             headers=dict(Location=openid_config["userinfo_endpoint"]))
+    from fusillade.clouddirectory import User, Group, Role
+    user = User(token_info['email'])
+    # TODO save user info in fusillade at the same time.
+    token_info[f"https://{os.environ['API_DOMAIN_NAME']}/app_metadata"] = {
+        'authorization': {
+            'groups': Group.get_names(user.groups),
+            'roles': Role.get_names(user.roles),
+            'scope': User.get_actions()
+        }
+    }
+    return ConnexionResponse(status_code=requests.codes.ok, body=token_info)
 
 
 def get_userinfo(token_info):
