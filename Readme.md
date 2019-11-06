@@ -43,6 +43,14 @@ To do this, your application should define an access control model consisting of
   }
   ```
 
+## [WIP] [GA4GH AAI](https://github.com/ga4gh/data-security/tree/master/AAI) Compatibility
+Fusillade will provide support for GA4GH Passport claims using the OIDC userinfo endpoint. A user can sign into 
+multiple different identities and they will be linked together as the same user. Server side 
+applications can view this information using the userinfo endpoint.
+
+See https://github.com/HumanCellAtlas/fusillade/issues/307 for current progress.
+
+
 ## AWS Cloud Architecture
 
 ![AWS Cloud Architecture](https://www.lucidchart.com/publicSegments/view/b3470977-3924-4fb3-a07f-ce97be59dac1/image.png)
