@@ -234,7 +234,33 @@ paths:
         - oauth
       responses:
         200:
-          description: OK.
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sub:
+                    type: string
+                  https://$API_DOMAIN_NAME/app_metadata:
+                    description: Contains information about what the user has access too.
+                    type: object
+                    properties:
+                      description: A list of roles the user can use.
+                      role:
+                        type: array
+                        items:
+                          type: string
+                      group:
+                        description: A list of groups the user is in.
+                        type: array
+                        items:
+                          type: string
+                      scope:
+                        description: A list of actions the user can perform.
+                        type: array
+                        items:
+                          type: string
         401:
           $ref: '#/components/responses/401'
     post:
