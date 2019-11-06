@@ -8,6 +8,8 @@ import os
 import sys
 import typing
 
+import time
+
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
@@ -85,11 +87,8 @@ def backup():
         users=backup_users(),
         groups=backup_groups(),
         roles=backup_roles())
-    with open('backup.json', 'w') as fp:
-        json.dump(
-            contents,
-            fp,
-            indent=2)
+    with open(f"backup_{time.strftime('%Y-%m-%d_%H%M%S')}.json", 'w') as fp:
+        json.dump(contents, fp, indent=2)
     return contents
 
 
