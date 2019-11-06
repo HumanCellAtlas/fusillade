@@ -1676,7 +1676,7 @@ class User(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
         actions = list(itertools.chain.from_iterable([s['Action'] for s in statements if s['Effect'] == 'Allow']))
 
         # Need to handle cases where the actions has a wildcard. All actions that match the wildcard are removed and
-        # only the wildcard value will remain.
+        # only the wildcard value will remain. TODO: investigate if this is worth the headache if managing.
         prefixes = []
         for a in actions:
             if a.endswith('*'):
