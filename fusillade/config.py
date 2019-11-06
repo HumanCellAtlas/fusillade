@@ -17,6 +17,7 @@ class Config:
     _directory_name = None
     group_max = 10
     oidc_email_claim = 'https://auth.data.humancellatlas.org/email'
+    cookie_age = 600
 
     @classmethod
     def get_admin_emails(cls):

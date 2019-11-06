@@ -7,6 +7,7 @@ import os
 
 import jwt
 import requests
+import time
 from connexion.lifecycle import ConnexionResponse
 from flask import json, request, make_response
 from furl import furl
@@ -29,7 +30,18 @@ def logout():
     client_id = oauth2_config[openid_provider]["client_id"] if not query_params else query_params.get('client_id')
     url = furl(f"https://{openid_provider}/v2/logout",
                query_params=dict(client_id=client_id)).url
-    return ConnexionResponse(status_code=requests.codes.ok, headers=dict(Location=url))
+    return ConnexionResponse(status_code=requests.codes.found,
+                             headers={
+                                 'Location': url,
+                                 'set-cookie': ';'.join(
+                                     [f"access_token=",
+                                      "SameSite=Strict",
+                                      "Domain=humancellatlas.org",
+                                      "Secure",
+                                      "HttpOnly",
+                                      f"Expires={int(time.time()) - Config.cookie_age}",
+                                      "path=/"])
+                             })
 
 
 def authorize():
@@ -201,7 +213,8 @@ def cb():
                                               "Domain=humancellatlas.org",
                                               "Secure",
                                               "HttpOnly",
-                                              "Max-Age=600",  # in seconds
+                                              f"Max-Age={Config.cookie_age}",  # in seconds
+                                              f"Expires={int(time.time()) + Config.cookie_age}",
                                               "path=/"])
 
         if redirect_uri:
@@ -222,11 +235,3 @@ def cb():
                                          "tok": tok,
                                      })
 
-
-"""
-Set-Cookie: key=value; SameSite=Strict; id=a3fWa; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Secure; HttpOnly
-
-https://en.wikipedia.org/wiki/Same-origin_policy
-https://en.wikipedia.org/wiki/Cross-site_request_forgery#Prevention
-https://dev.to/dashbird/how-i-fixed-jwt-security-flaws-in-3-steps-264k
-https://medium.com/@jcbaey/authentication-in-spa-reactjs-and-vuejs-the-right-way-e4a9ac5cd9a3"""
