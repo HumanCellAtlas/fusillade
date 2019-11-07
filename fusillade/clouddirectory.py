@@ -1023,6 +1023,28 @@ class CloudDirectory:
         else:
             return dict(clouddirectory_health_status='ok')
 
+    def make_filter_attribute_range(self,
+                                    attribute_name: str,
+                                    start_value: str = None,
+                                    end_value: str = None,
+                                    start_mode: str = 'INCLUSIVE',
+                                    end_mode: str = 'INCLUSIVE') -> List[Dict[str, Any]]:
+        """
+        see https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_range_filters.html
+        for"""
+        _range = dict()
+        if start_value:
+            _range.update({'StartMode': start_mode,
+                           'StartValue': {'StringValue': start_value}})
+        if end_value:
+            _range.update({'EndMode': end_mode,
+                           'EndValue': {'StringValue': end_value}})
+
+        return [{
+            'AttributeName': attribute_name,
+            'Range': _range
+        }]
+
 
 class CloudNode:
     """
@@ -1066,8 +1088,7 @@ class CloudNode:
         # links names must be unique between two objects
 
     def _get_links(self, node: Type['CloudNode'],
-                   attribute_name,
-                   attribute_value,
+                   filter_attribute_range: List[Dict[str, Any]],
                    facet,
                    next_token=None,
                    per_page=None,
@@ -1079,19 +1100,8 @@ class CloudNode:
         """
         get_links = self.cd.list_incoming_typed_links if incoming else self.cd.list_outgoing_typed_links
         object_selection = 'SourceObjectReference' if incoming else 'TargetObjectReference'
-        filter_attribute_ranges = [
-            {
-                'AttributeName': attribute_name,
-                'Range': {
-                    'StartMode': 'INCLUSIVE',
-                    'StartValue': {'StringValue': attribute_value},
-                    'EndMode': 'INCLUSIVE',
-                    'EndValue': {'StringValue': attribute_value}
-                }
-            }
-        ]
         if paged:
-            result, next_token = get_links(self.object_ref, filter_attribute_ranges, facet,
+            result, next_token = get_links(self.object_ref, filter_attribute_range, facet,
                                            next_token=next_token, paged=paged, per_page=per_page)
             if result:
                 operations = [self.cd.batch_get_attributes(
@@ -1111,7 +1121,7 @@ class CloudNode:
             return [
                 type_link[object_selection]['Selector']
                 for type_link in
-                get_links(self.object_ref, filter_attribute_ranges, facet)
+                get_links(self.object_ref, filter_attribute_range, facet)
             ]
 
     def _add_links_batch(self, links: List[str], object_Type: str):
@@ -1494,16 +1504,18 @@ class RolesMixin:
     def roles(self) -> List[str]:
         if not self._roles:
             self._roles = self._get_links(Role,
-                                          'member_of',
-                                          Role.object_type,
+                                          self.cd.make_filter_attribute_range('member_of',
+                                                                              Role.object_type,
+                                                                              Role.object_type),
                                           'membership_link',
                                           incoming=False)
         return self._roles
 
     def get_roles(self, next_token: str = None, per_page: str = None):
         result, next_token = self._get_links(Role,
-                                             'member_of',
-                                             Role.object_type,
+                                             self.cd.make_filter_attribute_range('member_of',
+                                                                                 Role.object_type,
+                                                                                 Role.object_type),
                                              'membership_link',
                                              paged=True,
                                              next_token=next_token,
@@ -1587,10 +1599,11 @@ class OwnershipMixin:
             return True
 
     def list_owned(self, node: Type['CloudNode'], **kwargs):
-        result, next_token = self._get_links(node=node,
-                                             facet='ownership_link',
-                                             attribute_value=node.object_type,
-                                             attribute_name='owner_of',
+        result, next_token = self._get_links(node,
+                                             self.cd.make_filter_attribute_range('owner_of',
+                                                                                 node.object_type,
+                                                                                 node.object_type),
+                                             'ownership_link',
                                              incoming=False,
                                              **kwargs)
         return {f"{node.object_type}s": result}, next_token
@@ -1763,15 +1776,17 @@ class User(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
     def groups(self) -> List[str]:
         if not self._groups:
             self._groups = self._get_links(Group,
-                                           'member_of',
-                                           Group.object_type,
+                                           self.cd.make_filter_attribute_range('member_of',
+                                                                               Group.object_type,
+                                                                               Group.object_type),
                                            'membership_link')
         return self._groups
 
     def get_groups(self, next_token: str = None, per_page: int = None):
         result, next_token = self._get_links(Group,
-                                             'member_of',
-                                             Group.object_type,
+                                             self.cd.make_filter_attribute_range('member_of',
+                                                                                 Group.object_type,
+                                                                                 Group.object_type),
                                              'membership_link',
                                              paged=True,
                                              next_token=next_token,
@@ -1846,8 +1861,9 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
         """
         return self._get_links(
             User,
-            'member_of',
-            self.object_type,
+            self.cd.make_filter_attribute_range('member_of',
+                                                self.object_type,
+                                                self.object_type),
             'membership_link',
             incoming=True)
 
@@ -1858,8 +1874,9 @@ class Group(CloudNode, RolesMixin, CreateMixin, OwnershipMixin):
         """
         results, next_token = self._get_links(
             User,
-            'member_of',
-            self.object_type,
+            self.cd.make_filter_attribute_range('member_of',
+                                                self.object_type,
+                                                self.object_type),
             'membership_link',
             paged=True,
             per_page=per_page,
