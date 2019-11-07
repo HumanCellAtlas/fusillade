@@ -49,9 +49,9 @@ cd_write_retry_parameters = dict(timeout=5,
                                  retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
 
 
-def get_json_file(file_name):
+def get_json_file(file_name) -> Dict[str, Any]:
     with open(file_name, 'r') as fp:
-        return json.dumps(json.load(fp))
+        return json.load(fp)
 
 
 def get_published_schema_from_directory(dir_arn: str) -> str:
@@ -1320,11 +1320,13 @@ class PolicyMixin:
         policy_paths = self.cd.lookup_policy(self.object_ref)
         return self.cd.get_policies(policy_paths)
 
-    def create_policy(self, statement: str, policy_type='IAMPolicy', run=True, **kwargs) -> Union[List, None]:
+    def create_policy(self, statement: Dict[str, Any],
+                      policy_type='IAMPolicy', run=True, **kwargs) -> Union[List, None]:
         """
         Create a policy object and attach it to the CloudNode
-        :param statement: Json string that follow AWS IAM Policy Grammar.
+        :param statement: Json that follow AWS IAM Policy Grammar.
           https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html
+        :param policy_type:
         :return:
         """
         operations = list()
@@ -1456,7 +1458,7 @@ class CreateMixin(PolicyMixin):
     @classmethod
     def create(cls,
                name: str,
-               statement: Optional[str] = None,
+               statement: Optional[Dict[str, Any]] = None,
                creator=None,
                **kwargs) -> Type['CloudNode']:
         ops = []
