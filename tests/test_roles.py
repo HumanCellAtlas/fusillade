@@ -7,16 +7,18 @@ sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.errors import FusilladeHTTPException
 from fusillade.clouddirectory import Role, cleanup_directory, cleanup_schema, get_json_file, default_role_path
-from tests.common import new_test_directory, create_test_statement_str, create_test_statements
+from tests.common import new_test_directory, create_test_statements, normalize_json, \
+    create_test_statement
 from tests.infra.testmode import standalone
+from tests.json_mixin import AssertJSONMixin
 
 
 @standalone
-class TestRole(unittest.TestCase):
+class TestRole(unittest.TestCase, AssertJSONMixin):
     @classmethod
     def setUpClass(cls):
         cls.directory, cls.schema_arn = new_test_directory()
-        cls.default_role_statement = get_json_file(default_role_path)
+        cls.default_role_statement = normalize_json(get_json_file(default_role_path))
 
     @classmethod
     def tearDownClass(cls):
@@ -31,27 +33,27 @@ class TestRole(unittest.TestCase):
             role_name = "test_role_default"
             role = Role.create(role_name)
             self.assertEqual(role.name, role_name)
-            self.assertEqual(role.get_policy(), self.default_role_statement)
+            self.assertJSONEqual(role.get_policy(), self.default_role_statement)
 
     def test_role_statement(self):
         role_name = "test_role_specified"
-        statement = create_test_statement_str(role_name)
+        statement = create_test_statement(role_name)
         role = Role.create(role_name, statement)
         with self.subTest("a role is created with specified statement when role.create is called with a statement"):
             self.assertEqual(role.name, role_name)
 
         with self.subTest("a roles statement is retrieved when role.get_policy() is called"):
-            self.assertEqual(role.get_policy(), statement)
+            self.assertJSONEqual(role.get_policy(), statement)
 
         with self.subTest("a roles statement is changed when role.get_policy() is assigned"):
-            statement = create_test_statement_str(f"UserPolicySomethingElse")
+            statement = create_test_statement(f"UserPolicySomethingElse")
             role.set_policy(statement)
-            self.assertEqual(role.get_policy(), statement)
+            self.assertJSONEqual(role.get_policy(), statement)
 
         with self.subTest("Error raised when setting policy to an invalid statement"):
             with self.assertRaises(FusilladeHTTPException):
                 role.set_policy("Something else")
-            self.assertEqual(role.get_policy(), statement)
+            self.assertJSONEqual(role.get_policy(), statement)
 
         statement = create_test_statements(150)
         with self.subTest("an error is returned when a policy that exceeds 10 Kb for a pre-existing role"):

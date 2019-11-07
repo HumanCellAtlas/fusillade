@@ -1418,16 +1418,17 @@ class PolicyMixin:
                 self._set_policy(statement, policy_type)
 
     def _set_policy(self, statement: Dict[str, Any], policy_type: str = 'IAMPolicy'):
-        params = [
-            UpdateObjectParams('POLICY',
-                               'policy_document',
-                               ValueTypes.BinaryValue,
-                               statement,
-                               UpdateActions.CREATE_OR_UPDATE,
-                               )
-        ]
         try:
             try:
+                verify_policy(statement, policy_type)
+                params = [
+                    UpdateObjectParams('POLICY',
+                                       'policy_document',
+                                       ValueTypes.BinaryValue,
+                                       json.dumps(statement),
+                                       UpdateActions.CREATE_OR_UPDATE,
+                                       )
+                ]
                 self.cd.update_object_attribute(self.cd.get_obj_type_path('policy') + self.get_policy_name(policy_type),
                                                 params,
                                                 self.cd.node_schema)

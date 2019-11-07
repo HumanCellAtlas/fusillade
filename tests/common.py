@@ -24,7 +24,16 @@ except FileNotFoundError:
         json.dump(service_accounts, fh)
 
 
-def create_test_statement(name: str, actions: typing.List[str] = None, JSON=False):
+def normalize_json(src: typing.Union[str, dict]):
+    "Normalize the shape of json to make comparing easier"
+    if isinstance(src, dict):
+        pass
+    if isinstance(src, str):
+        src = json.loads(src)
+    return json.dumps(src, sort_keys=True)
+
+
+def create_test_statement(name: str, actions: typing.List[str] = None):
     """Assists with the creation of policy statements for testing"""
     statement = {
         "Version": "2012-10-17",
@@ -39,7 +48,7 @@ def create_test_statement(name: str, actions: typing.List[str] = None, JSON=Fals
     }
     statement["Statement"][0]["Sid"] = name
 
-    return statement if JSON else json.dumps(statement)
+    return statement
 
 
 def create_test_statements(length=1):
@@ -60,7 +69,7 @@ def create_test_statements(length=1):
 
 
 def create_test_statement_str(*args, **kwargs):
-    json.dumps(create_test_statement(*args, **kwargs))
+    return normalize_json(create_test_statement(*args, **kwargs))
 
 
 def new_test_directory(directory_name=None) -> typing.Tuple[CloudDirectory, str]:

@@ -8,7 +8,7 @@ sys.path.insert(0, pkg_root)  # noqa
 from fusillade.errors import FusilladeHTTPException
 from fusillade.clouddirectory import User, Group, Role, cd_client, cleanup_directory, cleanup_schema, \
     get_json_file, default_user_policy_path, default_user_role_path, default_group_policy_path
-from tests.common import new_test_directory, create_test_statement_str
+from tests.common import new_test_directory, create_test_statement_str, normalize_json
 from tests.infra.testmode import standalone
 
 
@@ -17,10 +17,10 @@ class TestUser(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.directory, cls.schema_arn = new_test_directory()
-        cls.default_policy = get_json_file(default_user_policy_path)
+        cls.default_policy = normalize_json(get_json_file(default_user_policy_path))
         cls.default_user_policies = sorted([
-            get_json_file(default_user_role_path),
-            get_json_file(default_group_policy_path)
+            normalize_json(get_json_file(default_user_role_path)),
+            normalize_json(get_json_file(default_group_policy_path))
         ])
 
     @classmethod
