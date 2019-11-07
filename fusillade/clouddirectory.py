@@ -1062,7 +1062,7 @@ class CloudDirectory:
 
         return [{
             'AttributeName': attribute_name,
-            'Range': range
+            'Range': _range
         }]
 
 
