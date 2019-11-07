@@ -13,7 +13,7 @@ import os
 from collections import namedtuple, defaultdict
 from datetime import datetime
 from enum import Enum, auto
-from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, Type, Set
+from typing import Iterator, Any, Tuple, Dict, List, Callable, Optional, Union, Type
 
 import itertools
 
@@ -434,26 +434,6 @@ class CloudDirectory:
     def _make_ref(i):
         return i if i[0] == '$' else '$' + i
 
-    def create_object(self, link_name: str, facet_type: str, obj_type: str, **kwargs) -> str:
-        """
-        Create an object and store in cloud directory.
-        """
-        object_attribute_list = self.get_object_attribute_list(facet=facet_type, **kwargs)
-        parent_path = self.get_obj_type_path(obj_type)
-        cd_client.create_object(DirectoryArn=self._dir_arn,
-                                SchemaFacets=[
-                                    {
-                                        'SchemaArn': self.schema,
-                                        'FacetName': facet_type
-                                    },
-                                ],
-                                ObjectAttributeList=object_attribute_list,
-                                ParentReference=dict(Selector=parent_path),
-                                LinkName=link_name)
-        object_ref = parent_path + link_name
-        self.get_object_information(object_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
-        return object_ref
-
     @retry(**cd_read_retry_parameters)
     def get_object_attributes(self, obj_ref: str, facet: str, attributes: List[str],
                               schema=None) -> Dict[str, Any]:
@@ -539,10 +519,10 @@ class CloudDirectory:
             AttributeUpdates=updates
         )
 
-    def create_folder(self, path: str, name: str) -> None:
+    def create_folder(self, path: str, name: str, created_by: str = "fusillade") -> None:
         """ A folder is just a NodeFacet"""
         schema_facets = [dict(SchemaArn=self.schema, FacetName="NodeFacet")]
-        object_attribute_list = self.get_object_attribute_list(facet="NodeFacet", name=name, created_by="fusillade")
+        object_attribute_list = self.get_object_attribute_list(facet="NodeFacet", name=name, created_by=created_by)
         try:
             cd_client.create_object(DirectoryArn=self._dir_arn,
                                     SchemaFacets=schema_facets,
@@ -1064,14 +1044,17 @@ class CloudNode:
         if name and object_ref:
             raise FusilladeException("object_reference XOR name")
         if name:
-            self._name: str = name
-            self._path_name: str = self.hash_name(name)
-            self.object_ref: str = self.cd.get_obj_type_path(self.object_type) + self._path_name
+            self.from_name(name)
         else:
             self._name: str = None
             self._path_name: str = None
             self.object_ref: str = object_ref
         self.attached_policies: Dict[str, str] = dict()
+
+    def from_name(self, name):
+        self._name: str = name
+        self._path_name: str = self.hash_name(name)
+        self.object_ref: str = self.cd.get_obj_type_path(self.object_type) + self._path_name
 
     @staticmethod
     def hash_name(name):
