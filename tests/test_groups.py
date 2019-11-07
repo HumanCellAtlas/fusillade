@@ -8,7 +8,7 @@ sys.path.insert(0, pkg_root)  # noqa
 from fusillade.errors import FusilladeHTTPException
 from fusillade.clouddirectory import User, Group, cd_client, cleanup_directory, cleanup_schema, get_json_file, \
     default_group_policy_path, Role
-from tests.common import new_test_directory, create_test_statement
+from tests.common import new_test_directory, create_test_statement_str
 from tests.infra.testmode import standalone
 
 
@@ -40,7 +40,7 @@ class TestGroup(unittest.TestCase):
 
         with self.subTest("The group is returned when the group has been created with specified valid statement."):
             group_name = "NewGroup1234"
-            statement = create_test_statement(group_name)
+            statement = create_test_statement_str(group_name)
             group = Group.create("new_group3", statement)
             self.assertEqual(group.name, "new_group3")
             self.assertEqual(group.get_policy(), statement)
@@ -53,7 +53,7 @@ class TestGroup(unittest.TestCase):
             self.assertEqual(policies[0], self.default_group_statement)
 
         group_name = "NewGroup1234"
-        statement = create_test_statement(group_name)
+        statement = create_test_statement_str(group_name)
         with self.subTest("The group policy changes when satement is set"):
             group.set_policy(statement)
             policies = [p['policy'] for p in group.get_authz_params()['policies']]
@@ -100,7 +100,7 @@ class TestGroup(unittest.TestCase):
 
     def test_roles(self):
         roles = ['role1', 'role2']
-        role_objs = [Role.create(name, create_test_statement(name)) for name in roles]
+        role_objs = [Role.create(name, create_test_statement_str(name)) for name in roles]
         with self.subTest("multiple roles return when multiple roles are attached to group."):
             group = Group.create("test_roles")
             group.add_roles(roles)

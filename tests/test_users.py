@@ -8,7 +8,7 @@ sys.path.insert(0, pkg_root)  # noqa
 from fusillade.errors import FusilladeHTTPException
 from fusillade.clouddirectory import User, Group, Role, cd_client, cleanup_directory, cleanup_schema, \
     get_json_file, default_user_policy_path, default_user_role_path, default_group_policy_path
-from tests.common import new_test_directory, create_test_statement
+from tests.common import new_test_directory, create_test_statement_str
 from tests.infra.testmode import standalone
 
 
@@ -20,7 +20,7 @@ class TestUser(unittest.TestCase):
         cls.default_policy = get_json_file(default_user_policy_path)
         cls.default_user_policies = sorted([
             get_json_file(default_user_role_path),
-           get_json_file(default_group_policy_path)
+            get_json_file(default_group_policy_path)
         ])
 
     @classmethod
@@ -53,11 +53,12 @@ class TestUser(unittest.TestCase):
             self.assertRaises(FusilladeHTTPException, user.provision_user, name)
         with self.subTest("an existing users info is retrieved when instantiating User class for an existing user"):
             user = User(name)
-            self.assertEqual(sorted([p['policy'] for p in user.get_authz_params()['policies']]), self.default_user_policies)
+            self.assertEqual(sorted([p['policy'] for p in user.get_authz_params()['policies']]),
+                             self.default_user_policies)
 
     def test_get_groups(self):
         name = "test_get_groups@test.com"
-        test_groups = [(f"group_{i}", create_test_statement(f"GroupPolicy{i}")) for i in range(5)]
+        test_groups = [(f"group_{i}", create_test_statement_str(f"GroupPolicy{i}")) for i in range(5)]
         groups = [Group.create(*i) for i in test_groups]
 
         user = User.provision_user(name)
@@ -92,7 +93,7 @@ class TestUser(unittest.TestCase):
 
     def test_remove_groups(self):
         name = "test_remove_group@test.com"
-        test_groups = [(f"group_{i}", create_test_statement(f"GroupPolicy{i}")) for i in range(5)]
+        test_groups = [(f"group_{i}", create_test_statement_str(f"GroupPolicy{i}")) for i in range(5)]
         groups = [Group.create(*i).name for i in test_groups]
         user = User.provision_user(name)
         with self.subTest("A user is removed from a group when remove_group is called for a group the user belongs "
@@ -117,14 +118,14 @@ class TestUser(unittest.TestCase):
         with self.subTest("The initial user policy is None, when the user is first created"):
             self.assertFalse(user.get_policy())
 
-        statement = create_test_statement(f"UserPolicySomethingElse")
+        statement = create_test_statement_str(f"UserPolicySomethingElse")
         user.set_policy(statement)
         with self.subTest("The user policy is set when statement setter is used."):
             expected_statement = statement
             self.assertEqual(user.get_policy(), expected_statement)
             self.assertIn(expected_statement, [p['policy'] for p in user.get_authz_params()['policies']])
 
-        statement = create_test_statement(f"UserPolicySomethingElse2")
+        statement = create_test_statement_str(f"UserPolicySomethingElse2")
         user.set_policy(statement)
         with self.subTest("The user policy changes when set_policy is used."):
             expected_statement = statement
@@ -151,7 +152,7 @@ class TestUser(unittest.TestCase):
 
     def test_roles(self):
         name = "test_sete_policy@test.com"
-        test_roles = [(f"Role_{i}", create_test_statement(f"RolePolicy{i}")) for i in range(5)]
+        test_roles = [(f"Role_{i}", create_test_statement_str(f"RolePolicy{i}")) for i in range(5)]
         roles = [Role.create(*i).name for i in test_roles]
         role_names, _ = zip(*test_roles)
         role_names = sorted(role_names)
@@ -213,12 +214,12 @@ class TestUser(unittest.TestCase):
         """
         name = "test_set_policy@test.com"
         user = User.provision_user(name)
-        test_groups = [(f"group_{i}", create_test_statement(f"GroupPolicy{i}")) for i in range(5)]
+        test_groups = [(f"group_{i}", create_test_statement_str(f"GroupPolicy{i}")) for i in range(5)]
         [Group.create(*i) for i in test_groups]
         group_names, _ = zip(*test_groups)
         group_names = sorted(group_names)
         group_statements = [i[1] for i in test_groups]
-        test_roles = [(f"role_{i}", create_test_statement(f"RolePolicy{i}")) for i in range(5)]
+        test_roles = [(f"role_{i}", create_test_statement_str(f"RolePolicy{i}")) for i in range(5)]
         [Role.create(*i) for i in test_roles]
         role_names, _ = zip(*test_roles)
         role_names = sorted(role_names)

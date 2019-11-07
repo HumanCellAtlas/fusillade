@@ -17,7 +17,7 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from tests.base_api_test import BaseAPITest
-from tests.common import get_auth_header, service_accounts, create_test_statement
+from tests.common import get_auth_header, service_accounts, create_test_statement_str
 
 
 @unittest.skipIf(True, "Slow Test, enable to test performance of evaluate")
@@ -56,7 +56,7 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
             self.assertEqual(201, resp.status_code)
             for i in range(start, role):
                 role_id = f'test_{i}'
-                policy = create_test_statement(role_id)
+                policy = create_test_statement_str(role_id)
                 data = json.dumps({
                     'role_id': role_id,
                     'policy': policy
@@ -88,7 +88,7 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
             for i in range(start, group):
                 # create the roles
                 role_id = f'rtest_{i}'
-                policy = create_test_statement(role_id)
+                policy = create_test_statement_str(role_id)
                 data = json.dumps({
                     'role_id': role_id,
                     'policy': policy

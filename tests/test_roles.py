@@ -7,7 +7,7 @@ sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.errors import FusilladeHTTPException
 from fusillade.clouddirectory import Role, cleanup_directory, cleanup_schema, get_json_file, default_role_path
-from tests.common import new_test_directory, create_test_statement, create_test_statements
+from tests.common import new_test_directory, create_test_statement_str, create_test_statements
 from tests.infra.testmode import standalone
 
 
@@ -35,7 +35,7 @@ class TestRole(unittest.TestCase):
 
     def test_role_statement(self):
         role_name = "test_role_specified"
-        statement = create_test_statement(role_name)
+        statement = create_test_statement_str(role_name)
         role = Role.create(role_name, statement)
         with self.subTest("a role is created with specified statement when role.create is called with a statement"):
             self.assertEqual(role.name, role_name)
@@ -44,7 +44,7 @@ class TestRole(unittest.TestCase):
             self.assertEqual(role.get_policy(), statement)
 
         with self.subTest("a roles statement is changed when role.get_policy() is assigned"):
-            statement = create_test_statement(f"UserPolicySomethingElse")
+            statement = create_test_statement_str(f"UserPolicySomethingElse")
             role.set_policy(statement)
             self.assertEqual(role.get_policy(), statement)
 

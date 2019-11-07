@@ -15,7 +15,7 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from tests.base_api_test import BaseAPITest
-from tests.common import get_auth_header, service_accounts, create_test_statement
+from tests.common import get_auth_header, service_accounts, create_test_statement_str
 from tests.data import TEST_NAMES_NEG, TEST_NAMES_POS
 from fusillade.clouddirectory import Role, Group, User
 
@@ -52,7 +52,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
                 'name': f'201 returned when creating a group with policy only',
                 'json_request_body': {
                     "group_id": "test_post_group_Group2",
-                    "policy": create_test_statement("policy_03")
+                    "policy": create_test_statement_str("policy_03")
                 },
                 'response': {
                     'code': 201
@@ -63,7 +63,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
                 'json_request_body': {
                     "group_id": "test_post_group_Group3",
                     "roles": [Role.create("test_post_group_role_04").name],
-                    "policy": create_test_statement("policy_04")
+                    "policy": create_test_statement_str("policy_04")
                 },
                 'response': {
                     'code': 201
@@ -73,7 +73,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
                 'name': f'400 returned when creating a group without group_id',
                 'json_request_body': {
                     "roles": [Role.create("test_post_group_role_05").name],
-                    "policy": create_test_statement("policy_05")
+                    "policy": create_test_statement_str("policy_05")
                 },
                 'response': {
                     'code': 400
@@ -140,7 +140,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
                 '/v1/group',
                 headers=headers,
                 data=json.dumps({"group_id": f"test_get_groups_{i}",
-                                 'policy': create_test_statement("test_group")})
+                                 'policy': create_test_statement_str("test_group")})
 
             )
             self.assertEqual(201, resp.status_code)
@@ -314,7 +314,7 @@ class TestGroupApi(BaseAPITest, unittest.TestCase):
 
         role = Role.create("test_delete_group_role").name
         user = User.provision_user("test_delete_group_user").name
-        policy = create_test_statement("test_delete_group_policy")
+        policy = create_test_statement_str("test_delete_group_policy")
         group_id = "test_delete_group_group"
 
         with self.subTest("Group delete with users and roles."):
