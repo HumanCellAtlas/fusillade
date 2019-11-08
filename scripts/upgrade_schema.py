@@ -26,7 +26,7 @@ args = parser.parse_args()
 if not args.stage:
     print("'FUS_DEPLOYMENT_STAGE' not found in environment please run `source environment`, or use the --stage option")
     exit(1)
-new_schema = get_json_file(directory_schema_path)  # open schema file locally
+new_schema = json.dumps(get_json_file(directory_schema_path))  # open schema file locally
 schema_name = f"hca_fusillade_base_{args.stage}"
 directory_name = f"hca_fusillade_{args.stage}"
 rv = 0
