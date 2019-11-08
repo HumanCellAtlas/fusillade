@@ -21,7 +21,7 @@ info:
     to RFC 5988, and retrieve the next page if requested by the user, or if all
     results are being retrieved.
 
-  version: "0.0.1"
+  version: "0.2.0"
 servers:
   - url: https://$API_DOMAIN_NAME
 paths:
