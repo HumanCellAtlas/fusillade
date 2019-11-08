@@ -16,13 +16,13 @@ sys.path.insert(0, pkg_root)  # noqa
 from fusillade.clouddirectory import User, Group, Role
 
 
-def format_policies(policies: typing.List[typing.Tuple[str, str]]) -> typing.Dict[str, str]:
+def format_policies(policies: typing.List[typing.Tuple[str, typing.Any]]) -> typing.Dict[str, typing.Any]:
     rv = dict()
     for t, p in policies:
         if not p:
             continue
         else:
-            rv[t] = json.loads(p)
+            rv[t] = p
     return rv
 
 
