@@ -68,4 +68,5 @@ fi
 
 set -a
 API_DOMAIN_NAME=auth.${FUS_ZONE_NAME}
+FUS_VERSION=$(git describe --tags --abbrev=0)
 set +a
