@@ -1,5 +1,4 @@
 SHELL:=/bin/bash
-
 tests:=$(wildcard tests/test_*.py)
 
 before-test: package
@@ -54,14 +53,13 @@ deploy-infra:
 	source environment && $(MAKE) -C infra apply-all
 
 package:
-	git fetch --tags
 	source environment && $(MAKE) _package
 
 _package:
 	git clean -df chalicelib vendor
 	shopt -s nullglob; for wheel in vendor.in/*/*.whl; do unzip -q -o -d vendor $$wheel; done
-	cat fusillade-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/fusillade-api.yml
-	cat fusillade-internal-api.yml | envsubst '$$API_DOMAIN_NAME' > chalicelib/fusillade-internal-api.yml
+	cat fusillade-api.yml | envsubst '$$API_DOMAIN_NAME' | envsubst '$$FUS_VERSION' > chalicelib/fusillade-api.yml
+	cat fusillade-internal-api.yml | envsubst '$$API_DOMAIN_NAME' | envsubst '$$FUS_VERSION' > chalicelib/fusillade-internal-api.yml
 	cat service_config.json | jq .version=\"$(shell git describe --tags --abbrev=0)\" > ./chalicelib/service_config.json
 	cp -R ./fusillade ./policies chalicelib
 
