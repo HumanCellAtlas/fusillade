@@ -128,7 +128,7 @@ def userinfo(token_info):
         'authorization': {
             'groups': Group.get_names(user.groups),
             'roles': Role.get_names(user.roles),
-            'scope': User.get_actions()
+            'scope': user.get_actions()
         }
     }
     return ConnexionResponse(status_code=requests.codes.ok, body=token_info)
