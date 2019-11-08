@@ -1397,10 +1397,10 @@ class PolicyMixin:
                                         'expected': policy_type,
                                         'received': attrs['policy_type']
                                         })
-                    self.attached_policies[policy_type] = attrs['policy_document'].decode("utf-8")
+                    self.attached_policies[policy_type] = json.loads(attrs['policy_document'].decode("utf-8"))
                 except cd_client.exceptions.ResourceNotFoundException:
                     pass
-            return self.attached_policies.get(policy_type, '')
+            return self.attached_policies.get(policy_type, {})
         else:
             FusilladeHTTPException(
                 title='Bad Request',

@@ -58,7 +58,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase, AssertJSONMixin):
             'role_id': role_id,
             'policies': {"IAMPolicy": policy}
         }
-        self.assertJSONEqual(expected_body, resp.body)
+        self.assertEqual(expected_body, json.loads(resp.body))
 
         url = furl(f'/v1/role/{role_id}/policy')
         policy = create_test_statement('ABCD')
@@ -241,7 +241,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase, AssertJSONMixin):
                 if test['expected_resp'] == 200:
                     expected_body = {
                         'role_id': test['role_id'],
-                        'policies': {'IAMPolicy': json.dumps(expected_policy)}
+                        'policies': {'IAMPolicy': expected_policy}
                     }
                     self.assertEqual(expected_body, json.loads(resp.body))
 
