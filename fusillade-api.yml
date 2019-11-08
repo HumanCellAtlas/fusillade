@@ -21,7 +21,7 @@ info:
     to RFC 5988, and retrieve the next page if requested by the user, or if all
     results are being retrieved.
 
-  version: "0.0.1"
+  version: "0.2.0"
 servers:
   - url: https://$API_DOMAIN_NAME
 paths:
@@ -381,7 +381,7 @@ paths:
                   items:
                     $ref: '#/components/schemas/custom_identifier'
                 policy:
-                  type: string
+                  type: object
       tags:
         - user
       responses:
@@ -589,7 +589,7 @@ paths:
               type: object
               properties:
                 policy:
-                  type: string
+                  type: object
       responses:
         200:
           description: Policy modified.
@@ -642,7 +642,7 @@ paths:
                 group_id:
                   $ref: '#/components/schemas/custom_identifier'
                 policy:
-                  type: string
+                  type: object
                 roles:
                   type: array
                   items:
@@ -825,7 +825,7 @@ paths:
               type: object
               properties:
                 policy:
-                  type: string
+                  type: object
       responses:
         200:
           description: Policy modified.
@@ -879,7 +879,7 @@ paths:
                 role_id:
                   $ref: '#/components/schemas/custom_identifier'
                 policy:
-                  type: string
+                  type: object
       responses:
         201:
           description: Role was created.
@@ -948,7 +948,7 @@ paths:
               type: object
               properties:
                 policy:
-                  type: string
+                  type: object
       responses:
         200:
           description: Policy modified.

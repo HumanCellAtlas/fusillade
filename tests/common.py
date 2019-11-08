@@ -24,7 +24,16 @@ except FileNotFoundError:
         json.dump(service_accounts, fh)
 
 
-def create_test_statement(name: str):
+def normalize_json(src: typing.Union[str, dict]):
+    "Normalize the shape of json to make comparing easier"
+    if isinstance(src, dict):
+        pass
+    if isinstance(src, str):
+        src = json.loads(src)
+    return json.dumps(src, sort_keys=True)
+
+
+def create_test_statement(name: str, actions: typing.List[str] = None):
     """Assists with the creation of policy statements for testing"""
     statement = {
         "Version": "2012-10-17",
@@ -32,15 +41,14 @@ def create_test_statement(name: str):
             {
                 "Sid": "DefaultRole",
                 "Effect": "Deny",
-                "Action": [
-                    "fake:action"
-                ],
+                "Action": actions if actions else ["fake:action"],
                 "Resource": "fake:resource"
             }
         ]
     }
     statement["Statement"][0]["Sid"] = name
-    return json.dumps(statement)
+
+    return statement
 
 
 def create_test_statements(length=1):

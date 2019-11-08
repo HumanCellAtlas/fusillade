@@ -49,9 +49,9 @@ cd_write_retry_parameters = dict(timeout=5,
                                  retryable=lambda e: isinstance(e, cd_client.exceptions.RetryableConflictException))
 
 
-def get_json_file(file_name):
+def get_json_file(file_name) -> Dict[str, Any]:
     with open(file_name, 'r') as fp:
-        return json.dumps(json.load(fp))
+        return json.load(fp)
 
 
 def get_published_schema_from_directory(dir_arn: str) -> str:
@@ -85,7 +85,8 @@ def publish_schema(name: str, Version: str, MinorVersion: str = '0') -> str:
         dev_schema_arn = f"{project_arn}schema/development/{name}"
 
     # update the schema
-    schema = get_json_file(directory_schema_path)
+    with open(directory_schema_path) as fp:
+        schema = fp.read()
     cd_client.put_schema_from_json(SchemaArn=dev_schema_arn, Document=schema)
     try:
         pub_schema_arn = cd_client.publish_schema(DevelopmentSchemaArn=dev_schema_arn,
@@ -458,7 +459,7 @@ class CloudDirectory:
 
     def get_policy_attribute_list(self,
                                   policy_type: str,
-                                  statement: str,
+                                  statement: Dict[str, Any],
                                   **kwargs) -> List[Dict[str, Any]]:
         """
         policy_type and policy_document are required field for a policy object. See the section on Policies for more
@@ -479,7 +480,7 @@ class CloudDirectory:
                     FacetName='POLICY',
                     Name="policy_document"),
                 Value=dict(
-                    BinaryValue=statement.encode()))
+                    BinaryValue=json.dumps(statement).encode()))
         ])
         return attributes
 
@@ -1313,11 +1314,13 @@ class PolicyMixin:
         policy_paths = self.cd.lookup_policy(self.object_ref)
         return self.cd.get_policies(policy_paths)
 
-    def create_policy(self, statement: str, policy_type='IAMPolicy', run=True, **kwargs) -> Union[List, None]:
+    def create_policy(self, statement: Dict[str, Any],
+                      policy_type='IAMPolicy', run=True, **kwargs) -> Union[List, None]:
         """
         Create a policy object and attach it to the CloudNode
-        :param statement: Json string that follow AWS IAM Policy Grammar.
+        :param statement: Json that follow AWS IAM Policy Grammar.
           https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html
+        :param policy_type:
         :return:
         """
         operations = list()
@@ -1387,17 +1390,17 @@ class PolicyMixin:
                                         'expected': policy_type,
                                         'received': attrs['policy_type']
                                         })
-                    self.attached_policies[policy_type] = attrs['policy_document'].decode("utf-8")
+                    self.attached_policies[policy_type] = json.loads(attrs['policy_document'].decode("utf-8"))
                 except cd_client.exceptions.ResourceNotFoundException:
                     pass
-            return self.attached_policies.get(policy_type, '')
+            return self.attached_policies.get(policy_type, {})
         else:
             FusilladeHTTPException(
                 title='Bad Request',
                 detail=f"{self.object_type} cannot have policy type {policy_type}."
                 f" Allowed types are: {self.allowed_policy_types}")
 
-    def set_policy(self, statement: str, policy_type: str = 'IAMPolicy'):
+    def set_policy(self, statement: Dict[Any, str], policy_type: str = 'IAMPolicy'):
         if policy_type in self.allowed_policy_types:
             try:
                 # check if this object exists
@@ -1405,15 +1408,15 @@ class PolicyMixin:
             except cd_client.exceptions.ResourceNotFoundException:
                 raise FusilladeNotFoundException(detail="Resource does not exist.")
             else:
-                verify_policy(statement, policy_type)
                 self._set_policy(statement, policy_type)
 
-    def _set_policy(self, statement: str, policy_type: str = 'IAMPolicy'):
+    def _set_policy(self, statement: Dict[str, Any], policy_type: str = 'IAMPolicy'):
+        verify_policy(statement, policy_type)
         params = [
             UpdateObjectParams('POLICY',
                                'policy_document',
                                ValueTypes.BinaryValue,
-                               statement,
+                               json.dumps(statement),
                                UpdateActions.CREATE_OR_UPDATE,
                                )
         ]
@@ -1449,7 +1452,7 @@ class CreateMixin(PolicyMixin):
     @classmethod
     def create(cls,
                name: str,
-               statement: Optional[str] = None,
+               statement: Optional[Dict[str, Any]] = None,
                creator=None,
                **kwargs) -> Type['CloudNode']:
         ops = []
@@ -1463,12 +1466,11 @@ class CreateMixin(PolicyMixin):
         ))
         if creator:
             ops.append(User(name=creator).batch_add_ownership(new_node))
+
         if not statement and not getattr(cls, '_default_policy_path', None):
             pass
         else:
-            if statement:
-                verify_policy(statement, 'IAMPolicy')
-            elif getattr(cls, '_default_policy_path'):
+            if not statement:
                 statement = get_json_file(cls._default_policy_path)
             ops.extend(new_node.create_policy(statement, run=False, type=new_node.object_type, name=new_node.name))
 
@@ -1746,7 +1748,7 @@ class User(Principal):
     def provision_user(
             cls,
             name: str,
-            statement: Optional[str] = None,
+            statement: Optional[Dict[str, Any]] = None,
             roles: List[str] = None,
             groups: List[str] = None,
             creator: str = None

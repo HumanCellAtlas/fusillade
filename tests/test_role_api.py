@@ -17,10 +17,11 @@ sys.path.insert(0, pkg_root)  # noqa
 from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_statement
 from tests.data import TEST_NAMES_NEG, TEST_NAMES_POS
-from fusillade.clouddirectory import Role, Group, User
+from fusillade.clouddirectory import Role
+from tests.json_mixin import AssertJSONMixin
 
 
-class TestRoleApi(BaseAPITest, unittest.TestCase):
+class TestRoleApi(BaseAPITest, unittest.TestCase, AssertJSONMixin):
     def tearDown(self):
         self.clear_directory(
             users=[
@@ -79,7 +80,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
     def test_missing_custom_claim(self):
         headers = {'Content-Type': "application/json"}
         self._test_custom_claim(self.app.get, f'/v1/roles', headers, '')
-        
+
     def test_get_roles(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
@@ -307,7 +308,6 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
                 resp = self.app.put(url.url, data=data, headers=headers)
                 self.assertEqual(test['expected_resp'], resp.status_code)
 
-
     def test_delete_role(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
@@ -353,6 +353,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         with self.subTest("delete a role that does not exist."):
             resp = self.app.delete(f'/v1/role/ghost', headers=headers)
             self.assertEqual(resp.status_code, 404)
+
 
 if __name__ == '__main__':
     unittest.main()

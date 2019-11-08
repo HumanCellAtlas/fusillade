@@ -5,7 +5,7 @@ A fake ActionNames and ResourceArns are used to facilitate the simulation of the
 
 """
 import json
-
+import typing
 from dcplib.aws import clients as aws_clients
 from fusillade.errors import FusilladeHTTPException
 
@@ -26,5 +26,5 @@ _policy_func = {
 }
 
 
-def verify_policy(policy: str, policy_type):
-    _policy_func[policy_type](policy)
+def verify_policy(policy: typing.Dict[str, any], policy_type: str):
+    _policy_func[policy_type](json.dumps(policy))
