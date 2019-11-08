@@ -1477,9 +1477,7 @@ class CreateMixin(PolicyMixin):
         if not statement and not getattr(cls, '_default_policy_path', None):
             pass
         else:
-            if statement:
-                pass
-            elif getattr(cls, '_default_policy_path'):
+            if not statement:
                 statement = get_json_file(cls._default_policy_path)
             ops.extend(new_node.create_policy(statement, run=False, type=new_node.object_type, name=new_node.name))
 
