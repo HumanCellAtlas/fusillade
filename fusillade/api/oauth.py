@@ -128,10 +128,10 @@ def userinfo(token_info):
         'authorization': {
             'groups': Group.get_names(user.groups),
             'roles': Role.get_names(user.roles),
-            'scope': user.get_actions()
+            'scope': [i for i in user.get_actions()]
         }
     }
-    return ConnexionResponse(status_code=requests.codes.ok, body=token_info)
+    return make_response(json.jsonify(**token_info), requests.codes.ok)
 
 
 def get_userinfo(token_info):

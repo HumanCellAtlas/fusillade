@@ -234,33 +234,7 @@ paths:
         - oauth
       responses:
         200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  sub:
-                    type: string
-                  https://$API_DOMAIN_NAME/app_metadata:
-                    description: Contains information about what the user has access too.
-                    type: object
-                    properties:
-                      role:
-                        description: A list of roles the user can use.
-                        type: array
-                        items:
-                          type: string
-                      group:
-                        description: A list of groups the user is in.
-                        type: array
-                        items:
-                          type: string
-                      scope:
-                        description: A list of actions the user can perform.
-                        type: array
-                        items:
-                          type: string
+          $ref: '#/components/responses/userinfo'
         401:
           $ref: '#/components/responses/401'
     post:
@@ -274,7 +248,7 @@ paths:
         - oauth
       responses:
         200:
-          description: OK.
+          $ref: '#/components/responses/userinfo'
         401:
           $ref: '#/components/responses/401'
   /echo:
@@ -1077,6 +1051,41 @@ components:
         policies:
           type: object
   responses:
+    userinfo:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              sub:
+                description: A unique identifier for the user. This is part of the OIDC standard.
+                type: string
+              email:
+                description: The user's email associated with access token.
+                type: string
+              https://$API_DOMAIN_NAME/app_metadata:
+                description: Contains information about what the user has access too.
+                type: object
+                properties:
+                  authorization:
+                    type: object
+                    properties:
+                      role:
+                        description: A list of roles the user can use.
+                        type: array
+                        items:
+                          type: string
+                      group:
+                        description: A list of groups the user is in.
+                        type: array
+                        items:
+                          type: string
+                      scope:
+                        description: A list of actions the user can perform.
+                        type: array
+                        items:
+                          type: string
     206:
       description: A single page of results was retrieved.
       headers:
