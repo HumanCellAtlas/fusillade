@@ -909,7 +909,12 @@ class CloudDirectory:
     @staticmethod
     def get_obj_type_path(obj_type: str) -> str:
         obj_type = obj_type.lower()
-        return obj_type_path[obj_type]
+        try:
+            return obj_type_path[obj_type]
+        except KeyError:
+            if obj_type.startswith('resource'):
+                # check that it's a resource type with format resource/resource_type
+                return f'/{obj_type}/id/'
 
     def lookup_policy(self, object_id: str) -> List[Dict[str, Any]]:
         # retrieve all of the policies attached to an object and its parents.
@@ -1867,6 +1872,7 @@ class Group(Principal):
         :param name:
         """
         super(Group, self).__init__(name=name, object_ref=object_ref)
+        self._groups: Optional[List[str]] = None
         self._roles: Optional[List[str]] = None
 
     def get_users_iter(self) -> Tuple[Dict[str, Union[list, Any]], Any]:

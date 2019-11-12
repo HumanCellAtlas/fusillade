@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import unittest
@@ -6,10 +7,10 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.clouddirectory import cleanup_directory, cleanup_schema, get_json_file, \
-    default_group_policy_path
-from fusillade.errors import FusilladeHTTPException
-from fusillade.resource import ResourceType
-from tests.common import new_test_directory
+    default_group_policy_path, User
+from fusillade.errors import FusilladeBadRequestException, FusilladeNotFoundException, FusilladeHTTPException
+from fusillade.resource import ResourceType, ResourceId
+from tests.common import new_test_directory, create_test_statement
 from tests.infra.testmode import standalone
 
 
@@ -39,8 +40,55 @@ class TestResourceType(unittest.TestCase):
         # cannot do twice
         with self.assertRaises(FusilladeHTTPException):
             ResourceType.create(resource_type, actions)
+
         # actions are set
         self.assertTrue(set(projects_type.actions) == set(actions))
 
         # owner policy exists
         self.assertIn(f'/resource/{resource_type}/policy/Owner', projects_type.list_policies()[0])
+
+        # add an access policy
+        expected_policy = create_test_statement("resource policy", actions, json=True)
+        projects_type.create_policy('Reader', expected_policy, 'ResourcePolicy')
+
+        # retrieve a specific access policy
+        test_policy = projects_type.get_policy('Reader')
+        self.assertDictEqual(expected_policy, json.loads(test_policy['policy_document']))
+        self.assertEqual('ResourcePolicy', test_policy['policy_type'])
+
+        # retrieve all policies
+        policies, _ = projects_type.list_policies()
+        self.assertIn(f'/resource/{resource_type}/policy/Reader', policies)
+        self.assertIn(f'/resource/{resource_type}/policy/Owner', policies)
+
+        # update a policy
+        expected_policy = create_test_statement("updated", actions[0:1], json=True)
+        projects_type.update_policy('Reader', expected_policy)
+        self.assertDictEqual(expected_policy, json.loads(projects_type.get_policy('Reader')['policy_document']))
+
+        # invalid actions raise an exception
+        with self.assertRaises(FusilladeBadRequestException) as ex:
+            expected_policy = create_test_statement("updated", json=True)
+            projects_type.update_policy('Reader', expected_policy)
+
+        # remove policy
+        projects_type.delete_policy('Reader')
+        with self.assertRaises(FusilladeNotFoundException):
+            projects_type.delete_policy('Reader')
+        with self.assertRaises(FusilladeNotFoundException):
+            projects_type.get_policy('Reader')
+
+        # create an id
+        ResourceId.create('project', 'anything')
+        project = ResourceId('project', 'anything')
+
+        # list ids
+        projects = projects_type.list_ids()
+        self.assertTrue(projects)
+
+        # give a user read access to the id
+        project.add_principals(User('public'))
+
+
+if __name__ == '__main__':
+    unittest.main()
