@@ -72,7 +72,7 @@ class ResourceType(CloudNode):
                                                       created_by=_creator),
                 batch_reference='policy_node'
             ))
-        # link owner to resource
+        # link owner policy to resource type
         if not owner_policy and not getattr(cls, '_default_policy_path', None):
             raise FusilladeHTTPException('Must provide owner policy.')
         else:
