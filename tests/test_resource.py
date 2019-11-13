@@ -9,7 +9,7 @@ sys.path.insert(0, pkg_root)  # noqa
 from fusillade.clouddirectory import cleanup_directory, cleanup_schema, get_json_file, \
     default_group_policy_path, User
 from fusillade.errors import FusilladeBadRequestException, FusilladeNotFoundException, FusilladeHTTPException
-from fusillade.resource import ResourceType, ResourceId
+from fusillade.resource import ResourceType
 from tests.common import new_test_directory, create_test_statement
 from tests.infra.testmode import standalone
 
@@ -30,57 +30,88 @@ class TestResourceType(unittest.TestCase):
     def tearDown(self):
         self.directory.clear()
 
+    def _create_resource_type(self, name='test_type', actions=None):
+        actions = actions or ['readproject', 'writeproject', 'deleteproject']
+        return ResourceType.create(name, actions)
+
     def test_create_resource_type(self):
         actions = ['readproject', 'writeproject', 'deleteproject']
-        resource_type = 'project'
+        resource_type = 'test_type'
         # a resource type is created
-        ResourceType.create(resource_type, actions)
-        projects_type = ResourceType(resource_type)
+        self._create_resource_type(resource_type, actions)
+        test_type = ResourceType(resource_type)
 
         # cannot do twice
         with self.assertRaises(FusilladeHTTPException):
             ResourceType.create(resource_type, actions)
 
         # actions are set
-        self.assertTrue(set(projects_type.actions) == set(actions))
+        self.assertTrue(set(test_type.actions) == set(actions))
 
         # owner policy exists
-        self.assertIn(f'/resource/{resource_type}/policy/Owner', projects_type.list_policies()[0])
+        self.assertIn(f'/resource/{resource_type}/policy/Owner', test_type.list_policies()[0])
+
+    def test_access_policy(self):
+        actions = ['readproject', 'writeproject', 'deleteproject']
+        resource_type = 'test_type'
+        test_type = self._create_resource_type(resource_type, actions)
 
         # add an access policy
-        expected_policy = create_test_statement("resource policy", actions, json=True)
-        projects_type.create_policy('Reader', expected_policy, 'ResourcePolicy')
+        expected_policy = create_test_statement("resource policy", actions)
+        test_type.create_policy('Reader', expected_policy, 'ResourcePolicy')
 
         # retrieve a specific access policy
-        test_policy = projects_type.get_policy('Reader')
+        test_policy = test_type.get_policy('Reader')
         self.assertDictEqual(expected_policy, json.loads(test_policy['policy_document']))
         self.assertEqual('ResourcePolicy', test_policy['policy_type'])
 
         # retrieve all policies
-        policies, _ = projects_type.list_policies()
+        policies, _ = test_type.list_policies()
         self.assertIn(f'/resource/{resource_type}/policy/Reader', policies)
         self.assertIn(f'/resource/{resource_type}/policy/Owner', policies)
 
         # update a policy
-        expected_policy = create_test_statement("updated", actions[0:1], json=True)
-        projects_type.update_policy('Reader', expected_policy)
-        self.assertDictEqual(expected_policy, json.loads(projects_type.get_policy('Reader')['policy_document']))
+        expected_policy = create_test_statement("updated", actions[0:1])
+        test_type.update_policy('Reader', expected_policy)
+        self.assertDictEqual(expected_policy, json.loads(test_type.get_policy('Reader')['policy_document']))
 
         # invalid actions raise an exception
         with self.assertRaises(FusilladeBadRequestException) as ex:
-            expected_policy = create_test_statement("updated", json=True)
-            projects_type.update_policy('Reader', expected_policy)
+            expected_policy = create_test_statement("updated")
+            test_type.update_policy('Reader', expected_policy)
 
         # remove policy
-        projects_type.delete_policy('Reader')
+        test_type.delete_policy('Reader')
         with self.assertRaises(FusilladeNotFoundException):
-            projects_type.delete_policy('Reader')
+            test_type.delete_policy('Reader')
         with self.assertRaises(FusilladeNotFoundException):
-            projects_type.get_policy('Reader')
+            test_type.get_policy('Reader')
 
-        # create an id
-        ResourceId.create('project', 'anything')
-        project = ResourceId('project', 'anything')
+    def test_actions(self):
+        actions = ['action0']
+        test_type = self._create_resource_type(actions=actions)
+
+        # add actions
+        more_actions = ['action2', 'action1']
+        test_type.add_actions(more_actions)
+        self.assertEqual(set(test_type.actions), set(actions + more_actions))
+
+        # adding existing actions doesn't change actions
+        test_type.add_actions(more_actions)
+        self.assertEqual(set(actions + more_actions), set(test_type.actions))
+
+        # adding new and old actions only adds new actions
+        new_actions = ['ABCD']
+        test_type.add_actions(more_actions + new_actions)
+        self.assertEqual(set(actions + more_actions + new_actions), set(test_type.actions))
+
+        # actions can be removed
+        test_type.remove_actions(more_actions)
+        self.assertEqual(set(actions + new_actions), set(test_type.actions))
+
+        # actions that don't exist will not be removed
+        test_type.remove_actions(more_actions)
+        self.assertEqual(set(actions + new_actions), set(test_type.actions))
 
         # list ids
         projects = projects_type.list_ids()

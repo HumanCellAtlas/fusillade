@@ -467,6 +467,7 @@ class CloudDirectory:
         info https://docs.aws.amazon.com/clouddirectory/latest/developerguide/key_concepts_directory.html
         """
         attributes = self.get_object_attribute_list(facet='IAMPolicy', **kwargs)
+        statement.update(Version="2012-10-17")
         attributes.extend([
             dict(
                 Key=dict(

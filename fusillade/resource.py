@@ -141,8 +141,33 @@ class ResourceType(CloudNode):
             self._actions = self._actions.split(' ')
         return self._actions
 
-    def add_actions(self):
-        set(self._actions)
+    def add_actions(self, actions: List[str]):
+        _actions = set(actions)
+        _actions.update(self.actions)
+        self.cd.update_object_attribute(self.object_ref,
+                                        [UpdateObjectParams(
+                                            self._facet,
+                                            'actions',
+                                            ValueTypes.StringValue,
+                                            ' '.join(_actions),
+                                            UpdateActions.CREATE_OR_UPDATE,
+                                        )])
+        self._actions = None
+
+    def remove_actions(self, actions: List[str]):
+        _actions = set(self.actions) - set(actions)
+        self.cd.update_object_attribute(self.object_ref,
+                                        [UpdateObjectParams(
+                                            self._facet,
+                                            'actions',
+                                            ValueTypes.StringValue,
+                                            ' '.join(_actions),
+                                            UpdateActions.CREATE_OR_UPDATE,
+                                        )])
+        # TODO this actions from all policies
+        self._actions = None
+
+
 
     def check_actions(self, policy: dict):
         policy_actions = set()
@@ -204,7 +229,7 @@ class ResourceType(CloudNode):
         if policy_type == "ResourcePolicy":
             self.check_actions(policy)
         operations = list()
-        object_attribute_list = self.cd.get_policy_attribute_list(policy_type, self.format_policy(policy), **kwargs)
+        object_attribute_list = self.cd.get_policy_attribute_list(policy_type, policy, **kwargs)
         parent_path = parent_path or f"{self.object_ref}/policy"
         batch_reference = f'new_policy_{policy_name}'
         operations.append(
@@ -295,13 +320,13 @@ class ResourceType(CloudNode):
 
     def policy_exists(self, policy_name: str):
         try:
-            self.cd.get_object_info(self.get_policy_reference(policy_name))
+            self.cd.get_object_information(self.get_policy_reference(policy_name))
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeBadRequestException(f"{self.object_type}/{self.name}/policy/{policy_name} does not exist.")
 
     def delete_node(self):
         try:
-            self.cd.delete_object(self.object_ref, traverse=True)
+            self.cd.delete_object(self.object_ref, delete_children=True)
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
 
