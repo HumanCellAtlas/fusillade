@@ -1,6 +1,6 @@
 import json
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 
 from fusillade.clouddirectory import CloudNode, cd_client, ConsistencyLevel, logger
 from fusillade.errors import FusilladeHTTPException, FusilladeBadRequestException
@@ -29,14 +29,13 @@ class ResourceType(CloudNode):
                creator: str = None,
                **kwargs) -> 'ResourceType':
         """
-        Create the resource type node under /resource/name
-        Create the policy node policy/{resource_type}:{name}
+        Create a new resource type in cloud directory.
 
-        :param name:
+        :param name: The name of the new resource type.
         :param owner_policy: an IAM policy that determines what a resource owner can do to a resource.
-        :param creator:
-        :param actions:
-        :param kwargs:
+        :param creator: The user who initiated the creation of the resource type.
+        :param actions: The actions that can be performed on this resource type
+        :param kwargs: additional attributes describing the resource type.
         :return:
         """
         ops = []
@@ -153,17 +152,18 @@ class ResourceType(CloudNode):
                       policy_type: str = 'IAMPolicy',
                       parent_path: str = None,
                       run=True,
-                      **kwargs):
+                      **kwargs) -> Union[None, List[Dict[str,Any]]]:
         """
-        Create a policy object and attach it to the ResourceType
+        Create a policy object and attach it to the ResourceType.
 
         :param policy_name:
         :param policy: Json string that follow AWS IAM Policy Grammar.
           https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html
-        :param policy_type:
-        :param parent_path:
+        :param policy_type: Either 'IAMPolicy' or 'ResourcePolicy'.
+        :param parent_path: The cloud directory path to the parent node the policy will be attached. If None the
+        policy is attached to /resource/{self.name}/policy
         :param run:
-        :param kwargs:
+        :param kwargs: additional attributes describing the policy.
         :return:
         """
         if policy_type == "ResourcePolicy":
