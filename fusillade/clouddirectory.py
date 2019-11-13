@@ -1174,20 +1174,19 @@ class CloudNode:
             operations.append(batch_attach_typed_link(source, target, link_type, attributes))
         return operations
 
-    def _remove_links_batch(self, links: List[str], link_type: str, incoming=False):
+    def _remove_links_batch(self, links: List[Type['CloudNode']], incoming=False):
         """
         Removes links from this object in CloudDirectory.
         """
         if not links:
             return []
-        link_path = self.cd.get_obj_type_path(link_type)
         batch_detach_object = self.cd.batch_detach_object
         operations = []
         for link in links:
             if incoming:
-                source, target = f"{link_path}{self.hash_name(link)}", self.object_ref
+                source, target = link.object_ref, self.object_ref
             else:
-                source, target = self.object_ref, f"{link_path}{self.hash_name(link)}"
+                source, target = self.object_ref, link.object_ref
             operations.append(
                 batch_detach_object(
                     target,
@@ -1538,7 +1537,7 @@ class RolesMixin:
     def add_roles(self, roles: List[str]):
         operations = []
         _roles = [Role(role) for role in roles]
-        operations.extend(self._add_links_batch([Role(role) for role in roles]))
+        operations.extend(self._add_links_batch(_roles))
         operations.extend(self._add_typed_links_batch(_roles,
                                                       'membership_link',
                                                       {'member_of': Role.object_type}))
