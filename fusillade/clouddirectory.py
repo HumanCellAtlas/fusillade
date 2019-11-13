@@ -1872,7 +1872,6 @@ class Group(Principal):
         :param name:
         """
         super(Group, self).__init__(name=name, object_ref=object_ref)
-        self._groups: Optional[List[str]] = None
         self._roles: Optional[List[str]] = None
 
     def get_users_iter(self) -> Tuple[Dict[str, Union[list, Any]], Any]:

@@ -16,7 +16,7 @@ perform on a resource.
 import json
 import os
 from collections import defaultdict
-from typing import List, Dict, Any, Type
+from typing import List, Dict, Any, Type, Union
 
 from fusillade.clouddirectory import CloudNode, cd_client, ConsistencyLevel, logger, \
     UpdateObjectParams, ValueTypes, UpdateActions, User
