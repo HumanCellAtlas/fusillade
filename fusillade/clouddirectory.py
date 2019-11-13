@@ -648,7 +648,7 @@ class CloudDirectory:
                 self.delete_object(obj_ref)
         for name, obj_ref in self.list_object_children('/resource/',
                                                        ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
-            self.delete_object(obj_ref, traverse=True)
+            self.delete_object(obj_ref, delete_children=True)
 
     def delete_policy(self, policy_ref: str) -> None:
         """
@@ -667,12 +667,12 @@ class CloudDirectory:
             DirectoryArn=self._dir_arn,
             ObjectReference={'Selector': policy_ref})
 
-    def delete_object(self, obj_ref: str, traverse=False) -> None:
+    def delete_object(self, obj_ref: str, delete_children=False) -> None:
         """
         See details on deletion requirements for more info
         https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_access_objects.html
 
-        if traverse is true all children of the object will be deleted
+        if delete_children is true all children of the object will be deleted
         """
         object_id = f"${self.get_object_information(obj_ref)['ObjectIdentifier']}"
         params = dict(object_ref=object_id, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
@@ -697,9 +697,9 @@ class CloudDirectory:
                 children.append(child_ref)
             self.batch_write([self.batch_detach_object(object_id, link) for link in links],
                              allowed_errors=['ResourceNotFoundException'])
-            if traverse:
+            if delete_children:
                 for child in children:
-                    self.delete_object(child, traverse=traverse)
+                    self.delete_object(child, delete_children=delete_children)
         except cd_client.exceptions.NotNodeException:
             pass
         retry(**cd_read_retry_parameters)(cd_client.delete_object)(
