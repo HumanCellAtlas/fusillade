@@ -168,7 +168,7 @@ class ResourceType(CloudNode):
                       policy_type: str = 'IAMPolicy',
                       parent_path: str = None,
                       run=True,
-                      **kwargs) -> Union[None, List[Dict[str,Any]]]:
+                      **kwargs) -> Union[None, List[Dict[str, Any]]]:
         """
         Create a policy object and attach it to the ResourceType.
 
