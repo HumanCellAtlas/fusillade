@@ -105,6 +105,7 @@ class ResourceType(CloudNode):
                                               type=new_node.object_type,
                                               name=f"{new_node.name}:Owner"))
 
+        # Execute batch request
         try:
             new_node.cd.batch_write(ops)
         except cd_client.exceptions.BatchWriteException as ex:
@@ -139,18 +140,13 @@ class ResourceType(CloudNode):
             self._actions = self._actions.split(' ')
         return self._actions
 
-    def add_actions(self):
-        set(self._actions)
-
-    def check_actions(self, policy: dict):
-        policy_actions = set()
-        for s in policy['Statement']:
-            policy_actions.update(s['Action'])
-        if not policy_actions.issubset(set(self.actions)):
-            raise FusilladeBadRequestException(detail="Invalid actions in policy.")
-
     @staticmethod
     def hash_name(name):
+        """
+        Overriding the hash_name function in CloudNode. No special hashing is done on resourceTypes.
+        :param name:
+        :return:
+        """
         return name
 
     def list_policies(self, per_page=None, next=None):
