@@ -404,12 +404,11 @@ class ResourceId(CloudNode):
         self.resource_type.policy_exists(access_level)
         p = defaultdict(list)
         for principal in principals:
-            p[principal.object_type].append(principal.name)
+            p[principal.object_type].append(principal)
         operations = []
         for object_type, links in p.items():
             operations.extend(self._add_typed_links_batch(
                 links,
-                object_type,
                 'access_link',
                 {'access_level': access_level,
                  'resource': self.object_type,
