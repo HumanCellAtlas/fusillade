@@ -1,3 +1,19 @@
+"""
+## ResourceType
+The ResourceType class is an abstraction of a node in cloud directory that represents a type of resource we would like
+to apply access control logic (ACL).
+
+### Actions
+This type of resource has certain action that can be performed on or with it, and these actions are store in an
+attribute called `actions`. Any access policy associated with this resource type must only include actions that the
+resource supports. This is checked before new policies are added, and nonconforming access policies are rejected. If an
+actions is removed from the resource type all existing access policies with this action will be removed.
+
+### Owner policy
+The owner policy is added to the resource type and is used to determine what actions the owner of a resource Id can
+perform on a resource.
+"""
+
 import json
 import os
 from typing import List, Dict, Any, Union
