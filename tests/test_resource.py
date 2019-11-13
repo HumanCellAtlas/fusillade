@@ -113,12 +113,21 @@ class TestResourceType(unittest.TestCase):
         test_type.remove_actions(more_actions)
         self.assertEqual(set(actions + new_actions), set(test_type.actions))
 
+    def test_resource_id(self):
+        resource_type = 'test_type'
+        test_type = self._create_resource_type(resource_type)
+
+        # add an access policy
+        test_type.create_policy('Reader', create_test_statement("resource policy", ['readproject']), 'ResourcePolicy')
+
+        test_id = test_type.create_id('ABCD')
+
         # list ids
-        projects = projects_type.list_ids()
-        self.assertTrue(projects)
+        test_types = test_type.list_ids()
+        self.assertTrue(test_types)
 
         # give a user read access to the id
-        project.add_principals(User('public'))
+        test_id.add_principals([User('public')], 'Reader')
 
 
 if __name__ == '__main__':

@@ -330,6 +330,12 @@ class ResourceType(CloudNode):
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
 
+    def create_id(self, name: str, owner: str = None, **kwargs) -> 'ResourceId':
+        return ResourceId.create(self, name, owner, **kwargs)
+
+    def get_id(self, *args, **kwargs) -> 'ResourceId':
+        return ResourceId(self, *args, **kwargs)
+
 
 class ResourceId(CloudNode):
     """arn:*:resource/{resource_type}/{resource_id}"""
@@ -337,8 +343,8 @@ class ResourceId(CloudNode):
     _facet: str = 'NodeFacet'
     allowed_policy_types = ['Resource']
 
-    def __init__(self, resource_type, *args, **kwargs):
-        self.resource_type: ResourceType = ResourceType(resource_type)
+    def __init__(self, resource_type: ResourceType, *args, **kwargs):
+        self.resource_type: ResourceType = resource_type
         super(ResourceId, self).__init__(*args, **kwargs)
         self._principals = None  # update roles
 
@@ -356,7 +362,7 @@ class ResourceId(CloudNode):
         return name
 
     @classmethod
-    def create(cls, resource_type: str, name: str, owner: str = None, **kwargs) -> 'ResourceId':
+    def create(cls, resource_type: ResourceType, name: str, owner: str = None, **kwargs) -> 'ResourceId':
         ops = []
         new_node = cls(resource_type, name=name)
         _owner = owner if owner else "fusillade"
