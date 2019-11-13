@@ -185,7 +185,8 @@ obj_type_path = dict(
     index='/index/',
     user='/user/',
     policy='/policy/',
-    role='/role/'
+    role='/role/',
+    resource='/resource/'
 )
 
 
@@ -645,6 +646,9 @@ class CloudDirectory:
         for name, obj_ref in self.list_object_children('/role/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
             if name not in protected_roles:
                 self.delete_object(obj_ref)
+        for name, obj_ref in self.list_object_children('/resource/',
+                                                       ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
+            self.delete_object(obj_ref, delete_children=True)
 
     def delete_policy(self, policy_ref: str) -> None:
         """
@@ -663,10 +667,12 @@ class CloudDirectory:
             DirectoryArn=self._dir_arn,
             ObjectReference={'Selector': policy_ref})
 
-    def delete_object(self, obj_ref: str) -> None:
+    def delete_object(self, obj_ref: str, delete_children=False) -> None:
         """
         See details on deletion requirements for more info
         https://docs.aws.amazon.com/clouddirectory/latest/developerguide/directory_objects_access_objects.html
+
+        if delete_children is true all children of the object will be deleted
         """
         object_id = f"${self.get_object_information(obj_ref)['ObjectIdentifier']}"
         params = dict(object_ref=object_id, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
@@ -684,10 +690,16 @@ class CloudDirectory:
             for i in
             self.list_outgoing_typed_links(**params)], allowed_errors=['ResourceNotFoundException'])
         try:
-            self.batch_write([
-                self.batch_detach_object(object_id, link_name)
-                for link_name, _ in
-                self.list_object_children(**params)], allowed_errors=['ResourceNotFoundException'])
+            links = []
+            children = []
+            for link_name, child_ref in self.list_object_children(**params):
+                links.append(link_name)
+                children.append(child_ref)
+            self.batch_write([self.batch_detach_object(object_id, link) for link in links],
+                             allowed_errors=['ResourceNotFoundException'])
+            if delete_children:
+                for child in children:
+                    self.delete_object(child, delete_children=delete_children)
         except cd_client.exceptions.NotNodeException:
             pass
         retry(**cd_read_retry_parameters)(cd_client.delete_object)(
@@ -1148,6 +1160,8 @@ class CloudNode:
     def _add_typed_links_batch(self, links: List[str], object_type, link_type: str, attributes: Dict, incoming=False):
         """
         Attaches links to this object in CloudDirectory.
+
+        TODO modify this function to take in links: List[Type['CloudNode'] and remove the object_type parameter.
         """
         if not links:
             return []
@@ -1243,7 +1257,7 @@ class CloudNode:
             raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
 
     @classmethod
-    def list_all(cls, next_token: str, per_page: int):
+    def list_all(cls, next_token: str = None, per_page: int = None):
         cd = Config.get_directory()
         resp, next_token = cd.list_object_children_paged(f'/{cls.object_type}/', next_token, per_page)
         operations = [cd.batch_get_attributes(f'${obj_ref}', cls._facet, ['name'])
