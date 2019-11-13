@@ -66,7 +66,7 @@ class TestCloudDirectory(unittest.TestCase):
         directory = create_directory(directory_name, schema_arn, [service_accounts['admin']['client_email']])
         self.addCleanup(cleanup_directory, CloudDirectory.from_name(directory_name)._dir_arn)
 
-        folders = ['user', 'role', 'group', 'policy']
+        folders = ['user', 'role', 'group', 'policy', 'resource']
         for folder in folders:
             with self.subTest(f"{folder} node is created when directory is created"):
                 resp = directory.get_object_information(f'/{folder}')

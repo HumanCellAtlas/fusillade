@@ -1,0 +1,19 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Default Resource Owner",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": [
+        "fus:GetResourceId",
+        "fus:PutResourceId",
+        "fus:DeleteResourceId"
+      ],
+      "Resource": [
+        "arn:hca:fus:*:*:resource/${fus:resource_type}/${fus:resource_id}/inline_policy",
+        "arn:hca:fus:*:*:resource/${fus:resource_type}/${fus:resource_id}/policies/*"
+      ]
+    }
+  ]
+}
