@@ -8,7 +8,7 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from scripts import backup
-from fusillade.directory import cleanup_directory, cleanup_schema
+from fusillade.directory import cleanup_directory, cleanup_schema, clear_cd
 from tests.common import new_test_directory
 
 
@@ -23,7 +23,7 @@ class Test_Backup(unittest.TestCase):
         cleanup_schema(cls.schema_arn)
 
     def tearDown(self):
-        self.directory.clear()
+        clear_cd(self.directory)
 
     def test_default(self):
         """

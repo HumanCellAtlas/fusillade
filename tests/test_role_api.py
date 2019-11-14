@@ -319,24 +319,24 @@ class TestRoleApi(BaseAPITest, unittest.TestCase, AssertJSONMixin):
             policy = create_test_statement("policy_04")
 
             resp = self.app.post(f'/v1/role',
-                     headers=headers,
-                     data=json.dumps({
-                         "role_id": role_id,
-                         "policy": policy
-                     }))
+                                 headers=headers,
+                                 data=json.dumps({
+                                     "role_id": role_id,
+                                     "policy": policy
+                                 }))
             resp.raise_for_status()
             resp = self.app.post(f'/v1/group',
-                     headers=headers,
-                     data=json.dumps({
-                         "group_id": group,
-                         "roles": [role_id]
-                     }))
+                                 headers=headers,
+                                 data=json.dumps({
+                                     "group_id": group,
+                                     "roles": [role_id]
+                                 }))
             resp.raise_for_status()
             resp = self.app.post(f'/v1/user',
-                     headers=headers,
-                     data=json.dumps({
-                         "user_id": user,
-                         "roles": [role_id]}))
+                                 headers=headers,
+                                 data=json.dumps({
+                                     "user_id": user,
+                                     "roles": [role_id]}))
             resp.raise_for_status()
 
             resp = self.app.delete(f'/v1/role/{role_id}', headers=headers)

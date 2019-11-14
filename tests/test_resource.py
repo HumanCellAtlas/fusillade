@@ -7,7 +7,7 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.directory import cleanup_directory, cleanup_schema, get_json_file, \
-    default_group_policy_path, User
+    default_group_policy_path, User, clear_cd
 from fusillade.errors import FusilladeBadRequestException, FusilladeNotFoundException, FusilladeHTTPException
 from fusillade.directory.resource import ResourceType
 from tests.common import new_test_directory, create_test_statement
@@ -28,7 +28,7 @@ class TestResourceType(unittest.TestCase):
         cleanup_schema(cls.schema_arn)
 
     def tearDown(self):
-        self.directory.clear()
+        clear_cd(self.directory)
 
     def _create_resource_type(self, name='test_type', actions=None):
         actions = actions or ['readproject', 'writeproject', 'deleteproject']
