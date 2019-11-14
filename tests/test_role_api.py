@@ -17,13 +17,13 @@ sys.path.insert(0, pkg_root)  # noqa
 from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_statement
 from tests.data import TEST_NAMES_NEG, TEST_NAMES_POS
-from fusillade.directory import Role
+from fusillade.directory import Role, clear_cd
 from tests.json_mixin import AssertJSONMixin
 
 
 class TestRoleApi(BaseAPITest, unittest.TestCase, AssertJSONMixin):
     def tearDown(self):
-        self.clear(self.directory,
+        clear_cd(self.directory,
             users=[
                 service_accounts['admin']['client_email'],
                 service_accounts['user']['client_email'],
