@@ -57,7 +57,7 @@ See https://github.com/HumanCellAtlas/fusillade/issues/307 for current progress.
 
 ## Cloud Directory Structure
 
-![Cloud Directory Structure](https://www.lucidchart.com/publicSegments/view/3f6f3cdc-7429-460c-b45f-33ae35d9e07c/image.png)
+![Cloud Directory Structure](https://www.lucidchart.com/publicSegments/view/b08deb5a-881c-4eec-94af-9917f82d285f/image.png)
 
 # Installing and configuring Fusillade
 
