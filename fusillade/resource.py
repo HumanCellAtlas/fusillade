@@ -18,7 +18,7 @@ import os
 from collections import defaultdict
 from typing import List, Dict, Any, Type, Union
 
-from fusillade.clouddirectory import CloudNode, cd_client, ConsistencyLevel, logger, \
+from fusillade.clouddirectory import CloudNode, Principal, cd_client, ConsistencyLevel, logger, \
     UpdateObjectParams, ValueTypes, UpdateActions, User
 from fusillade.errors import FusilladeHTTPException, FusilladeNotFoundException, FusilladeBadRequestException
 from fusillade.policy.validator import verify_iam_policy
@@ -388,7 +388,7 @@ class ResourceId(CloudNode):
                              object=dict(type=new_node.object_type, path_name=new_node._path_name)))
             return new_node
 
-    def add_principals(self, principals: List[Type['CloudNode']], access_level):
+    def add_principals(self, principals: List[Type['Principal']], access_level):
         """
         add a typed linked from resource to principal with the access type.
         verifies that the policy exists before making link
@@ -420,7 +420,7 @@ class ResourceId(CloudNode):
                          access_level=access_level
                          ))
 
-    def remove_principals(self, principals: List[Type['CloudNode']]):
+    def remove_principals(self, principals: List[Type['Principal']]):
         p = defaultdict(list)
         for principal in principals:
             p[principal.object_type].append(principal)
@@ -439,7 +439,7 @@ class ResourceId(CloudNode):
                          principals=p,
                          ))
 
-    def update_principal(self, principal: Type['CloudNode'], access_level: str):
+    def update_principal(self, principal: Type['Principal'], access_level: str):
         tls = self.cd.make_typed_link_specifier(
             principal.object_ref,
             self.object_ref,
@@ -460,7 +460,7 @@ class ResourceId(CloudNode):
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
 
-    def check_access(self, principal: Type['CloudNode']) -> str:
+    def check_access(self, principal: Type['Principal']) -> str:
         tls = self.cd.make_typed_link_specifier(
             principal.object_ref,
             self.object_ref,
