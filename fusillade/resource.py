@@ -164,7 +164,7 @@ class ResourceType(CloudNode):
                                             ' '.join(_actions),
                                             UpdateActions.CREATE_OR_UPDATE,
                                         )])
-        # TODO this actions from all policies
+        # TODO remove this actions from all access policies
         self._actions = None
 
     def check_actions(self, policy: dict):
@@ -390,7 +390,7 @@ class ResourceId(CloudNode):
 
     def add_principals(self, principals: List[Type['Principal']], access_level):
         """
-        add a typed linked from resource to principal with the access type.
+        add a typed link from resource to principal with the access type.
         verifies that the policy exists before making link
 
         :param principal_type:
