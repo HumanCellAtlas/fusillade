@@ -30,7 +30,7 @@ class TestUser(unittest.TestCase, AssertJSONMixin):
         cleanup_schema(cls.schema_arn)
 
     def tearDown(self):
-        clear_cd(self.directory)()
+        clear_cd(self.directory)
 
     def test_user_statement(self):
         name = "user_statement@test.com"

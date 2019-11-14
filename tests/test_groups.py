@@ -27,7 +27,7 @@ class TestGroup(unittest.TestCase, AssertJSONMixin):
         cleanup_schema(cls.schema_arn)
 
     def tearDown(self):
-        clear_cd(self.directory)()
+        clear_cd(self.directory)
 
     def test_create_group(self):
         with self.subTest("an error is returned when creating a group with an invalid statement."):
