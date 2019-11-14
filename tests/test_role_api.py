@@ -17,13 +17,13 @@ sys.path.insert(0, pkg_root)  # noqa
 from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_statement
 from tests.data import TEST_NAMES_NEG, TEST_NAMES_POS
-from fusillade.directory import Role, clear_cd
+from fusillade.directory import Role
 from tests.json_mixin import AssertJSONMixin
 
 
 class TestRoleApi(BaseAPITest, unittest.TestCase, AssertJSONMixin):
     def tearDown(self):
-        clear_cd(self.directory,
+        self.clear_directory(
             users=[
                 service_accounts['admin']['client_email'],
                 service_accounts['user']['client_email'],
@@ -319,24 +319,24 @@ class TestRoleApi(BaseAPITest, unittest.TestCase, AssertJSONMixin):
             policy = create_test_statement("policy_04")
 
             resp = self.app.post(f'/v1/role',
-                     headers=headers,
-                     data=json.dumps({
-                         "role_id": role_id,
-                         "policy": policy
-                     }))
+                                 headers=headers,
+                                 data=json.dumps({
+                                     "role_id": role_id,
+                                     "policy": policy
+                                 }))
             resp.raise_for_status()
             resp = self.app.post(f'/v1/group',
-                     headers=headers,
-                     data=json.dumps({
-                         "group_id": group,
-                         "roles": [role_id]
-                     }))
+                                 headers=headers,
+                                 data=json.dumps({
+                                     "group_id": group,
+                                     "roles": [role_id]
+                                 }))
             resp.raise_for_status()
             resp = self.app.post(f'/v1/user',
-                     headers=headers,
-                     data=json.dumps({
-                         "user_id": user,
-                         "roles": [role_id]}))
+                                 headers=headers,
+                                 data=json.dumps({
+                                     "user_id": user,
+                                     "roles": [role_id]}))
             resp.raise_for_status()
 
             resp = self.app.delete(f'/v1/role/{role_id}', headers=headers)
