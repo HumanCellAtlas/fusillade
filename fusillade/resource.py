@@ -13,13 +13,14 @@ actions is removed from the resource type all existing access policies with this
 The owner policy is added to the resource type and is used to determine what actions the owner of a resource Id can
 perform on a resource.
 """
-
 import json
 import os
-from typing import List, Dict, Any, Union
+from collections import defaultdict
+from typing import List, Dict, Any, Type, Union
 
-from fusillade.clouddirectory import CloudNode, cd_client, ConsistencyLevel, logger
-from fusillade.errors import FusilladeHTTPException, FusilladeBadRequestException
+from fusillade.clouddirectory import CloudNode, Principal, cd_client, ConsistencyLevel, logger, \
+    UpdateObjectParams, ValueTypes, UpdateActions, User
+from fusillade.errors import FusilladeHTTPException, FusilladeNotFoundException, FusilladeBadRequestException
 from fusillade.policy.validator import verify_iam_policy
 
 proj_path = os.path.dirname(__file__)
@@ -140,6 +141,39 @@ class ResourceType(CloudNode):
             self._actions = self._actions.split(' ')
         return self._actions
 
+    def add_actions(self, actions: List[str]):
+        _actions = set(actions)
+        _actions.update(self.actions)
+        self.cd.update_object_attribute(self.object_ref,
+                                        [UpdateObjectParams(
+                                            self._facet,
+                                            'actions',
+                                            ValueTypes.StringValue,
+                                            ' '.join(_actions),
+                                            UpdateActions.CREATE_OR_UPDATE,
+                                        )])
+        self._actions = None
+
+    def remove_actions(self, actions: List[str]):
+        _actions = set(self.actions) - set(actions)
+        self.cd.update_object_attribute(self.object_ref,
+                                        [UpdateObjectParams(
+                                            self._facet,
+                                            'actions',
+                                            ValueTypes.StringValue,
+                                            ' '.join(_actions),
+                                            UpdateActions.CREATE_OR_UPDATE,
+                                        )])
+        # TODO remove this actions from all access policies
+        self._actions = None
+
+    def check_actions(self, policy: dict):
+        policy_actions = set()
+        for s in policy['Statement']:
+            policy_actions.update(s['Action'])
+        if not policy_actions.issubset(set(self.actions)):
+            raise FusilladeBadRequestException(detail="Invalid actions in policy.")
+
     @staticmethod
     def hash_name(name):
         """
@@ -152,6 +186,18 @@ class ResourceType(CloudNode):
     def list_policies(self, per_page=None, next=None):
         children, next_token = self.cd.list_object_children_paged(f"{self.object_ref}/policy", next, per_page)
         return [f"/resource/{self.name}/policy/{child}" for child in children.keys()], next_token
+
+    def list_ids(self, per_page=None, next=None):
+        children, next_token = self.cd.list_object_children_paged(f"{self.object_ref}/id", next, per_page)
+        return [f"/resource/{self.name}/id/{child}" for child in children.keys()], next_token
+
+    def get_policy_reference(self, policy_name: str) -> str:
+        """Returns a policy reference that can be used by cloud directory"""
+        return f"{self.object_ref}/policy/{policy_name}"
+
+    def get_policy_path(self, policy_name: str):
+        """Returns a human readable policy path"""
+        return f"/resource/{self.name}/policy/{policy_name}"
 
     @staticmethod
     def format_policy(policy: dict) -> str:
@@ -181,7 +227,7 @@ class ResourceType(CloudNode):
         if policy_type == "ResourcePolicy":
             self.check_actions(policy)
         operations = list()
-        object_attribute_list = self.cd.get_policy_attribute_list(policy_type, self.format_policy(policy), **kwargs)
+        object_attribute_list = self.cd.get_policy_attribute_list(policy_type, policy, **kwargs)
         parent_path = parent_path or f"{self.object_ref}/policy"
         batch_reference = f'new_policy_{policy_name}'
         operations.append(
@@ -219,3 +265,211 @@ class ResourceType(CloudNode):
                              ))
         else:
             return operations
+
+    def delete_policy(self, policy_name):
+        try:
+            self.cd.delete_object(self.get_policy_reference(policy_name))
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeNotFoundException(f"{self.get_policy_path(policy_name)} does not exist.")
+
+    def update_policy(self, policy_name: str, policy: dict):
+        self.check_actions(policy)
+        policy = self.format_policy(policy)
+        params = [
+            UpdateObjectParams('POLICY',
+                               'policy_document',
+                               ValueTypes.BinaryValue,
+                               policy,
+                               UpdateActions.CREATE_OR_UPDATE,
+                               )
+        ]
+        try:
+            verify_iam_policy(policy)
+            self.cd.update_object_attribute(self.get_policy_reference(policy_name),
+                                            params,
+                                            self.cd.node_schema)
+        except cd_client.exceptions.LimitExceededException as ex:
+            raise FusilladeHTTPException(ex)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeNotFoundException(f"{self.get_policy_path(policy_name)} does not exist.")
+        else:
+            logger.info(dict(message="Policy updated",
+                             object=dict(
+                                 type=self.object_type,
+                                 path_name=self._path_name
+                             ),
+                             policy=dict(
+                                 link_name=policy_name,
+                                 policy_type=self.policy_type)
+                             ))
+
+    def get_policy(self, policy_name):
+        try:
+            resp = self.cd.get_object_attributes(
+                self.get_policy_reference(policy_name),
+                'POLICY',
+                ['policy_document', 'policy_type'],
+                self.cd.node_schema
+            )
+            attrs = dict([(attr['Key']['Name'], attr['Value'].popitem()[1]) for attr in resp['Attributes']])
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeNotFoundException(f"{self.get_policy_path(policy_name)} does not exist.")
+        return attrs
+
+    def policy_exists(self, policy_name: str):
+        try:
+            self.cd.get_object_information(self.get_policy_reference(policy_name))
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeBadRequestException(f"{self.object_type}/{self.name}/policy/{policy_name} does not exist.")
+
+    def delete_node(self):
+        try:
+            self.cd.delete_object(self.object_ref, delete_children=True)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
+
+    def create_id(self, name: str, owner: str = None, **kwargs) -> 'ResourceId':
+        return ResourceId.create(self, name, owner, **kwargs)
+
+    def get_id(self, *args, **kwargs) -> 'ResourceId':
+        return ResourceId(self, *args, **kwargs)
+
+
+class ResourceId(CloudNode):
+    """arn:*:resource/{resource_type}/{resource_id}"""
+
+    _facet: str = 'NodeFacet'
+    allowed_policy_types = ['Resource']
+
+    def __init__(self, resource_type: ResourceType, *args, **kwargs):
+        self.resource_type: ResourceType = resource_type
+        super(ResourceId, self).__init__(*args, **kwargs)
+        self._principals = None  # update roles
+
+    def from_name(self, name):
+        self._name: str = name
+        self._path_name: str = name
+        self.object_ref: str = f'{self.cd.get_obj_type_path(self.object_type)}{self._path_name}'
+
+    @property
+    def object_type(self):
+        return f'resource/{self.resource_type.name}'
+
+    @staticmethod
+    def hash_name(name):
+        return name
+
+    @classmethod
+    def create(cls, resource_type: ResourceType, name: str, owner: str = None, **kwargs) -> 'ResourceId':
+        ops = []
+        new_node = cls(resource_type, name=name)
+        _owner = owner if owner else "fusillade"
+        ops.append(new_node.cd.batch_create_object(
+            f'{new_node.resource_type.object_ref}/id',
+            new_node.name,
+            new_node._facet,
+            new_node.cd.get_object_attribute_list(facet=new_node._facet, name=name, created_by=_owner, **kwargs)
+        ))
+        if owner:
+            ops.append(User(name=owner).batch_add_ownership(new_node))
+        try:
+            new_node.cd.batch_write(ops)
+        except cd_client.exceptions.BatchWriteException as ex:
+            if 'LinkNameAlreadyInUseException' in ex.response['Error']['Message']:
+                raise FusilladeHTTPException(
+                    status=409, title="Conflict", detail=f"The {cls.object_type} named {name} already exists. "
+                    f"{cls.object_type} was not modified.")
+            else:
+                raise FusilladeHTTPException(ex)
+        else:
+            new_node.cd.get_object_information(new_node.object_ref, ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name)
+            logger.info(dict(message=f"{new_node.object_type} created",
+                             creator=_owner,
+                             object=dict(type=new_node.object_type, path_name=new_node._path_name)))
+            return new_node
+
+    def add_principals(self, principals: List[Type['Principal']], access_level):
+        """
+        add a typed link from resource to principal with the access type.
+        verifies that the policy exists before making link
+
+        :param principal_type:
+        :param name:
+        :param access_level:
+        :return:
+        """
+        # Check policy exists
+        self.resource_type.policy_exists(access_level)
+        p = defaultdict(list)
+        for principal in principals:
+            p[principal.object_type].append(principal)
+        operations = []
+        for object_type, links in p.items():
+            operations.extend(self._add_typed_links_batch(
+                links,
+                'access_link',
+                {'access_level': access_level,
+                 'resource': self.resource_type.name,
+                 'principal': object_type},
+                incoming=True))
+        self.cd.batch_write(operations)
+        self._principals = None  # update roles
+        logger.info(dict(message="Changed resource access permission for principals.",
+                         resource=dict(type=self.object_type, path_name=self._path_name),
+                         principals=p,
+                         access_level=access_level
+                         ))
+
+    def remove_principals(self, principals: List[Type['Principal']]):
+        p = defaultdict(list)
+        for principal in principals:
+            p[principal.object_type].append(principal)
+        operations = []
+        for object_type, links in p.items():
+            operations.extend(self._remove_typed_links_batch(
+                links,
+                'access_link',
+                {'resource': self.resource_type.name,
+                 'principal': object_type},
+                incoming=True))
+        self.cd.batch_write(operations)
+        self._principals = None  # update roles
+        logger.info(dict(message="Removed resource access permission for principals.",
+                         resource=dict(type=self.object_type, path_name=self._path_name),
+                         principals=p,
+                         ))
+
+    def update_principal(self, principal: Type['Principal'], access_level: str):
+        tls = self.cd.make_typed_link_specifier(
+            principal.object_ref,
+            self.object_ref,
+            'access_link',
+            {'principal': principal.object_type,
+             'resource': self.resource_type.name})
+        uop = [UpdateObjectParams('access_link',
+                                  'access_level',
+                                  ValueTypes.StringValue,
+                                  access_level,
+                                  UpdateActions.CREATE_OR_UPDATE,
+                                  )]
+        self.cd.update_link_attributes(tls, uop)
+
+    def delete_node(self):
+        try:
+            self.cd.delete_object(self.object_ref, delete_children=True)
+        except cd_client.exceptions.ResourceNotFoundException:
+            raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
+
+    def check_access(self, principal: Type['Principal']) -> str:
+        tls = self.cd.make_typed_link_specifier(
+            principal.object_ref,
+            self.object_ref,
+            'access_link',
+            {'principal': principal.object_type,
+             'resource': self.resource_type.name})
+        try:
+            access_level = self.cd.get_link_attributes(tls, ['access_level'])['access_level']
+        except cd_client.exceptions.ResourceNotFoundException:
+            return None
+        else:
+            return access_level

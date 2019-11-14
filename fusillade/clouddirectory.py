@@ -467,6 +467,7 @@ class CloudDirectory:
         info https://docs.aws.amazon.com/clouddirectory/latest/developerguide/key_concepts_directory.html
         """
         attributes = self.get_object_attribute_list(facet='IAMPolicy', **kwargs)
+        statement.update(Version="2012-10-17")
         attributes.extend([
             dict(
                 Key=dict(
@@ -518,6 +519,39 @@ class CloudDirectory:
             ObjectReference={
                 'Selector': object_ref
             },
+            AttributeUpdates=updates
+        )
+
+    def update_link_attributes(self, tls,
+                               update_params: List[UpdateObjectParams],
+                               schema=None) -> Dict[str, Any]:
+        """
+        a wrapper around CloudDirectory.Client.update_object_attributes
+
+        :param object_ref: The reference that identifies the object.
+        :param update_params: a list of attributes to modify.
+        :param schema:
+        :return:
+        """
+        if not schema:
+            schema = self.schema
+        updates = [
+            {
+                'AttributeKey': {
+                    'SchemaArn': schema,
+                    'FacetName': i.facet,
+                    'Name': i.attribute
+                },
+                'AttributeAction': {
+                    'AttributeActionType': i.action.name,
+                    'AttributeUpdateValue': {
+                        i.value_type.name: i.value
+                    }
+                }
+            } for i in update_params]
+        return cd_client.update_link_attributes(
+            DirectoryArn=self._dir_arn,
+            TypedLinkSpecifier=tls,
             AttributeUpdates=updates
         )
 
@@ -909,7 +943,12 @@ class CloudDirectory:
     @staticmethod
     def get_obj_type_path(obj_type: str) -> str:
         obj_type = obj_type.lower()
-        return obj_type_path[obj_type]
+        try:
+            return obj_type_path[obj_type]
+        except KeyError:
+            if obj_type.startswith('resource'):
+                # check that it's a resource type with format resource/resource_type
+                return f'/{obj_type}/id/'
 
     def lookup_policy(self, object_id: str) -> List[Dict[str, Any]]:
         # retrieve all of the policies attached to an object and its parents.
@@ -925,13 +964,17 @@ class CloudDirectory:
         return policies_paths
 
     @retry(**cd_read_retry_parameters)
-    def get_link_attributes(self, TypedLinkSpecifier, AttributeNames, **kwargs):
-        cd_client.get_link_attributes(
+    def get_link_attributes(self, TypedLinkSpecifier, AttributeNames, **kwargs) -> Dict[str, str]:
+        resp = cd_client.get_link_attributes(
             DirectoryArn=self._dir_arn,
             TypedLinkSpecifier=TypedLinkSpecifier,
             AttributeNames=AttributeNames,
             **kwargs
         )
+        attributes = dict()
+        for attr in resp['Attributes']:
+            attributes[attr['Key']['Name']] = attr['Value'].popitem()[1]
+        return attributes
 
     def get_policies(self,
                      policy_paths: List[Dict[str, Any]],
