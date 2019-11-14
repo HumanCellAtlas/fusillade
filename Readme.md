@@ -226,18 +226,29 @@ staging and dev environment.
 ### Resource
 
 For resource set the `partition` to `hca`, set your `service` name to the name of your component, and set the 
-`account-id` to the deployment stage. All other fields can be used as needed or use \* for wild cards. Resource names
- are case sensitive.
-
+`account-id` to the deployment stage. The field **resourcetype** can optionally be the name of a resource type defined
+ in fusillade. If `resourcetype` matches a resource type defined in fusillade then a resource policy will be used 
+ evaluating the users access. All other fields can be used as needed or use \* for wild cards. Resource names are 
+ case sensitive.
+ 
 #### Examples
 
-- arn:**hca**:**fusillade**:region:**dev**:resource
-- arn:**hca**:**dss**:region:**staging**:resourcetype/resource
-- arn:**hca**:**query**:region:**integration**:resourcetype/resource/qualifier
-- arn:**hca**:**ingest**:region:**prod**:resourcetype/resource:qualifier
-- arn:**hca**:**azul**:region:**dev**:resourcetype:resource
-- arn:**hca**:**matrix**:region:**staging**:resourcetype:resource:qualifier
+- arn:**hca**:**fusillade**:region:**dev**:**resourcetype**
+- arn:**hca**:**dss**:region:**staging**:**resourcetype**/resource
+- arn:**hca**:**query**:region:**integration**:**resourcetype**/resource/qualifier
 
+#### Resource ACL 
+A new resource type is created by providing the name of the resource type, and the actions that can be performed on it. 
+ Once a resource type is created you can store specific ids of the resource you'd like to control. A principal only has 
+ access to resource they are give access to, either directly or through group membership. The creator of a resource ID is
+ automatically designated as the owner of the resource. The owner of a resource can add additional owners, and assign 
+ access levels to their resource. The different levels of access are defined by access policies associated with a 
+ resource type. New access policies can be defined for a resource type after the resource type has been created. All 
+ resources of that type share the same access policies and can only be assigned access policies that have already been 
+ defined. Access policies can only define policies that use actions supported by that resource type. Actions can be 
+ added and removed after a resource type has been created. If a resource type is deleted, all access policies and 
+ resource ids associated with that type are deleted.
+ 
 # Using Fusillade as a library
 
 # Using Fusillade as a proxy
