@@ -8,7 +8,7 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from scripts import backup
-from fusillade.clouddirectory import cleanup_directory, cleanup_schema
+from fusillade.directory import cleanup_directory, cleanup_schema
 from tests.common import new_test_directory
 
 

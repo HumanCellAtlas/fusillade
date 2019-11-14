@@ -121,7 +121,7 @@ def userinfo(token_info):
     """
     Part of OIDC
     """
-    from fusillade.clouddirectory import User, Group, Role
+    from fusillade.directory import User, Group, Role
     user = User(token_info['email'])
     # TODO save user info in fusillade at the same time.
     token_info[f"https://{os.environ['API_DOMAIN_NAME']}/app_metadata"] = {

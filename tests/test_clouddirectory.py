@@ -8,7 +8,7 @@ sys.path.insert(0, pkg_root)  # noqa
 
 from tests.infra.testmode import standalone
 from tests.common import random_hex_string, service_accounts
-from fusillade.clouddirectory import cd_client, cleanup_directory, cleanup_schema, publish_schema, create_directory, \
+from fusillade.directory import cd_client, cleanup_directory, cleanup_schema, publish_schema, create_directory, \
     CloudDirectory, CloudNode
 from fusillade import Config
 

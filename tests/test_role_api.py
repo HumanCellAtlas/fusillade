@@ -17,7 +17,7 @@ sys.path.insert(0, pkg_root)  # noqa
 from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_statement
 from tests.data import TEST_NAMES_NEG, TEST_NAMES_POS
-from fusillade.clouddirectory import Role
+from fusillade.directory import Role
 from tests.json_mixin import AssertJSONMixin
 
 

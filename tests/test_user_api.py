@@ -18,7 +18,7 @@ from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_statement
 from tests.data import TEST_NAMES_POS, TEST_NAMES_NEG
 from fusillade.errors import FusilladeHTTPException
-from fusillade.clouddirectory import User, Group, Role
+from fusillade.directory import User, Group, Role
 
 
 class TestUserApi(BaseAPITest, unittest.TestCase):
