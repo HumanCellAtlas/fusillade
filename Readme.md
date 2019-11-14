@@ -225,7 +225,7 @@ staging and dev environment.
 
 ### Resource
 
-For resource set the `partition` to `hca`, set your `service` name to the name of your component, and set the 
+For resource, set the `partition` to `hca`, set your `service` name to the name of your component, and set the 
 `account-id` to the deployment stage. The field **resourcetype** can optionally be the name of a `resource_type` defined
  in fusillade. If `resourcetype` matches a `resource_type` defined in fusillade then a resource policy will be used to
  evaluate user access. All other fields can be used as needed or use \* for wild cards. Resource names are 
@@ -251,7 +251,8 @@ An `access_policy` is a policy associated with a `resource_type` and is used to 
  Actions can be added and removed after a `resource_type` has been created.
  
 The creator of a `resource_id` is automatically designated as the owner of the resource. The owner of a
- resource can add additional owners, and assign access levels to their resource. A principal only has access to resource they are give access to, either directly or through group membership.
+ `resource_id` can add additional owners, and assign access levels to principals for that `resource_id`. A principal only 
+ has access to resource they are give access to, either directly or through group membership.
 
 If a `resource_type` is deleted, all access policies and 
  `resource_id`s associated with that type are deleted.
