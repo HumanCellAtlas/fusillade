@@ -166,8 +166,7 @@
       },
       "identityAttributeOrder": [
         "principal",
-        "resource",
-        "access_level"
+        "resource"
       ]
     },
     "ownership_link": {

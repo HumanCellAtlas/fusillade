@@ -167,8 +167,6 @@ class ResourceType(CloudNode):
         # TODO this actions from all policies
         self._actions = None
 
-
-
     def check_actions(self, policy: dict):
         policy_actions = set()
         for s in policy['Statement']:
@@ -411,7 +409,7 @@ class ResourceId(CloudNode):
                 links,
                 'access_link',
                 {'access_level': access_level,
-                 'resource': self.object_type,
+                 'resource': self.resource_type.name,
                  'principal': object_type},
                 incoming=True))
         self.cd.batch_write(operations)
@@ -422,25 +420,56 @@ class ResourceId(CloudNode):
                          access_level=access_level
                          ))
 
-    def remove_principal(self, principal):
-        raise NotImplementedError()
+    def remove_principals(self, principals: List[Type['CloudNode']]):
+        p = defaultdict(list)
+        for principal in principals:
+            p[principal.object_type].append(principal)
+        operations = []
+        for object_type, links in p.items():
+            operations.extend(self._remove_typed_links_batch(
+                links,
+                'access_link',
+                {'resource': self.resource_type.name,
+                 'principal': object_type},
+                incoming=True))
+        self.cd.batch_write(operations)
+        self._principals = None  # update roles
+        logger.info(dict(message="Removed resource access permission for principals.",
+                         resource=dict(type=self.object_type, path_name=self._path_name),
+                         principals=p,
+                         ))
+
+    def update_principal(self, principal: Type['CloudNode'], access_level: str):
+        tls = self.cd.make_typed_link_specifier(
+            principal.object_ref,
+            self.object_ref,
+            'access_link',
+            {'principal': principal.object_type,
+             'resource': self.resource_type.name})
+        uop = [UpdateObjectParams('access_link',
+                                  'access_level',
+                                  ValueTypes.StringValue,
+                                  access_level,
+                                  UpdateActions.CREATE_OR_UPDATE,
+                                  )]
+        self.cd.update_link_attributes(tls, uop)
 
     def delete_node(self):
         try:
-            self.cd.delete_object(self.object_ref, traverse=True)
+            self.cd.delete_object(self.object_ref, delete_children=True)
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
 
     def check_access(self, principal: Type['CloudNode']) -> str:
         tls = self.cd.make_typed_link_specifier(
-            self.object_ref,
             principal.object_ref,
+            self.object_ref,
             'access_link',
             {'principal': principal.object_type,
              'resource': self.resource_type.name})
         try:
-            self.cd.get_link_attributes(tls, ['access_level'])
+            access_level = self.cd.get_link_attributes(tls, ['access_level'])['access_level']
         except cd_client.exceptions.ResourceNotFoundException:
-            return False
+            return None
         else:
-            return True
+            return access_level

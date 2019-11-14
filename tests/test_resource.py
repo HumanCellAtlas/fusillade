@@ -127,7 +127,19 @@ class TestResourceType(unittest.TestCase):
         self.assertTrue(test_types)
 
         # give a user read access to the id
-        test_id.add_principals([User('public')], 'Reader')
+        user = User('public')
+        test_id.add_principals([user], 'Reader')
+        self.assertEqual(test_id.check_access(user), 'Reader')
+
+        # update access
+        test_type.create_policy('RW', create_test_statement("resource policy", ['readproject', 'writeproject']),
+                                'ResourcePolicy')
+        test_id.update_principal(user, 'RW')
+        self.assertEqual(test_id.check_access(user), 'RW')
+
+        # remove access
+        test_id.remove_principals([user])
+        self.assertEqual(test_id.check_access(user), None)
 
 
 if __name__ == '__main__':
