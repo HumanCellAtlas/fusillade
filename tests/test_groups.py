@@ -6,7 +6,7 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.errors import FusilladeHTTPException
-from fusillade.clouddirectory import User, Group, cd_client, cleanup_directory, cleanup_schema, get_json_file, \
+from fusillade.directory import User, Group, cd_client, cleanup_directory, cleanup_schema, get_json_file, \
     default_group_policy_path, Role
 from tests.common import new_test_directory, create_test_statement, normalize_json
 from tests.infra.testmode import standalone

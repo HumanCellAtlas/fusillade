@@ -1,6 +1,6 @@
 import requests
 
-from fusillade.clouddirectory import cd_client, Group, Role, User
+from fusillade.directory import cd_client, Group, Role, User
 from fusillade.errors import FusilladeLimitException, FusilladeHTTPException
 
 

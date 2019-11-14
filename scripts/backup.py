@@ -13,7 +13,7 @@ import time
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
-from fusillade.clouddirectory import User, Group, Role
+from fusillade.directory import User, Group, Role
 
 
 def format_policies(policies: typing.List[typing.Tuple[str, typing.Any]]) -> typing.Dict[str, typing.Any]:

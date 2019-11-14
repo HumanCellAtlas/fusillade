@@ -18,12 +18,12 @@ import os
 from collections import defaultdict
 from typing import List, Dict, Any, Type, Union
 
-from fusillade.clouddirectory import CloudNode, Principal, cd_client, ConsistencyLevel, logger, \
+from fusillade.config import proj_path
+from fusillade.directory import CloudNode, Principal, cd_client, ConsistencyLevel, logger, \
     UpdateObjectParams, ValueTypes, UpdateActions, User
 from fusillade.errors import FusilladeHTTPException, FusilladeNotFoundException, FusilladeBadRequestException
 from fusillade.policy.validator import verify_iam_policy
 
-proj_path = os.path.dirname(__file__)
 default_resource_owner_policy = os.path.join(proj_path, '..', 'policies', 'default_resource_owner_policy.json')
 
 

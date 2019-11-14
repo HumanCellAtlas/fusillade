@@ -19,6 +19,7 @@ import itertools
 
 from dcplib.aws import clients as aws_clients
 from fusillade import Config
+from fusillade.config import proj_path
 from fusillade.errors import FusilladeException, FusilladeHTTPException, FusilladeNotFoundException, \
     AuthorizationException, FusilladeLimitException, FusilladeBadRequestException
 from fusillade.policy.validator import verify_policy
@@ -30,7 +31,6 @@ cd_client = aws_clients.clouddirectory
 project_arn = "arn:aws:clouddirectory:{}:{}:".format(
     os.getenv('AWS_DEFAULT_REGION'),
     aws_clients.sts.get_caller_identity().get('Account'))
-proj_path = os.path.dirname(__file__)
 
 # TODO make all configurable
 directory_schema_path = os.path.join(proj_path, 'directory_schema.json')
