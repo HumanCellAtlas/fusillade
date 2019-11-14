@@ -23,7 +23,7 @@ from tests.json_mixin import AssertJSONMixin
 
 class TestRoleApi(BaseAPITest, unittest.TestCase, AssertJSONMixin):
     def tearDown(self):
-        self.clear_directory(
+        self.clear(self.directory,
             users=[
                 service_accounts['admin']['client_email'],
                 service_accounts['user']['client_email'],

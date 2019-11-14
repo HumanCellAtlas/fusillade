@@ -6,7 +6,7 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.errors import FusilladeHTTPException
-from fusillade.directory import Role, cleanup_directory, cleanup_schema, get_json_file, default_role_path
+from fusillade.directory import Role, cleanup_directory, cleanup_schema, get_json_file, default_role_path, clear_cd
 from tests.common import new_test_directory, create_test_statements, normalize_json, \
     create_test_statement
 from tests.infra.testmode import standalone
@@ -26,7 +26,7 @@ class TestRole(unittest.TestCase, AssertJSONMixin):
         cleanup_schema(cls.schema_arn)
 
     def tearDown(self):
-        self.directory.clear()
+        clear_cd(self.directory)
 
     def test_role_default(self):
         with self.subTest("a role is set to default policy when role.create is called without a statement."):

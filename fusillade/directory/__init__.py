@@ -160,6 +160,38 @@ def verify_directory(directory: 'CloudDirectory'):
             directory.create_folder('/', folder_name)
 
 
+def clear_cd(directory: 'CloudDirectory',
+             users: List[str] = None,
+             groups: List[str] = None,
+             roles: List[str] = None) -> None:
+    """
+
+    :param users: a list of users to keep
+    :param groups: a list of groups to keep
+    :param roles: a list of roles to keep
+    :return:
+    """
+    users = users if users else []
+    groups = groups if groups else []
+    roles = roles if roles else []
+    protected_users = [User.hash_name(name) for name in ['public'] + users]
+    protected_groups = [Group.hash_name(name) for name in ['user_default'] + groups]
+    protected_roles = [Role.hash_name(name) for name in ["fusillade_admin", "default_user"] + roles]
+
+    for name, obj_ref in directory.list_object_children('/user/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
+        if name not in protected_users:
+            directory.delete_object(obj_ref)
+    for name, obj_ref in directory.list_object_children('/group/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
+        if name not in protected_groups:
+            directory.delete_object(obj_ref)
+    for name, obj_ref in directory.list_object_children('/role/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
+        if name not in protected_roles:
+            directory.delete_object(obj_ref)
+    for name, obj_ref in directory.list_object_children('/resource/',
+                                                        ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
+        directory.delete_object(obj_ref, delete_children=True)
+
+
 @retry(**cd_read_retry_parameters, inherit=True)
 def _paging_loop(fn: Callable, key: str, upack_response: Optional[Callable] = None, **kwarg):
     while True:
@@ -653,36 +685,6 @@ class CloudDirectory:
             },
             'IdentityAttributeValues': self.make_attributes(attributes)
         }
-
-    def clear(self, users: List[str] = None,
-              groups: List[str] = None,
-              roles: List[str] = None) -> None:
-        """
-
-        :param users: a list of users to keep
-        :param groups: a list of groups to keep
-        :param roles: a list of roles to keep
-        :return:
-        """
-        users = users if users else []
-        groups = groups if groups else []
-        roles = roles if roles else []
-        protected_users = [CloudNode.hash_name(name) for name in ['public'] + users]
-        protected_groups = [CloudNode.hash_name(name) for name in ['user_default'] + groups]
-        protected_roles = [CloudNode.hash_name(name) for name in ["fusillade_admin", "default_user"] + roles]
-
-        for name, obj_ref in self.list_object_children('/user/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
-            if name not in protected_users:
-                self.delete_object(obj_ref)
-        for name, obj_ref in self.list_object_children('/group/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
-            if name not in protected_groups:
-                self.delete_object(obj_ref)
-        for name, obj_ref in self.list_object_children('/role/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
-            if name not in protected_roles:
-                self.delete_object(obj_ref)
-        for name, obj_ref in self.list_object_children('/resource/',
-                                                       ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
-            self.delete_object(obj_ref, delete_children=True)
 
     def delete_policy(self, policy_ref: str) -> None:
         """

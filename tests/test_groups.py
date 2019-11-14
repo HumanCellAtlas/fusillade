@@ -7,7 +7,7 @@ sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.errors import FusilladeHTTPException
 from fusillade.directory import User, Group, cd_client, cleanup_directory, cleanup_schema, get_json_file, \
-    default_group_policy_path, Role
+    default_group_policy_path, Role, clear_cd
 from tests.common import new_test_directory, create_test_statement, normalize_json
 from tests.infra.testmode import standalone
 from tests.json_mixin import AssertJSONMixin
@@ -27,7 +27,7 @@ class TestGroup(unittest.TestCase, AssertJSONMixin):
         cleanup_schema(cls.schema_arn)
 
     def tearDown(self):
-        self.directory.clear()
+        clear_cd(self.directory)()
 
     def test_create_group(self):
         with self.subTest("an error is returned when creating a group with an invalid statement."):
