@@ -73,7 +73,9 @@ class TestResourceType(unittest.TestCase):
         # update a policy
         expected_policy = create_test_ResourcePolicy("updated", actions[0:1])
         test_type.update_policy('Reader', expected_policy, 'ResourcePolicy')
-        self.assertDictEqual(expected_policy, json.loads(test_type.get_policy('Reader')['policy_document']))
+        test_policy = test_type.get_policy('Reader')
+        self.assertDictEqual(expected_policy, json.loads(test_policy['policy_document']))
+        self.assertEqual('ResourcePolicy', test_policy['policy_type'])
 
         # invalid actions raise an exception
         with self.assertRaises(FusilladeBadRequestException) as ex:
