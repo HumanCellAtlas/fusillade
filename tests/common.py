@@ -34,7 +34,7 @@ def normalize_json(src: typing.Union[str, dict]):
     return json.dumps(src, sort_keys=True)
 
 
-def create_test_IAMPolicy(name: str, actions: typing.List[str] = None):
+def create_test_IAMPolicy(name: str, actions: typing.List[str] = None) -> dict:
     """Assists with the creation of policy statements for testing"""
     statement = {
         "Version": "2012-10-17",
@@ -52,7 +52,7 @@ def create_test_IAMPolicy(name: str, actions: typing.List[str] = None):
     return statement
 
 
-def create_test_ResourcePolicy(name: str, actions: typing.List[str] = None):
+def create_test_ResourcePolicy(name: str, actions: typing.List[str] = None) -> dict:
     """Assists with the creation of policy statements for testing"""
     statement = {
         "Version": "2012-10-17",
@@ -71,7 +71,7 @@ def create_test_ResourcePolicy(name: str, actions: typing.List[str] = None):
     return statement
 
 
-def create_test_statements(length=1):
+def create_test_statements(length=1) -> dict:
     """Assists with the creation of policy statements for testing"""
     statement = {
         "Version": "2012-10-17",
@@ -85,7 +85,7 @@ def create_test_statements(length=1):
             } for i in range(length)
         ]
     }
-    return json.dumps(statement)
+    return statement
 
 
 def new_test_directory(directory_name=None) -> typing.Tuple[CloudDirectory, str]:
