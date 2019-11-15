@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Callable, Optional, Iterator, Tuple, List, Union, Dict, Any
 
 from dcplib.aws.clients import clouddirectory as cd_client
-from fusillade.directory.structs import ConsistencyLevel, UpdateObjectParams, ValueTypes, obj_type_path
+from fusillade.directory.structs import ConsistencyLevel, UpdateObjectParams, ValueTypes
 from fusillade.errors import FusilladeException
 from fusillade.utils.retry import retry
 
@@ -738,16 +738,6 @@ class CloudDirectory:
         A wrapper around CloudDirectory.Client.batch_read
         """
         return cd_client.batch_read(DirectoryArn=self._dir_arn, Operations=operations, **kwargs)
-
-    @staticmethod
-    def get_obj_type_path(obj_type: str) -> str:
-        obj_type = obj_type.lower()
-        try:
-            return obj_type_path[obj_type]
-        except KeyError:
-            if obj_type.startswith('resource'):
-                # check that it's a resource type with format resource/resource_type
-                return f'/{obj_type}/id/'
 
     def lookup_policy(self, object_id: str) -> List[Dict[str, Any]]:
         # retrieve all of the policies attached to an object and its parents.
