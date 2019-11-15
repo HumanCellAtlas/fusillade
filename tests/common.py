@@ -6,7 +6,8 @@ import typing
 import jwt
 from dcplib.aws import clients
 
-from fusillade.directory import publish_schema, create_directory, CloudDirectory
+from fusillade.directory import publish_schema, create_directory
+from fusillade import CloudDirectory
 from fusillade.config import Config
 from tests import schema_name, random_hex_string
 

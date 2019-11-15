@@ -9,8 +9,8 @@ sys.path.insert(0, pkg_root)  # noqa
 from tests.infra.testmode import standalone
 from tests.common import random_hex_string, service_accounts
 from fusillade.directory import cd_client, cleanup_directory, cleanup_schema, publish_schema, create_directory, \
-    CloudDirectory, CloudNode
-from fusillade import Config
+    CloudNode
+from fusillade import Config, CloudDirectory
 
 admin_email = "test_email1@domain.com,test_email2@domain.com, test_email3@domain.com "
 
