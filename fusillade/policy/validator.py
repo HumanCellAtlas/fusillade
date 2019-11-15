@@ -6,6 +6,7 @@ A fake ActionNames and ResourceArns are used to facilitate the simulation of the
 """
 import json
 import typing
+
 from dcplib.aws import clients as aws_clients
 from fusillade.errors import FusilladeHTTPException
 
@@ -23,6 +24,9 @@ def verify_iam_policy(policy: str):
 
 def verify_resource_policy(policy: str):
     try:
+        resource = json.loads(policy)['Statement'][0]['Resource']
+        if isinstance(resource, str):
+            resource = [resource]
         iam.simulate_custom_policy(
             PolicyInputList=[json.dumps({"Version": "2012-10-17",
                                          "Statement": [{
@@ -31,7 +35,7 @@ def verify_resource_policy(policy: str):
                                              "Resource": "arn:hca:fus:*:*:resource/fake/1234",
                                          }]}), ],
             ActionNames=["fake:action"],
-            ResourceArns=["arn:aws:iam::123456789012:user/Bob"],
+            ResourceArns=resource,
             ResourcePolicy=policy,
             CallerArn='arn:aws:iam::634134578715:user/anyone')
     except iam.exceptions.InvalidInputException:
@@ -45,4 +49,5 @@ _policy_func = {
 
 
 def verify_policy(policy: typing.Dict[str, any], policy_type: str):
+    policy.update(Version="2012-10-17")
     _policy_func[policy_type](json.dumps(policy))

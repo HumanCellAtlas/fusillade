@@ -10,7 +10,7 @@ from fusillade.directory import cleanup_directory, cleanup_schema, get_json_file
     default_group_policy_path, User, clear_cd
 from fusillade.errors import FusilladeBadRequestException, FusilladeNotFoundException, FusilladeHTTPException
 from fusillade.directory.resource import ResourceType
-from tests.common import new_test_directory, create_test_statement
+from tests.common import new_test_directory, create_test_IAMPolicy, create_test_ResourcePolicy
 from tests.infra.testmode import standalone
 
 
@@ -57,7 +57,7 @@ class TestResourceType(unittest.TestCase):
         test_type = self._create_resource_type(resource_type, actions)
 
         # add an access policy
-        expected_policy = create_test_statement("resource policy", actions)
+        expected_policy = create_test_ResourcePolicy("resource policy", actions)
         test_type.create_policy('Reader', expected_policy, 'ResourcePolicy')
 
         # retrieve a specific access policy
@@ -71,13 +71,13 @@ class TestResourceType(unittest.TestCase):
         self.assertIn(f'/resource/{resource_type}/policy/Owner', policies)
 
         # update a policy
-        expected_policy = create_test_statement("updated", actions[0:1])
+        expected_policy = create_test_ResourcePolicy("updated", actions[0:1])
         test_type.update_policy('Reader', expected_policy, 'ResourcePolicy')
         self.assertDictEqual(expected_policy, json.loads(test_type.get_policy('Reader')['policy_document']))
 
         # invalid actions raise an exception
         with self.assertRaises(FusilladeBadRequestException) as ex:
-            expected_policy = create_test_statement("updated")
+            expected_policy = create_test_ResourcePolicy("updated")
             test_type.update_policy('Reader', expected_policy, 'ResourcePolicy')
 
         # remove policy
@@ -118,7 +118,7 @@ class TestResourceType(unittest.TestCase):
         test_type = self._create_resource_type(resource_type)
 
         # add an access policy
-        test_type.create_policy('Reader', create_test_statement("resource policy", ['readproject']), 'ResourcePolicy')
+        test_type.create_policy('Reader', create_test_IAMPolicy("resource policy", ['readproject']), 'ResourcePolicy')
 
         test_id = test_type.create_id('ABCD')
 
@@ -132,7 +132,7 @@ class TestResourceType(unittest.TestCase):
         self.assertEqual(test_id.check_access(user), 'Reader')
 
         # update access
-        test_type.create_policy('RW', create_test_statement("resource policy", ['readproject', 'writeproject']),
+        test_type.create_policy('RW', create_test_IAMPolicy("resource policy", ['readproject', 'writeproject']),
                                 'ResourcePolicy')
         test_id.update_principal(user, 'RW')
         self.assertEqual(test_id.check_access(user), 'RW')

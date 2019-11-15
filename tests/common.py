@@ -52,6 +52,25 @@ def create_test_IAMPolicy(name: str, actions: typing.List[str] = None):
     return statement
 
 
+def create_test_ResourcePolicy(name: str, actions: typing.List[str] = None):
+    """Assists with the creation of policy statements for testing"""
+    statement = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Principal": "*",
+                "Sid": "DefaultRole",
+                "Effect": "Deny",
+                "Action": actions if actions else ["fake:action"],
+                "Resource": "arn:aws:execute-api:region:account-id:api-id/*"
+            }
+        ]
+    }
+    statement["Statement"][0]["Sid"] = name
+
+    return statement
+
+
 def create_test_statements(length=1):
     """Assists with the creation of policy statements for testing"""
     statement = {
