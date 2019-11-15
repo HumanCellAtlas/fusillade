@@ -61,7 +61,7 @@ class ResourceType(CloudNode):
         _creator = creator if creator else "fusillade"
         # Create the node /resource/{resource_type}
         ops.append(new_node.cd.batch_create_object(
-            new_node.cd.get_obj_type_path(cls.object_type),
+            get_obj_type_path(cls.object_type),
             name,
             new_node._facet,
             new_node.cd.get_object_attribute_list(facet=new_node._facet,
