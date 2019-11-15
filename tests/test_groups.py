@@ -32,7 +32,7 @@ class TestGroup(unittest.TestCase, AssertJSONMixin):
     def test_create_group(self):
         with self.subTest("an error is returned when creating a group with an invalid statement."):
             with self.assertRaises(FusilladeHTTPException):
-                group = Group.create("new_group1", "does things")
+                group = Group.create("new_group1", {"random": "fields"})
 
         with self.subTest("The group is returned when the group has been created with default valid statement"):
             group = Group.create("new_group2")
