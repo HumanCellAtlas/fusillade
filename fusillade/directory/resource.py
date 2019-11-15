@@ -94,8 +94,7 @@ class ResourceType(CloudNode):
             raise FusilladeHTTPException('Must provide owner policy.')
         else:
             if owner_policy:
-                owner_policy = new_node.format_policy(owner_policy)
-                verify_policy(owner_policy, 'IAMPolicy')
+                pass
             elif getattr(cls, '_default_policy_path'):
                 with open(cls._default_policy_path, 'r') as fp:
                     owner_policy = json.load(fp)
@@ -199,11 +198,6 @@ class ResourceType(CloudNode):
         """Returns a human readable policy path"""
         return f"/resource/{self.name}/policy/{policy_name}"
 
-    @staticmethod
-    def format_policy(policy: dict) -> str:
-        policy.update(Version="2012-10-17")
-        return json.dumps(policy)
-
     def create_policy(self,
                       policy_name: str,
                       policy: dict,
@@ -226,6 +220,7 @@ class ResourceType(CloudNode):
         """
         if policy_type == "ResourcePolicy":
             self.check_actions(policy)
+        verify_policy(policy, policy_type)
         operations = list()
         object_attribute_list = self.cd.get_policy_attribute_list(policy_type, policy, **kwargs)
         parent_path = parent_path or f"{self.object_ref}/policy"
@@ -274,12 +269,11 @@ class ResourceType(CloudNode):
 
     def update_policy(self, policy_name: str, policy: dict, policy_type: str):
         self.check_actions(policy)
-        policy = self.format_policy(policy)
         params = [
             UpdateObjectParams('POLICY',
                                'policy_document',
                                ValueTypes.BinaryValue,
-                               policy,
+                               self.cd.format_policy(policy),
                                UpdateActions.CREATE_OR_UPDATE,
                                )
         ]

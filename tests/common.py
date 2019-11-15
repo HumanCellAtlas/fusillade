@@ -34,7 +34,7 @@ def normalize_json(src: typing.Union[str, dict]):
     return json.dumps(src, sort_keys=True)
 
 
-def create_test_statement(name: str, actions: typing.List[str] = None):
+def create_test_IAMPolicy(name: str, actions: typing.List[str] = None):
     """Assists with the creation of policy statements for testing"""
     statement = {
         "Version": "2012-10-17",

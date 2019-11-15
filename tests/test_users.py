@@ -8,7 +8,7 @@ sys.path.insert(0, pkg_root)  # noqa
 from fusillade.errors import FusilladeHTTPException
 from fusillade.directory import User, Group, Role, cd_client, cleanup_directory, cleanup_schema, \
     get_json_file, default_user_policy_path, default_user_role_path, default_group_policy_path, clear_cd
-from tests.common import new_test_directory, create_test_statement, normalize_json
+from tests.common import new_test_directory, create_test_IAMPolicy, normalize_json
 from tests.infra.testmode import standalone
 from tests.json_mixin import AssertJSONMixin
 
@@ -59,7 +59,7 @@ class TestUser(unittest.TestCase, AssertJSONMixin):
 
     def test_get_groups(self):
         name = "test_get_groups@test.com"
-        test_groups = [(f"group_{i}", create_test_statement(f"GroupPolicy{i}")) for i in range(5)]
+        test_groups = [(f"group_{i}", create_test_IAMPolicy(f"GroupPolicy{i}")) for i in range(5)]
         groups = [Group.create(*i) for i in test_groups]
 
         user = User.provision_user(name)
@@ -94,7 +94,7 @@ class TestUser(unittest.TestCase, AssertJSONMixin):
 
     def test_remove_groups(self):
         name = "test_remove_group@test.com"
-        test_groups = [(f"group_{i}", create_test_statement(f"GroupPolicy{i}")) for i in range(5)]
+        test_groups = [(f"group_{i}", create_test_IAMPolicy(f"GroupPolicy{i}")) for i in range(5)]
         groups = [Group.create(*i).name for i in test_groups]
         user = User.provision_user(name)
         with self.subTest("A user is removed from a group when remove_group is called for a group the user belongs "
@@ -119,14 +119,14 @@ class TestUser(unittest.TestCase, AssertJSONMixin):
         with self.subTest("The initial user policy is None, when the user is first created"):
             self.assertFalse(user.get_policy())
 
-        statement = create_test_statement(f"UserPolicySomethingElse")
+        statement = create_test_IAMPolicy(f"UserPolicySomethingElse")
         user.set_policy(statement)
         with self.subTest("The user policy is set when statement setter is used."):
             expected_statement = statement
             self.assertJSONEqual(user.get_policy(), expected_statement)
             self.assertJSONIn(expected_statement, [p['policy'] for p in user.get_authz_params()['policies']])
 
-        statement = create_test_statement(f"UserPolicySomethingElse2")
+        statement = create_test_IAMPolicy(f"UserPolicySomethingElse2")
         user.set_policy(statement)
         with self.subTest("The user policy changes when set_policy is used."):
             expected_statement = statement
@@ -135,7 +135,7 @@ class TestUser(unittest.TestCase, AssertJSONMixin):
 
         with self.subTest("Error raised when setting policy to an invalid statement"):
             with self.assertRaises(FusilladeHTTPException):
-                user.set_policy("Something else")
+                user.set_policy({"Statement": "Something else"})
             self.assertJSONEqual(user.get_policy(), expected_statement)
 
     def test_status(self):
@@ -153,7 +153,7 @@ class TestUser(unittest.TestCase, AssertJSONMixin):
 
     def test_roles(self):
         name = "test_sete_policy@test.com"
-        test_roles = [(f"Role_{i}", create_test_statement(f"RolePolicy{i}")) for i in range(5)]
+        test_roles = [(f"Role_{i}", create_test_IAMPolicy(f"RolePolicy{i}")) for i in range(5)]
         roles = [Role.create(*i).name for i in test_roles]
         role_names, _ = zip(*test_roles)
         role_names = sorted(role_names)
@@ -212,12 +212,12 @@ class TestUser(unittest.TestCase, AssertJSONMixin):
         """
         name = "test_set_policy@test.com"
         user = User.provision_user(name)
-        test_groups = [(f"group_{i}", create_test_statement(f"GroupPolicy{i}")) for i in range(5)]
+        test_groups = [(f"group_{i}", create_test_IAMPolicy(f"GroupPolicy{i}")) for i in range(5)]
         [Group.create(*i) for i in test_groups]
         group_names, _ = zip(*test_groups)
         group_names = sorted(group_names)
         group_statements = [i[1] for i in test_groups]
-        test_roles = [(f"role_{i}", create_test_statement(f"RolePolicy{i}")) for i in range(5)]
+        test_roles = [(f"role_{i}", create_test_IAMPolicy(f"RolePolicy{i}")) for i in range(5)]
         [Role.create(*i) for i in test_roles]
         role_names, _ = zip(*test_roles)
         role_names = sorted(role_names)
@@ -251,7 +251,6 @@ class TestUser(unittest.TestCase, AssertJSONMixin):
             resp = user.list_owned(Group)
         user.remove_ownership(group)
         self.assertFalse(user.is_owner(group))
-
 
     @unittest.skip("TODO: unfinished and low priority")
     def test_remove_user(self):
