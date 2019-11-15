@@ -11,7 +11,8 @@ import sys
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
-from fusillade.directory import cd_client, directory_schema_path, get_json_file, project_arn
+from fusillade.directory import cd_client, directory_schema_path, project_arn
+from fusillade.utils.json import get_json_file
 from fusillade import CloudDirectory
 
 parser = argparse.ArgumentParser(description=__doc__)

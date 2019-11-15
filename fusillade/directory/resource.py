@@ -21,6 +21,7 @@ from typing import List, Dict, Any, Type, Union
 from fusillade.config import proj_path
 from fusillade.directory import CloudNode, Principal, cd_client, ConsistencyLevel, logger, \
     UpdateObjectParams, ValueTypes, UpdateActions, User
+from fusillade.directory.identifiers import get_obj_type_path
 from fusillade.errors import FusilladeHTTPException, FusilladeNotFoundException, FusilladeBadRequestException
 from fusillade.policy.validator import verify_policy
 
@@ -343,7 +344,7 @@ class ResourceId(CloudNode):
     def from_name(self, name):
         self._name: str = name
         self._path_name: str = name
-        self.object_ref: str = f'{self.cd.get_obj_type_path(self.object_type)}{self._path_name}'
+        self.object_ref: str = f'{get_obj_type_path(self.object_type)}{self._path_name}'
 
     @property
     def object_type(self):

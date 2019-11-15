@@ -7,16 +7,6 @@ class UpdateActions(Enum):
     DELETE = auto()
 
 
-obj_type_path = dict(
-    group='/group/',
-    index='/index/',
-    user='/user/',
-    policy='/policy/',
-    role='/role/',
-    resource='/resource/'
-)
-
-
 class ValueTypes(Enum):
     StringValue = auto()
     BinaryValue = auto()
