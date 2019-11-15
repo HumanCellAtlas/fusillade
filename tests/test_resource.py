@@ -72,13 +72,13 @@ class TestResourceType(unittest.TestCase):
 
         # update a policy
         expected_policy = create_test_statement("updated", actions[0:1])
-        test_type.update_policy('Reader', expected_policy)
+        test_type.update_policy('Reader', expected_policy, 'ResourcePolicy')
         self.assertDictEqual(expected_policy, json.loads(test_type.get_policy('Reader')['policy_document']))
 
         # invalid actions raise an exception
         with self.assertRaises(FusilladeBadRequestException) as ex:
             expected_policy = create_test_statement("updated")
-            test_type.update_policy('Reader', expected_policy)
+            test_type.update_policy('Reader', expected_policy, 'ResourcePolicy')
 
         # remove policy
         test_type.delete_policy('Reader')

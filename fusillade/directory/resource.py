@@ -22,7 +22,7 @@ from fusillade.config import proj_path
 from fusillade.directory import CloudNode, Principal, cd_client, ConsistencyLevel, logger, \
     UpdateObjectParams, ValueTypes, UpdateActions, User
 from fusillade.errors import FusilladeHTTPException, FusilladeNotFoundException, FusilladeBadRequestException
-from fusillade.policy.validator import verify_iam_policy
+from fusillade.policy.validator import verify_policy
 
 default_resource_owner_policy = os.path.join(proj_path, '..', 'policies', 'default_resource_owner_policy.json')
 
@@ -32,7 +32,7 @@ class ResourceType(CloudNode):
     _facet: str = 'NodeFacet'
     object_type: str = 'resource'
     _default_policy_path: str = default_resource_owner_policy
-    policy_type = 'Resource'
+    policy_type = 'ResourcePolicy'
 
     def __init__(self, *args, **kwargs):
         super(ResourceType, self).__init__(*args, **kwargs)
@@ -95,7 +95,7 @@ class ResourceType(CloudNode):
         else:
             if owner_policy:
                 owner_policy = new_node.format_policy(owner_policy)
-                verify_iam_policy(owner_policy)
+                verify_policy(owner_policy, 'IAMPolicy')
             elif getattr(cls, '_default_policy_path'):
                 with open(cls._default_policy_path, 'r') as fp:
                     owner_policy = json.load(fp)
@@ -272,7 +272,7 @@ class ResourceType(CloudNode):
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeNotFoundException(f"{self.get_policy_path(policy_name)} does not exist.")
 
-    def update_policy(self, policy_name: str, policy: dict):
+    def update_policy(self, policy_name: str, policy: dict, policy_type: str):
         self.check_actions(policy)
         policy = self.format_policy(policy)
         params = [
@@ -284,7 +284,7 @@ class ResourceType(CloudNode):
                                )
         ]
         try:
-            verify_iam_policy(policy)
+            verify_policy(policy, policy_type)
             self.cd.update_object_attribute(self.get_policy_reference(policy_name),
                                             params,
                                             self.cd.node_schema)
@@ -300,7 +300,7 @@ class ResourceType(CloudNode):
                              ),
                              policy=dict(
                                  link_name=policy_name,
-                                 policy_type=self.policy_type)
+                                 policy_type=policy_type)
                              ))
 
     def get_policy(self, policy_name):
