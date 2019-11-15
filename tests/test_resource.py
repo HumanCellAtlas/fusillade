@@ -120,7 +120,8 @@ class TestResourceType(unittest.TestCase):
         test_type = self._create_resource_type(resource_type)
 
         # add an access policy
-        test_type.create_policy('Reader', create_test_IAMPolicy("resource policy", ['readproject']), 'ResourcePolicy')
+        test_type.create_policy('Reader', create_test_ResourcePolicy("resource policy", ['readproject']),
+                                'ResourcePolicy')
 
         test_id = test_type.create_id('ABCD')
 
@@ -134,7 +135,7 @@ class TestResourceType(unittest.TestCase):
         self.assertEqual(test_id.check_access(user), 'Reader')
 
         # update access
-        test_type.create_policy('RW', create_test_IAMPolicy("resource policy", ['readproject', 'writeproject']),
+        test_type.create_policy('RW', create_test_ResourcePolicy("resource policy", ['readproject', 'writeproject']),
                                 'ResourcePolicy')
         test_id.update_principal(user, 'RW')
         self.assertEqual(test_id.check_access(user), 'RW')

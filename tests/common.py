@@ -62,7 +62,7 @@ def create_test_ResourcePolicy(name: str, actions: typing.List[str] = None) -> d
                 "Sid": "DefaultRole",
                 "Effect": "Deny",
                 "Action": actions if actions else ["fake:action"],
-                "Resource": "arn:aws:execute-api:region:account-id:api-id/*"
+                "Resource": "arn:dcp:fus:us-east-1:dev:project/*"
             }
         ]
     }
