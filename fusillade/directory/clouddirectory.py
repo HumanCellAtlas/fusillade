@@ -306,9 +306,14 @@ class CloudDirectory:
                     FacetName='POLICY',
                     Name="policy_document"),
                 Value=dict(
-                    BinaryValue=json.dumps(statement).encode()))
+                    BinaryValue=self.format_policy(statement)))
         ])
         return attributes
+
+    @staticmethod
+    def format_policy(statement: Dict[str, Any]) -> bytearray:
+        statement.update(Version="2012-10-17")
+        return json.dumps(statement).encode()
 
     def update_object_attribute(self,
                                 object_ref: str,

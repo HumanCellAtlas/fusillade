@@ -548,7 +548,7 @@ class PolicyMixin:
             UpdateObjectParams('POLICY',
                                'policy_document',
                                ValueTypes.BinaryValue,
-                               json.dumps(statement),
+                               self.cd.format_policy(statement),
                                UpdateActions.CREATE_OR_UPDATE,
                                )
         ]
