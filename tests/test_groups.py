@@ -62,7 +62,7 @@ class TestGroup(unittest.TestCase, AssertJSONMixin):
 
         with self.subTest("error raised when invalid statement assigned to group.get_policy()."):
             with self.assertRaises(FusilladeHTTPException):
-                group.set_policy("invalid statement")
+                group.set_policy({"Statement": "Something else"})
 
     def test_users(self):
         emails = ["test@test.com", "why@not.com", "hello@world.com"]
