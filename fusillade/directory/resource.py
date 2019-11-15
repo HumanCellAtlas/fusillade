@@ -16,7 +16,7 @@ perform on a resource.
 import json
 import os
 from collections import defaultdict
-from typing import List, Dict, Any, Type, Union, Tuple
+from typing import List, Dict, Any, Type, Union
 
 from fusillade.config import proj_path, Config
 from fusillade.directory import CloudNode, Principal, cd_client, ConsistencyLevel, logger, \
@@ -489,6 +489,6 @@ class ResourceId(CloudNode):
         access_policies = self.check_access(principals)
         return self.cd.get_policies(access_policies)
 
-    def get_access_policy(self, principal: Type['Principal']) -> Union[None, Dict[str, Any]]:
-        json.loads(self.resource_type.get_policy(self.check_access(principal))['policy_document'])
-        return
+    def get_access_policies(self, principals: List[Type['Principal']]):
+        access_policies = self.check_access(principals)
+        return self.cd.get_policies(access_policies)
