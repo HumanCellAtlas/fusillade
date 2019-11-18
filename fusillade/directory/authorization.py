@@ -1,3 +1,5 @@
+from typing import List, Union
+
 from fusillade import Config
 from fusillade.directory import User, Group
 from fusillade.directory.resource import ResourceId, ResourceType
@@ -5,7 +7,7 @@ from fusillade.errors import FusilladeForbiddenException
 from fusillade.policy.resource_policy import combine
 
 
-def get_resource_authz_parameters(user: str, resource: str):
+def get_resource_authz_parameters(user: str, resources: Union[List[str], str]):
     """
 
     Get all policy ids, and send them to lookup policy, group them by policy type.
@@ -16,6 +18,8 @@ def get_resource_authz_parameters(user: str, resource: str):
     """
     policies = []
     _user = User(user)
+    # Only support a single resource for now
+    resource = resources[0] if isinstance(resources, list) else resources
     r_type, r_id, *_ = resource.split(':')[-1].split('/')
     if r_type in ResourceType.get_types():
         r_id = ResourceId(r_type, r_id)
