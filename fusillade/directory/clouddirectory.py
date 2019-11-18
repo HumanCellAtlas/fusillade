@@ -596,6 +596,20 @@ class CloudDirectory:
             }
         }
 
+    @batch_reference
+    def batch_get_link_attributes(self,
+                                  TypedLinkSpecifier: Dict[str, Any],
+                                  AttributeNames: List[str]) -> Dict[str, Any]:
+        """
+        A helper function to format a batch get_attributes operation
+        """
+        return {
+            'GetLinkAttributes': {
+                'TypedLinkSpecifier': TypedLinkSpecifier,
+                'AttributeNames': AttributeNames
+            }
+        }
+
     @staticmethod
     @batch_reference
     def batch_attach_object(parent: str, child: str, name: str) -> Dict[str, Any]:
