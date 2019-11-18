@@ -18,7 +18,7 @@ import os
 from collections import defaultdict
 from typing import List, Dict, Any, Type, Union
 
-from fusillade.config import proj_path
+from fusillade.config import proj_path, Config
 from fusillade.directory import CloudNode, Principal, cd_client, ConsistencyLevel, logger, \
     UpdateObjectParams, ValueTypes, UpdateActions, User
 from fusillade.directory.identifiers import get_obj_type_path
@@ -34,6 +34,7 @@ class ResourceType(CloudNode):
     object_type: str = 'resource'
     _default_policy_path: str = default_resource_owner_policy
     policy_type = 'ResourcePolicy'
+    _resource_types: List[str] = None
 
     def __init__(self, *args, **kwargs):
         super(ResourceType, self).__init__(*args, **kwargs)
@@ -102,9 +103,7 @@ class ResourceType(CloudNode):
             ops.extend(new_node.create_policy('Owner',
                                               owner_policy,
                                               parent_path='#policy_node',
-                                              run=False,
-                                              type=new_node.object_type,
-                                              name=f"{new_node.name}:Owner"))
+                                              run=False))
 
         # Execute batch request
         try:
@@ -172,7 +171,15 @@ class ResourceType(CloudNode):
         for s in policy['Statement']:
             policy_actions.update(s['Action'])
         if not policy_actions.issubset(set(self.actions)):
-            raise FusilladeBadRequestException(detail="Invalid actions in policy.")
+            raise FusilladeBadRequestException(
+                detail=f"Invalid actions in policy. Allowed actions are {self.actions}")
+
+    @classmethod
+    def get_types(cls):
+        if not cls._resource_types:
+            cd = Config.get_directory()
+            cls._resource_types = [name for name, _ in cd.list_object_children(f'/{cls.object_type}/')]
+        return cls._resource_types
 
     @staticmethod
     def hash_name(name):
@@ -223,7 +230,8 @@ class ResourceType(CloudNode):
             self.check_actions(policy)
         verify_policy(policy, policy_type)
         operations = list()
-        object_attribute_list = self.cd.get_policy_attribute_list(policy_type, policy, **kwargs)
+        object_attribute_list = self.cd.get_policy_attribute_list(policy_type, policy, type=self.object_type,
+                                                                  name=policy_name, **kwargs)
         parent_path = parent_path or f"{self.object_ref}/policy"
         batch_reference = f'new_policy_{policy_name}'
         operations.append(
@@ -247,7 +255,9 @@ class ResourceType(CloudNode):
                     'BatchReferenceName': batch_reference
                 }
             }
+
         )
+
         if run:
             self.cd.batch_write(operations)
             logger.info(dict(message="Policy created",
