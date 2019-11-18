@@ -17,8 +17,8 @@ from fusillade import Config
 from fusillade.config import proj_path
 from fusillade.directory.clouddirectory import CloudDirectory
 from fusillade.directory.cloudnode import CloudNode
-from fusillade.directory.structs import UpdateActions, ValueTypes, ConsistencyLevel, UpdateObjectParams
 from fusillade.directory.identifiers import obj_type_path, get_obj_type_path
+from fusillade.directory.structs import UpdateActions, ValueTypes, ConsistencyLevel, UpdateObjectParams
 from fusillade.errors import FusilladeHTTPException, FusilladeNotFoundException, \
     AuthorizationException, FusilladeLimitException
 from fusillade.policy.validator import verify_policy
