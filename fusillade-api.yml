@@ -20,6 +20,9 @@ info:
     The client should recognize and parse the `Link` header appropriately according
     to RFC 5988, and retrieve the next page if requested by the user, or if all
     results are being retrieved.
+    Additional Pagination Headers are returned to assist with client pagination these are:
+    `X-OpenAPI-Pagination` - boolean that indicates if there are more pages.
+    `X-OpenAPI-Paginated-Content-Key` - string that indicates which key in the response will be paged.
 
   version: $FUS_VERSION
 servers:
