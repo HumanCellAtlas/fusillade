@@ -323,10 +323,6 @@ paths:
                 $ref: '#/components/schemas/users'
         206:
           $ref: '#/components/responses/206'
-          headers:
-            Link:
-              type: string
-              description: URL to retrieve the next page of results.
         404:
           $ref: '#/components/responses/404'
         default:
