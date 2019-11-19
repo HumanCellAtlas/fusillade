@@ -765,9 +765,18 @@ class CloudDirectory:
             attributes[attr['Key']['Name']] = attr['Value'].popitem()[1]
         return attributes
 
-    def get_policies(self,
-                     policy_paths: List[Dict[str, Any]],
-                     policy_type='IAMPolicy') -> Dict[str, Union[List[Dict[str, str]], List[str]]]:
+    def get_policy_ids(self, policy_paths: List[Dict[str, Any]], policy_type='IAMPolicy'):
+        # Parse the policyIds from the policies path. Only keep the unique ids
+        return set(
+            [
+                f"${o['PolicyId']}"
+                for p in policy_paths
+                for o in p['Policies']
+                if o.get('PolicyId') and o['PolicyType'] == policy_type
+            ]
+        )
+
+    def get_policies(self, policy_ids: List[str]) -> Dict[str, Union[List[Dict[str, str]], List[str]]]:
         """
         Get's policy statements and attributes.
 
@@ -775,15 +784,6 @@ class CloudDirectory:
         :param policy_type: the type of policies to retrieve from the policy nodes
         :return: returns the policies of the type IAMPolicy from a list of policy paths.
         """
-        # Parse the policyIds from the policies path. Only keep the unique ids
-        policy_ids = set(
-            [
-                o['PolicyId']
-                for p in policy_paths
-                for o in p['Policies']
-                if o.get('PolicyId') and o['PolicyType'] == policy_type
-            ]
-        )
 
         # retrieve the policies and policy attributes in a batched request
         operations = []
@@ -791,7 +791,7 @@ class CloudDirectory:
             operations.extend([
                 {
                     'GetObjectAttributes': {
-                        'ObjectReference': {'Selector': f'${policy_id}'},
+                        'ObjectReference': {'Selector': policy_id},
                         'SchemaFacet': {
                             'SchemaArn': self.node_schema,
                             'FacetName': 'POLICY'
@@ -801,7 +801,7 @@ class CloudDirectory:
                 },
                 {
                     'GetObjectAttributes': {
-                        'ObjectReference': {'Selector': f'${policy_id}'},
+                        'ObjectReference': {'Selector': policy_id},
                         'SchemaFacet': {
                             'SchemaArn': self._schema,
                             'FacetName': 'IAMPolicy'
