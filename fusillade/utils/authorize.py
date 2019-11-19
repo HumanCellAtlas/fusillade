@@ -43,22 +43,22 @@ def evaluate_policy(
 ) -> Dict[str, Any]:
     context_entries = context_entries if context_entries else []
     eval_results = []
-    for _response in simulate_custom_policy_paginator.paginate(
-            PolicyInputList=[policy['policy'] for policy in policies],
-            ActionNames=actions,
-            ResourceArns=resources,
-            ContextEntries=[
-                {
-                    'ContextKeyName': 'fus:user_email',
-                    'ContextKeyValues': [principal],
-                    'ContextKeyType': 'string'
-                }, *context_entries
-            ],
-            PaginationConfig={
-                'MaxItems': 20,
-                'PageSize': 8
-            }
-    ):
+    params = dict(
+        PolicyInputList=[policy['policy'] for policy in policies],
+        ActionNames=actions,
+        ResourceArns=resources,
+        ContextEntries=[
+            {
+                'ContextKeyName': 'fus:user_email',
+                'ContextKeyValues': [principal],
+                'ContextKeyType': 'string'
+            }, *context_entries
+        ],
+        PaginationConfig={
+            'MaxItems': 20,
+            'PageSize': 8
+        })
+    for _response in simulate_custom_policy_paginator.paginate(**params):
         logger.info(_response['ResponseMetadata'])
         logger.debug(_response['EvaluationResults'])
         eval_results.extend(get_policy_statement(_response['EvaluationResults'], policies))
