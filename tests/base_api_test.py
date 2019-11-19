@@ -1,7 +1,6 @@
 import json
 import os
 
-import jmespath
 from furl import furl
 
 from tests.common import service_accounts, new_test_directory, get_auth_header
