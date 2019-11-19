@@ -103,9 +103,7 @@ class ResourceType(CloudNode):
             ops.extend(new_node.create_policy('Owner',
                                               owner_policy,
                                               parent_path='#policy_node',
-                                              run=False,
-                                              type=new_node.object_type,
-                                              name=f"{new_node.name}:Owner"))
+                                              run=False))
 
         # Execute batch request
         try:
@@ -182,6 +180,13 @@ class ResourceType(CloudNode):
             cls._resource_types = [name for name, _ in cd.list_object_children(f'/{cls.object_type}/')]
         return cls._resource_types
 
+    @classmethod
+    def get_types(cls):
+        if not cls._resource_types:
+            cd = Config.get_directory()
+            cls._resource_types = [name for name, _ in cd.list_object_children(f'/{cls.object_type}/')]
+        return cls._resource_types
+
     @staticmethod
     def hash_name(name):
         """
@@ -231,7 +236,8 @@ class ResourceType(CloudNode):
             self.check_actions(policy)
         verify_policy(policy, policy_type)
         operations = list()
-        object_attribute_list = self.cd.get_policy_attribute_list(policy_type, policy, **kwargs)
+        object_attribute_list = self.cd.get_policy_attribute_list(policy_type, policy, type=self.object_type,
+                                                                  name=policy_name, **kwargs)
         parent_path = parent_path or f"{self.object_ref}/policy"
         batch_reference = f'new_policy_{policy_name}'
         operations.append(
@@ -255,7 +261,9 @@ class ResourceType(CloudNode):
                     'BatchReferenceName': batch_reference
                 }
             }
+
         )
+
         if run:
             self.cd.batch_write(operations)
             logger.info(dict(message="Policy created",
@@ -332,10 +340,10 @@ class ResourceType(CloudNode):
             raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
 
     def create_id(self, name: str, owner: str = None, **kwargs) -> 'ResourceId':
-        return ResourceId.create(self, name, owner, **kwargs)
+        return ResourceId.create(self.name, name, owner, **kwargs)
 
     def get_id(self, *args, **kwargs) -> 'ResourceId':
-        return ResourceId(self, *args, **kwargs)
+        return ResourceId(self.name, *args, **kwargs)
 
 
 class ResourceId(CloudNode):
@@ -344,8 +352,8 @@ class ResourceId(CloudNode):
     _facet: str = 'NodeFacet'
     allowed_policy_types = ['Resource']
 
-    def __init__(self, resource_type: ResourceType, *args, **kwargs):
-        self.resource_type: ResourceType = resource_type
+    def __init__(self, resource_type: str, *args, **kwargs):
+        self.resource_type: ResourceType = ResourceType(resource_type)
         super(ResourceId, self).__init__(*args, **kwargs)
         self._principals = None  # update roles
 
@@ -363,7 +371,7 @@ class ResourceId(CloudNode):
         return name
 
     @classmethod
-    def create(cls, resource_type: ResourceType, name: str, owner: str = None, **kwargs) -> 'ResourceId':
+    def create(cls, resource_type: str, name: str, owner: str = None, **kwargs) -> 'ResourceId':
         ops = []
         new_node = cls(resource_type, name=name)
         _owner = owner if owner else "fusillade"
@@ -463,16 +471,27 @@ class ResourceId(CloudNode):
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
 
-    def check_access(self, principal: Type['Principal']) -> str:
-        tls = self.cd.make_typed_link_specifier(
-            principal.object_ref,
-            self.object_ref,
-            'access_link',
-            {'principal': principal.object_type,
-             'resource': self.resource_type.name})
+    def check_access(self, principals: List[Type['Principal']]) -> Union[None, List[str]]:
+        ops = []
+        for principal in principals:
+            tls = self.cd.make_typed_link_specifier(
+                principal.object_ref,
+                self.object_ref,
+                'access_link',
+                {'principal': principal.object_type,
+                 'resource': self.resource_type.name})
+            ops.append(self.cd.batch_get_link_attributes(tls, ['access_level']))
         try:
-            access_level = self.cd.get_link_attributes(tls, ['access_level'])['access_level']
+            attributes = [r['SuccessfulResponse']['GetLinkAttributes']['Attributes'] for r in self.cd.batch_read(ops)[
+                'Responses'] if r.get('SuccessfulResponse')]
         except cd_client.exceptions.ResourceNotFoundException:
             return None
         else:
-            return access_level
+            access_levels = set()
+            for attr in attributes:
+                access_levels.add(self.resource_type.get_policy_path(attr[0]['Value'].popitem()[1]))
+            return list(access_levels)
+
+    def get_access_policies(self, principals: List[Type['Principal']]):
+        access_policies = self.check_access(principals)
+        return self.cd.get_policies(access_policies)
