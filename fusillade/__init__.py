@@ -1,4 +1,5 @@
 from .config import Config
 from . import logging
-from .clouddirectory import User, Group, Role, CloudDirectory
+from .directory import User, Group, Role
+from fusillade.directory.clouddirectory import CloudDirectory
 from .errors import FusilladeException, FusilladeBindingException

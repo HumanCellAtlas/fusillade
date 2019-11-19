@@ -34,6 +34,13 @@
             }
           },
           "requiredBehavior": "REQUIRED_ALWAYS"
+        },
+        "actions": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": false
+          },
+          "requiredBehavior": "NOT_REQUIRED"
         }
       },
       "objectType": "NODE"
@@ -127,6 +134,39 @@
       },
       "identityAttributeOrder": [
         "member_of"
+      ]
+    },
+    "access_link": {
+      "facetAttributes": {
+        "access_level": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": false,
+            "attributeRules": {}
+          },
+          "requiredBehavior": "REQUIRED_ALWAYS"
+        },
+        "resource": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": true,
+            "attributeRules": {
+            }
+          },
+          "requiredBehavior": "REQUIRED_ALWAYS"
+        },
+        "principal": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": true,
+            "attributeRules": {}
+          },
+          "requiredBehavior": "REQUIRED_ALWAYS"
+        }
+      },
+      "identityAttributeOrder": [
+        "principal",
+        "resource"
       ]
     },
     "ownership_link": {

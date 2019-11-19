@@ -69,3 +69,6 @@ class Config:
     @classmethod
     def log_level(cls):
         return int(os.environ.get("DEBUG", "1"))
+
+
+proj_path = os.path.dirname(__file__)

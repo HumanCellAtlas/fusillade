@@ -11,8 +11,9 @@ import sys
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
-from fusillade.clouddirectory import cd_client, directory_schema_path, get_json_file, project_arn, \
-    CloudDirectory
+from fusillade.directory import cd_client, directory_schema_path, project_arn
+from fusillade.utils.json import get_json_file
+from fusillade import CloudDirectory
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--stage", required=False, default=os.getenv('FUS_DEPLOYMENT_STAGE'), type=str,
@@ -26,7 +27,7 @@ args = parser.parse_args()
 if not args.stage:
     print("'FUS_DEPLOYMENT_STAGE' not found in environment please run `source environment`, or use the --stage option")
     exit(1)
-new_schema = get_json_file(directory_schema_path)  # open schema file locally
+new_schema = json.dumps(get_json_file(directory_schema_path))  # open schema file locally
 schema_name = f"hca_fusillade_base_{args.stage}"
 directory_name = f"hca_fusillade_{args.stage}"
 rv = 0

@@ -9,7 +9,7 @@ import sys
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
-from fusillade.clouddirectory import publish_schema, create_directory
+from fusillade.directory import publish_schema, create_directory
 from fusillade import Config
 
 
