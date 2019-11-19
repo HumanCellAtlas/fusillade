@@ -184,7 +184,8 @@ class PolicyMixin:
 
     def get_authz_params(self) -> Dict[str, Union[List[Dict[str, str]], List[str]]]:
         policy_paths = self.cd.lookup_policy(self.object_ref)
-        return self.cd.get_policies(policy_paths)
+        policy_ids = self.cd.get_policy_ids(policy_paths)
+        return self.cd.get_policies(policy_ids)
 
     def create_policy(self, statement: Dict[str, Any],
                       policy_type='IAMPolicy', run=True, **kwargs) -> Union[List, None]:
@@ -518,11 +519,14 @@ class User(Principal):
         self._roles: Optional[List[str]] = None
 
     def get_authz_params(self) -> Dict[str, Union[List[Dict[str, str]], List[str]]]:
+        return self.cd.get_policies(self.get_policy_ids())
+
+    def get_policy_ids(self) -> Dict[str, Union[List[Dict[str, str]], List[str]]]:
         if self.is_enabled():
             policy_paths = self.lookup_policies_batched()
         else:
             raise AuthorizationException(f"User {self.status}")
-        return self.cd.get_policies(policy_paths)
+        return self.cd.get_policy_ids(policy_paths)
 
     def lookup_policies_batched(self):
         object_refs = self.groups + [self.object_ref]
