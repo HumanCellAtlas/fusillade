@@ -50,10 +50,11 @@ def put_user(token_info: dict, user_id: str):
 def get_users_owns(token_info: dict, user_id: str):
     next_token, per_page = get_next_token(request.args)
     user = User(user_id)
+    content_key = "roles" if request.args['resource_type'] == "role" else "groups"
     return get_page(user.get_owned,
                     next_token,
                     per_page,
-                    'groups || roles',
+                    content_key,
                     request.args['resource_type'],
                     paged=True)
 

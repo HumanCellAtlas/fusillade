@@ -387,13 +387,12 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
         name = "test_user_role_api@email.com"
-        key = 'groups || roles'
+        key = 'roles'
         user = User.provision_user(name)
         url = furl(f"/v1/user/{name}/owns", query_params={'resource_type': 'role'}).url
         resp = self.app.request(url, headers=headers)
+        self.assertIs('False', resp.headers['X-OpenAPI-Pagination'])
         user_role_names = [Role(object_ref=role).name for role in user.roles]
-        length = len(jmespath.search(key, resp.json()))
-        self.assertEqual(0, length)
         roles = [Role.create(f"test_user_owned_role_{i}") for i in range(11)]
         user.add_roles([role.name for role in roles])
         [user.add_ownership(role) for role in roles]
