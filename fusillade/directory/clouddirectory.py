@@ -796,7 +796,7 @@ class CloudDirectory:
                             'SchemaArn': self.node_schema,
                             'FacetName': 'POLICY'
                         },
-                        'AttributeNames': ['policy_document', 'policy_type']
+                        'AttributeNames': ['policy_document']
                     }
                 },
                 {
