@@ -182,6 +182,13 @@ class ResourceType(CloudNode):
             cls._resource_types = [name for name, _ in cd.list_object_children(f'/{cls.object_type}/')]
         return cls._resource_types
 
+    @classmethod
+    def get_types(cls):
+        if not cls._resource_types:
+            cd = Config.get_directory()
+            cls._resource_types = [name for name, _ in cd.list_object_children(f'/{cls.object_type}/')]
+        return cls._resource_types
+
     @staticmethod
     def hash_name(name):
         """
