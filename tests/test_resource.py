@@ -10,7 +10,7 @@ from fusillade.directory import cleanup_directory, cleanup_schema, default_group
 from fusillade.utils.json import get_json_file
 from fusillade.errors import FusilladeBadRequestException, FusilladeNotFoundException, FusilladeHTTPException
 from fusillade.directory.resource import ResourceType
-from tests.common import new_test_directory, create_test_IAMPolicy, create_test_ResourcePolicy
+from tests.common import new_test_directory, create_test_ResourcePolicy
 from tests.infra.testmode import standalone
 
 
@@ -139,19 +139,28 @@ class TestResourceType(unittest.TestCase):
         self.assertTrue(test_types)
 
         # give a user read access to the id
-        user = User('public')
-        test_id.add_principals([user], 'Reader')
-        self.assertEqual(test_id.check_access(user), 'Reader')
+        user = [User('public')]
+        test_id.add_principals(user, 'Reader')
+        self.assertEqual(test_id.check_access(user)[0], test_type.get_policy_path('Reader'))
 
         # update access
         test_type.create_policy('RW', create_test_ResourcePolicy("resource policy", ['readproject', 'writeproject']),
                                 'ResourcePolicy')
-        test_id.update_principal(user, 'RW')
-        self.assertEqual(test_id.check_access(user), 'RW')
+        test_id.update_principal(user[0], 'RW')
+        self.assertEqual(test_id.check_access(user)[0], test_type.get_policy_path('RW'))
 
         # remove access
-        test_id.remove_principals([user])
-        self.assertEqual(test_id.check_access(user), None)
+        test_id.remove_principals(user)
+        self.assertFalse(test_id.check_access(user))
+
+        # multiple principals
+        users = [User.provision_user(f'user{i}') for i in range(3)]
+        test_id.add_principals(users[:-1], 'Reader')
+        self.assertEqual(test_id.check_access(users), [test_type.get_policy_path('Reader')])
+
+        # get policies
+        policies = test_id.get_access_policies(users)
+        self.assertTrue(test_type.get_policy('Reader'))
 
 
 if __name__ == '__main__':
