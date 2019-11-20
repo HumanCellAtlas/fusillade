@@ -153,7 +153,7 @@ class TestResourceType(unittest.TestCase):
         test_id.remove_principals(user)
         self.assertFalse(test_id.check_access(user))
 
-        # multiple principlas
+        # multiple principals
         users = [User.provision_user(f'user{i}') for i in range(3)]
         test_id.add_principals(users[:-1], 'Reader')
         self.assertEqual(test_id.check_access(users), [test_type.get_policy_path('Reader')])
