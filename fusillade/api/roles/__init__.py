@@ -16,7 +16,7 @@ def post_role(token_info: dict):
 @authorize(['fus:GetRole'], ['arn:hca:fus:*:*:role'])
 def get_roles(token_info: dict):
     next_token, per_page = get_next_token(request.args)
-    return get_page(Role.list_all, next_token, per_page)
+    return get_page(Role.list_all, next_token, per_page, 'roles')
 
 
 @authorize(['fus:GetRole'], ['arn:hca:fus:*:*:role/{role_id}/'], ['role_id'])

@@ -19,7 +19,7 @@ def post_user(token_info: dict):
 @authorize(['fus:GetUser'], ['arn:hca:fus:*:*:user'])
 def get_users(token_info: dict):
     next_token, per_page = get_next_token(request.args)
-    return get_page(User.list_all, next_token, per_page)
+    return get_page(User.list_all, next_token, per_page, 'users')
 
 
 @authorize(['fus:GetUser'], ['arn:hca:fus:*:*:user/{user_id}/'], ['user_id'])
@@ -50,9 +50,11 @@ def put_user(token_info: dict, user_id: str):
 def get_users_owns(token_info: dict, user_id: str):
     next_token, per_page = get_next_token(request.args)
     user = User(user_id)
+    content_key = "roles" if request.args['resource_type'] == "role" else "groups"
     return get_page(user.get_owned,
                     next_token,
                     per_page,
+                    content_key,
                     request.args['resource_type'],
                     paged=True)
 
@@ -69,7 +71,7 @@ def put_user_policy(token_info: dict, user_id: str):
 def get_users_groups(token_info: dict, user_id: str):
     next_token, per_page = get_next_token(request.args)
     user = User(user_id)
-    return get_page(user.get_groups, next_token, per_page)
+    return get_page(user.get_groups, next_token, per_page, 'groups')
 
 
 @authorize(['fus:PutGroup'], ['arn:hca:fus:*:*:user/{user_id}/groups'], ['user_id'])
@@ -83,7 +85,7 @@ def put_users_groups(token_info: dict, user_id: str):
 def get_users_roles(token_info: dict, user_id: str):
     next_token, per_page = get_next_token(request.args)
     user = User(user_id)
-    return get_page(user.get_roles, next_token, per_page)
+    return get_page(user.get_roles, next_token, per_page, 'roles')
 
 
 @authorize(['fus:PutRole'], ['arn:hca:fus:*:*:user/{user_id}/roles'], ['user_id'])

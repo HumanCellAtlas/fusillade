@@ -79,6 +79,8 @@ class BaseAPITest():
         self.assertEqual(206, resp.status_code)
         self.assertEqual(per_page, len(json.loads(resp.body)[key]))
         self.assertTrue("Link" in resp.headers)
+        self.assertTrue ("X-OpenAPI-Pagination", resp.headers)
+        self.assertEqual(resp.headers['X-OpenAPI-Paginated-Content-Key'], key)
         while "Link" in resp.headers:
             next_url = resp.headers['Link'].split(';')[0][1:-1]
             resp = self.app.get(next_url, headers=headers)
