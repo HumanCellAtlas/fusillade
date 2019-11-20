@@ -2,17 +2,20 @@ from flask import request, make_response, jsonify
 from furl import furl
 
 
-def get_page(func, next_token, per_page, *args, **kwargs):
+def get_page(func, next_token, per_page, content_key='', *args, **kwargs):
     if args:
         result, next_token = func(*args, **kwargs, next_token=next_token, per_page=per_page)
     else:
         result, next_token = func(next_token, per_page, *args, **kwargs)
     if next_token:
         next_url = build_next_url(next_token, per_page)
-        headers = {'Link': build_link_header({next_url: {"rel": "next"}})}
+        headers = {'Link': build_link_header({next_url: {"rel": "next"}}),
+                   'X-OpenAPI-Paginated-Content-Key': content_key,
+                   'X-OpenAPI-Pagination': True}
         return make_response(jsonify(result), 206, headers)
     else:
-        return make_response(jsonify(result), 200)
+        headers = {'X-OpenAPI-Pagination': False}
+        return make_response(jsonify(result), 200, headers)
 
 
 def get_next_token(query_params: dict):
