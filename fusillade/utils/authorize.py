@@ -27,7 +27,7 @@ def get_policy_statement(evaluation_results: List[Dict[str, Any]], policies: Lis
             begin = ms['StartPosition']['Column']
             end = ms['EndPosition']['Column']
             policy = policies[policy_index]
-            ms['statement'] = policy['policy'][begin:end]
+            ms['statement'] = policy['policy_document'][begin:end]
             ms['SourcePolicyId'] = policy['name']
             ms['SourcePolicyType'] = policy['type']
     return evaluation_results
