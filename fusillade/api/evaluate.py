@@ -4,7 +4,7 @@ from threading import Thread
 
 from flask import make_response, jsonify
 
-from fusillade import User
+from fusillade.directory.authorization import get_resource_authz_parameters
 from fusillade.errors import AuthorizationException
 from fusillade.utils.authorize import assert_authorized, evaluate_policy, restricted_context_entries, get_email_claim
 
@@ -15,7 +15,7 @@ def evaluate_policy_api(token_info, body):  # TODO allow context variables to be
                          ['fus:Evaluate'],
                          ['arn:hca:fus:*:*:user']):
         try:
-            authz_params = User(body['principal']).get_authz_params()
+            authz_params = get_resource_authz_parameters(body['principal'], body['resource'])
         except AuthorizationException:
             response = {'result': False, 'reason': "The user is disabled."}
         else:
@@ -24,6 +24,7 @@ def evaluate_policy_api(token_info, body):  # TODO allow context variables to be
                 body['action'],
                 body['resource'],
                 authz_params['IAMPolicy'],
+                authz_params.get('ResourcePolicy'),
                 context_entries=restricted_context_entries(authz_params))
     return make_response(jsonify(**response), 200)
 

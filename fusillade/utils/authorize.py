@@ -13,7 +13,9 @@ iam = aws_clients.iam
 simulate_custom_policy_paginator = iam.get_paginator('simulate_custom_policy')
 
 
-def get_policy_statement(evaluation_results: List[Dict[str, Any]], policies: List[str]) -> List[Dict[str, Any]]:
+def get_policy_statement(evaluation_results: List[Dict[str, Any]],
+                         policies: List[Dict[str, Any]],
+                         resource_policy: str = None) -> List[Dict[str, Any]]:
     """
     Parses the response from simulate_custom_policy and adds the policy statements that matched to the results.
 
@@ -23,13 +25,25 @@ def get_policy_statement(evaluation_results: List[Dict[str, Any]], policies: Lis
     """
     for evaluation_result in evaluation_results:
         for ms in evaluation_result['MatchedStatements']:
-            policy_index = int(ms['SourcePolicyId'].split('.')[-1]) - 1
             begin = ms['StartPosition']['Column']
             end = ms['EndPosition']['Column']
-            policy = policies[policy_index]
-            ms['statement'] = policy['policy_document'][begin:end]
-            ms['SourcePolicyId'] = policy['name']
-            ms['SourcePolicyType'] = policy['type']
+            try:
+                policy_index = int(ms['SourcePolicyId'].split('.')[-1]) - 1
+            except ValueError:
+                if resource_policy:
+                    ms['statement'] = resource_policy[begin:end]
+                    ms['SourcePolicyId'] = 'ResourcePolicy'
+                    ms['SourcePolicyType'] = 'ResourcePolicy'
+                else:
+                    logging.warning({"msg": "Failed to parse evaluation response.",
+                                     "matched_statement": ms,
+                                     "policies": policies,
+                                     "resource_policy": resource_policy})
+                    continue
+            else:
+                policy = policies[policy_index]
+                ms['SourcePolicyId'] = policy['name']
+                ms['SourcePolicyType'] = policy['type']
     return evaluation_results
 
 
@@ -38,6 +52,7 @@ def evaluate_policy(
         actions: List[str],
         resources: List[str],
         policies: List[Dict[str, str]],
+        resource_policy: str = None,
         context_entries: List[Dict] = None
 ) -> Dict[str, Any]:
     context_entries = context_entries if context_entries else []
@@ -56,11 +71,16 @@ def evaluate_policy(
         PaginationConfig={
             'MaxItems': 20,
             'PageSize': 8
-        })
+        }
+    )
+    if resource_policy:
+        params.update(
+            ResourcePolicy=resource_policy,
+            CallerArn='arn:aws:iam::634134578715:user/anyone')  # TODO this should be an AWS fusillade service account
     for _response in simulate_custom_policy_paginator.paginate(**params):
         logger.info(_response['ResponseMetadata'])
         logger.debug(_response['EvaluationResults'])
-        eval_results.extend(get_policy_statement(_response['EvaluationResults'], policies))
+        eval_results.extend(get_policy_statement(_response['EvaluationResults'], policies, resource_policy))
     eval_decisions = [er['EvalDecision'] for er in eval_results]
     if 'explicitDeny' in eval_decisions:
         response = {
