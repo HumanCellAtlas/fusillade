@@ -18,7 +18,7 @@ import os
 from collections import defaultdict
 from typing import List, Dict, Any, Type, Union
 
-from fusillade.config import proj_path
+from fusillade.config import proj_path, Config
 from fusillade.directory import CloudNode, Principal, cd_client, ConsistencyLevel, logger, \
     UpdateObjectParams, ValueTypes, UpdateActions, User
 from fusillade.directory.identifiers import get_obj_type_path
@@ -34,6 +34,7 @@ class ResourceType(CloudNode):
     object_type: str = 'resource'
     _default_policy_path: str = default_resource_owner_policy
     policy_type = 'ResourcePolicy'
+    _resource_types: List[str] = None
 
     def __init__(self, *args, **kwargs):
         super(ResourceType, self).__init__(*args, **kwargs)
@@ -173,6 +174,13 @@ class ResourceType(CloudNode):
             policy_actions.update(s['Action'])
         if not policy_actions.issubset(set(self.actions)):
             raise FusilladeBadRequestException(detail="Invalid actions in policy.")
+
+    @classmethod
+    def get_types(cls):
+        if not cls._resource_types:
+            cd = Config.get_directory()
+            cls._resource_types = [name for name, _ in cd.list_object_children(f'/{cls.object_type}/')]
+        return cls._resource_types
 
     @staticmethod
     def hash_name(name):
