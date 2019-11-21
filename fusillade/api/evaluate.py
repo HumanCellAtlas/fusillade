@@ -23,7 +23,7 @@ def evaluate_policy_api(token_info, body):  # TODO allow context variables to be
                 body['principal'],
                 body['action'],
                 body['resource'],
-                authz_params['policies'],
+                authz_params['IAMPolicy'],
                 context_entries=restricted_context_entries(authz_params))
     return make_response(jsonify(**response), 200)
 
