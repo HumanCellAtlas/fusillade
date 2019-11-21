@@ -51,7 +51,7 @@ class TestGroup(unittest.TestCase, AssertJSONMixin):
     def test_policy(self):
         group = Group.create("new_group")
         with self.subTest("Only one policy is attached when lookup policy is called on a group without any roles"):
-            policies = [p['policy'] for p in group.get_authz_params()['policies']]
+            policies = [p['policy_document'] for p in group.get_authz_params()['IAMPolicy']]
             self.assertEqual(len(policies), 1)
             self.assertJSONEqual(policies[0], self.default_group_statement)
 
@@ -59,7 +59,7 @@ class TestGroup(unittest.TestCase, AssertJSONMixin):
         statement = create_test_IAMPolicy(group_name)
         with self.subTest("The group policy changes when satement is set"):
             group.set_policy(statement)
-            policies = [p['policy'] for p in group.get_authz_params()['policies']]
+            policies = [p['policy_document'] for p in group.get_authz_params()['IAMPolicy']]
             self.assertJSONEqual(policies[0], statement)
 
         with self.subTest("error raised when invalid statement assigned to group.get_policy()."):
@@ -109,7 +109,7 @@ class TestGroup(unittest.TestCase, AssertJSONMixin):
             group.add_roles(roles)
             self.assertEqual(len(group.roles), 2)
         with self.subTest("policies inherited from roles are returned when lookup policies is called"):
-            group_policies = sorted([normalize_json(p['policy']) for p in group.get_authz_params()['policies']])
+            group_policies = sorted([normalize_json(p['policy_document']) for p in group.get_authz_params()['IAMPolicy']])
             role_policies = sorted([normalize_json(role.get_policy()) for role in role_objs] + [
                 self.default_group_statement])
             self.assertListEqual(group_policies, role_policies)
