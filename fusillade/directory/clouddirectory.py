@@ -463,6 +463,22 @@ class CloudDirectory:
 
         return [_make_attribute(name, value) for name, value in kwargs.items()]
 
+    @staticmethod
+    def parse_attributes(attributes: List[Dict[str, Any]]) -> Dict[str, Any]:
+        result = dict()
+        for attr in attributes:
+            if ValueTypes.StringValue.name in attr['Value'].keys():
+                result[attr['Key']['Name']] = attr['Value'][ValueTypes.StringValue.name]
+            elif ValueTypes.BinaryValue.name in attr['Value'].keys():
+                result[attr['Key']['Name']] = attr['Value'][ValueTypes.BinaryValue.name]
+            elif ValueTypes.BinaryValue.name in attr['Value'].keys():
+                result[attr['Key']['Name']] = attr['Value'][ValueTypes.BooleanValue.name]
+            elif ValueTypes.BinaryValue.name in attr['Value'].keys():
+                result[attr['Key']['Name']] = attr['Value'][ValueTypes.NumberValue.name]
+            elif ValueTypes.BinaryValue.name in attr['Value'].keys():
+                result[attr['Key']['Name']] = attr['Value'][ValueTypes.DatetimeValue.name]
+        return result
+
     def make_typed_link_specifier(
             self,
             source_object_ref: str,
@@ -810,7 +826,7 @@ class CloudDirectory:
                             'SchemaArn': self.node_schema,
                             'FacetName': 'POLICY'
                         },
-                        'AttributeNames': ['policy_document']
+                        'AttributeNames': ['policy_document', 'policy_type']
                     }
                 },
                 {
@@ -829,32 +845,17 @@ class CloudDirectory:
         results = defaultdict(list)
         n = 2
         for p, a in [responses[i:i + n] for i in range(0, len(responses), n)]:
-            policy = p['SuccessfulResponse']['GetObjectAttributes']['Attributes'][0]['Value'][
-                'BinaryValue'].decode('utf-8')
+            attributes = p['SuccessfulResponse']['GetObjectAttributes']['Attributes']
+            attributes.extend(a['SuccessfulResponse']['GetObjectAttributes']['Attributes'])
+            attributes = self.parse_attributes(attributes)
+            attributes['policy_document'] = attributes['policy_document'].decode()
+            results[attributes['policy_type']].append(
+                attributes
+            )
             try:
-                attrs = a['SuccessfulResponse']['GetObjectAttributes']['Attributes']
-                if attrs[0]['Key']['Name'] == 'name':
-                    name = attrs[0]['Value']['StringValue']
-                    _type = attrs[1]['Value']['StringValue']
-                else:
-                    name = attrs[1]['Value']['StringValue']
-                    _type = attrs[0]['Value']['StringValue']
-                results['policies'].append(
-                    {
-                        'policy': policy,
-                        'type': _type,
-                        'name': name
-                    }
-                )
-                results[f'{_type}s'].append(name)
+                results[f"{attributes['type']}s"].append(attributes['name'])
             except KeyError:
-                results.append(
-                    {
-                        'policy': policy,
-                        'type': None,
-                        'name': None
-                    }
-                )
+                pass
         return results
 
     @retry(**cd_read_retry_parameters)
