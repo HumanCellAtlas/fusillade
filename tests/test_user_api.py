@@ -390,7 +390,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         user = User.provision_user(name)
         url = furl(f"/v1/user/{name}/owns", query_params={'resource_type': 'role'}).url
         resp = self.app.request(url, headers=headers)
-        self.assertIs('False', resp.headers['X-OpenAPI-Pagination'])
+        self.assertEqual('False', resp.headers['X-OpenAPI-Pagination'])
         user_role_names = [Role(object_ref=role).name for role in user.roles]
         roles = [Role.create(f"test_user_owned_role_{i}") for i in range(11)]
         user.add_roles([role.name for role in roles])
