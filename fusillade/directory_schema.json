@@ -38,7 +38,8 @@
         "actions": {
           "attributeDefinition": {
             "attributeType": "STRING",
-            "isImmutable": false
+            "isImmutable": false,
+            "attributeRules": {}
           },
           "requiredBehavior": "NOT_REQUIRED"
         }
