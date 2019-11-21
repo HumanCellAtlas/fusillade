@@ -172,7 +172,8 @@ class ResourceType(CloudNode):
         for s in policy['Statement']:
             policy_actions.update(s['Action'])
         if not policy_actions.issubset(set(self.actions)):
-            raise FusilladeBadRequestException(detail="Invalid actions in policy.")
+            raise FusilladeBadRequestException(
+                detail=f"Invalid actions in policy. Allowed actions are {self.actions}")
 
     @classmethod
     def get_types(cls):
