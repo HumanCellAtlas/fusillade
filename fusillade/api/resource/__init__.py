@@ -1,7 +1,7 @@
 from flask import request
 
 from fusillade.api.paging import get_next_token, get_page
-from fusillade.resource import ResourceType
+from fusillade.directory.resource import ResourceType
 from fusillade.utils.authorize import authorize
 
 
