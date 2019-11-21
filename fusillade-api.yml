@@ -290,6 +290,7 @@ paths:
                   type: array
                   items:
                     type: string
+                    pattern: 'arn:([\w\-\*]+:){2,4}[\w\-\*/]+'
       responses:
         200:
           description: The result of the policy evaluation.
@@ -1693,6 +1694,7 @@ components:
       required: true
       schema:
         type: string
+        pattern: '[A-z]\w*[^\W_]:[A-z]\w*[^\W_]'
     action:
       name: action
       in: query
