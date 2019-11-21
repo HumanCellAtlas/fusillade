@@ -28,7 +28,7 @@ def get_policy_statement(evaluation_results: List[Dict[str, Any]], policies: Lis
             begin = ms['StartPosition']['Column']
             end = ms['EndPosition']['Column']
             policy = policies[policy_index]
-            ms['statement'] = policy['policy'][begin:end]
+            ms['statement'] = policy['policy_document'][begin:end]
             ms['SourcePolicyId'] = policy['name']
             ms['SourcePolicyType'] = policy['type']
     return evaluation_results
@@ -44,7 +44,7 @@ def evaluate_policy(
     context_entries = context_entries if context_entries else []
     eval_results = []
     params = dict(
-        PolicyInputList=[policy['policy'] for policy in policies],
+        PolicyInputList=[policy['policy_document'] for policy in policies],
         ActionNames=actions,
         ResourceArns=resources,
         ContextEntries=[
@@ -108,7 +108,12 @@ def assert_authorized(user, actions, resources, context_entries=None):
         raise FusilladeForbiddenException(detail="User must be enabled to make authenticated requests.")
     else:
         context_entries.extend(restricted_context_entries(authz_params))
-        if not evaluate_policy(user, actions, resources, authz_params['policies'], context_entries)['result']:
+        if not evaluate_policy(
+                user,
+                actions,
+                resources,
+                authz_params['IAMPolicy'],
+                context_entries=context_entries)['result']:
             logger.info(dict(message="User not authorized.", user=u._path_name, action=actions, resources=resources))
             raise FusilladeForbiddenException()
         else:
