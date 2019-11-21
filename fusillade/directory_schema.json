@@ -38,8 +38,7 @@
         "actions": {
           "attributeDefinition": {
             "attributeType": "STRING",
-            "isImmutable": false,
-            "attributeRules": {}
+            "isImmutable": false
           },
           "requiredBehavior": "NOT_REQUIRED"
         }
@@ -48,6 +47,22 @@
     },
     "LeafFacet": {
       "facetAttributes": {
+        "id": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": true,
+            "attributeRules": {
+              "nameLength": {
+                "parameters": {
+                  "min": "1",
+                  "max": "128"
+                },
+                "ruleType": "STRING_LENGTH"
+              }
+            }
+          },
+          "requiredBehavior": "NOT_REQUIRED"
+        },
         "name": {
           "attributeDefinition": {
             "attributeType": "STRING",
@@ -128,9 +143,27 @@
           "attributeDefinition": {
             "attributeType": "STRING",
             "isImmutable": true,
-            "attributeRules": {}
+            "attributeRules": {
+            }
           },
           "requiredBehavior": "REQUIRED_ALWAYS"
+        },
+        "source": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": false,
+            "attributeRules": {
+            }
+          },
+          "requiredBehavior": "NOT_REQUIRED"
+        },
+        "target": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": false,
+            "attributeRules": {}
+          },
+          "requiredBehavior": "NOT_REQUIRED"
         }
       },
       "identityAttributeOrder": [
@@ -179,6 +212,14 @@
             "attributeRules": {}
           },
           "requiredBehavior": "REQUIRED_ALWAYS"
+        },
+        "access_level": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": false,
+            "attributeRules": {}
+          },
+          "requiredBehavior": "NOT_REQUIRED"
         }
       },
       "identityAttributeOrder": [
