@@ -2,6 +2,13 @@
 """
 Check if your schema is matches the latest in AWS.
 Optional you can upgrade the published schema to match your local schema
+
+
+Issue: When a schema is uploaded top AWS, optional fields that are missing are added to the schema with empty
+values. This may cause the schemas to not match when compared even though they are functionally equivalent. This
+problem has been observed when a local schema defines a facet that does not contain `attribute_rules`. After the
+schema is published, the schema contained `"attribute_rules": {}`. This resulted in a false negative indicating that
+the schemas did not match. https://github.com/HumanCellAtlas/fusillade/issues/352
 """
 import argparse
 import json
