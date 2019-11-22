@@ -1863,7 +1863,6 @@ components:
               - $ref: '#/components/schemas/groups'
               - $ref: '#/components/schemas/roles'
               - $ref: '#/components/schemas/users'
-              - $ref: '#/components/schemas/members'
               - $ref: '#/components/schemas/resource_types'
               - $ref: '#/components/schemas/policies'
     206:
@@ -1887,7 +1886,6 @@ components:
               - $ref: '#/components/schemas/groups'
               - $ref: '#/components/schemas/roles'
               - $ref: '#/components/schemas/users'
-              - $ref: '#/components/schemas/members'
               - $ref: '#/components/schemas/resource_types'
               - $ref: '#/components/schemas/policies'
     401:
