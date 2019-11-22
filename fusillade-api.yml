@@ -1075,13 +1075,6 @@ components:
       description: The Name of a type of resources which a resource policy can be applied.
       schema:
         $ref: '#/components/schemas/custom_identifier'
-    resource_id:
-      name: resource_id
-      in: path
-      required: true
-      description: The id of the resource.
-      schema:
-        $ref: '#/components/schemas/custom_identifier'
     resource_action:
       name: action
       in: path
@@ -1134,26 +1127,6 @@ components:
       properties:
         resources:
           $ref: '#/components/schemas/paged_results'
-    resources:
-      type: object
-      properties:
-        resource_ids:
-          $ref: '#/components/schemas/paged_results'
-    resource_member:
-      type: object
-      properties:
-        member:
-          type: string
-        member_type:
-          type: string
-        access_policy:
-          type: array
-          items:
-            type: string
-    members:
-      type: array
-      items:
-        $ref: '#/components/schemas/resource_member'
     resource_policy:
       type: object
       properties:
@@ -1283,9 +1256,7 @@ components:
               - $ref: '#/components/schemas/groups'
               - $ref: '#/components/schemas/roles'
               - $ref: '#/components/schemas/users'
-              - $ref: '#/components/schemas/members'
               - $ref: '#/components/schemas/resource_types'
-              - $ref: '#/components/schemas/resources'
               - $ref: '#/components/schemas/policies'
     206:
       description: A single page of results was retrieved.
@@ -1308,9 +1279,7 @@ components:
               - $ref: '#/components/schemas/groups'
               - $ref: '#/components/schemas/roles'
               - $ref: '#/components/schemas/users'
-              - $ref: '#/components/schemas/members'
               - $ref: '#/components/schemas/resource_types'
-              - $ref: '#/components/schemas/resources'
               - $ref: '#/components/schemas/policies'
     401:
       description: The users credentials failed to authenticate.
