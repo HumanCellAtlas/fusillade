@@ -935,6 +935,109 @@ paths:
           description: Unexpected error.
       tags:
         - role
+  /v1/resource:
+    get:
+      summary:  List avaialable resource types
+      description: List avaialable resource types
+      operationId: fusillade.api.resource.get
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/next_token'
+        - $ref: '#/components/parameters/per_page'
+      responses:
+        200:
+          $ref: '#/components/responses/200_paged'
+        206:
+          $ref: '#/components/responses/206'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+  /v1/resource/{resource_type_name}:
+    get:
+      summary: List all resources for this resource type
+      description: List all resources for this resource type
+      operationId: fusillade.api.resource.resource_type_name.get
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/next_token'
+        - $ref: '#/components/parameters/per_page'
+      responses:
+        200:
+          $ref: '#/components/responses/200_paged'
+        206:
+          $ref: '#/components/responses/206'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+    post:
+      summary: Create a new resource type.
+      description: Create a new resource type.
+      operationId: fusillade.api.resource.resource_type_name.post
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                owner_policy:
+                  $ref: '#/components/schemas/resource_policy'
+                actions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        201:
+          description: The new resource type has been created.
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        409:
+          $ref: '#/components/responses/409'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+    delete:
+      summary: Delete an existing resource type.
+      description: Delete an existing resource type if there are no ids of that resource type stored.
+      operationId: fusillade.api.resource.resource_type_name.delete
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+      responses:
+        201:
+          description: The resource has been delete.
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        409:
+          $ref: '#/components/responses/Resource_not_empty'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
 components:
   parameters:
     user_id:
@@ -965,6 +1068,27 @@ components:
       schema:
         type: string
         enum: [group, role]
+    resource_type_name:
+      name: resource_type_name
+      in: path
+      required: true
+      description: The Name of a type of resources which a resource policy can be applied.
+      schema:
+        $ref: '#/components/schemas/custom_identifier'
+    resource_id:
+      name: resource_id
+      in: path
+      required: true
+      description: The id of the resource.
+      schema:
+        $ref: '#/components/schemas/custom_identifier'
+    resource_action:
+      name: action
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '[A-z]\w*[^\W_]:[A-z]\w*[^\W_]'
     action:
       name: action
       in: query
@@ -994,11 +1118,72 @@ components:
         minimum: 5
         maximum: 30
         default: 15
+    policy_name:
+      name: policy_name
+      in: path
+      required: true
+      schema:
+        type: string
   schemas:
     paged_results:
       type: array
       items:
         type: string
+    resource_types:
+      type: object
+      properties:
+        resources:
+          $ref: '#/components/schemas/paged_results'
+    resources:
+      type: object
+      properties:
+        resource_ids:
+          $ref: '#/components/schemas/paged_results'
+    resource_member:
+      type: object
+      properties:
+        member:
+          type: string
+        member_type:
+          type: string
+        access_policy:
+          type: array
+          items:
+            type: string
+    members:
+      type: array
+      items:
+        $ref: '#/components/schemas/resource_member'
+    resource_policy:
+      type: object
+      properties:
+        Statements:
+          type: array
+          items:
+            type: object
+            properties:
+              Sid:
+                type: string
+              Effect:
+                type: string
+                enum: ['Allow', 'Deny']
+              Actions:
+                type: array
+                items:
+                  type: string
+              Resource:
+                type: array
+                items:
+                  type: string
+    policy:
+      type: object
+      properties:
+        policy:
+          type: string
+    policies:
+      type: array
+      items:
+        type: object
     groups:
       type: object
       properties:
@@ -1089,6 +1274,19 @@ components:
                         type: array
                         items:
                           type: string
+    200_paged:
+      description: All results have been retrieved.
+      content:
+        application/json:
+          schema:
+            anyOf:
+              - $ref: '#/components/schemas/groups'
+              - $ref: '#/components/schemas/roles'
+              - $ref: '#/components/schemas/users'
+              - $ref: '#/components/schemas/members'
+              - $ref: '#/components/schemas/resource_types'
+              - $ref: '#/components/schemas/resources'
+              - $ref: '#/components/schemas/policies'
     206:
       description: A single page of results was retrieved.
       headers:
@@ -1110,6 +1308,10 @@ components:
               - $ref: '#/components/schemas/groups'
               - $ref: '#/components/schemas/roles'
               - $ref: '#/components/schemas/users'
+              - $ref: '#/components/schemas/members'
+              - $ref: '#/components/schemas/resource_types'
+              - $ref: '#/components/schemas/resources'
+              - $ref: '#/components/schemas/policies'
     401:
       description: The users credentials failed to authenticate.
     403:
@@ -1119,6 +1321,8 @@ components:
       description: Resource not found.
     409:
       description: The object already exists.
+    Resource_not_empty:
+      description: All resource ids must be deleted before the resource type can be deleted.
   securitySchemes:
     BearerAuth:
       type: http
