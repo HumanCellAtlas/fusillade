@@ -15,10 +15,10 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from tests.base_api_test import BaseAPITest
-from tests.common import get_auth_header, service_accounts, create_test_statement
+from tests.common import get_auth_header, service_accounts, create_test_IAMPolicy
 from tests.data import TEST_NAMES_POS, TEST_NAMES_NEG
 from fusillade.errors import FusilladeHTTPException
-from fusillade.clouddirectory import User, Group, Role
+from fusillade.directory import User, Group, Role
 
 
 class TestUserApi(BaseAPITest, unittest.TestCase):
@@ -63,7 +63,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'name': f'201 returned when creating a user with policy only',
                 'json_request_body': {
                     "user_id": "test_post_user3@email.com",
-                    "policy": create_test_statement("policy_03")
+                    "policy": create_test_IAMPolicy("policy_03")
                 },
                 'response': {
                     'code': 201
@@ -75,7 +75,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                     "user_id": "test_post_user4@email.com",
                     "groups": [Group.create("test_post_new_user_group_04").name],
                     "roles": [Role.create("test_post_new_user_role_04").name],
-                    "policy": create_test_statement("policy_04")
+                    "policy": create_test_IAMPolicy("policy_04")
                 },
                 'response': {
                     'code': 201
@@ -86,7 +86,7 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
                 'json_request_body': {
                     "groups": [Group.create("test_post_new_user_group_05").name],
                     "roles": [Role.create("test_post_new_user_role_05").name],
-                    "policy": create_test_statement("policy_05")
+                    "policy": create_test_IAMPolicy("policy_05")
                 },
                 'response': {
                     'code': 400
@@ -389,9 +389,9 @@ class TestUserApi(BaseAPITest, unittest.TestCase):
         key = 'roles'
         user = User.provision_user(name)
         url = furl(f"/v1/user/{name}/owns", query_params={'resource_type': 'role'}).url
-        resp = self.app.get(url, headers=headers)
+        resp = self.app.request(url, headers=headers)
+        self.assertEqual('False', resp.headers['X-OpenAPI-Pagination'])
         user_role_names = [Role(object_ref=role).name for role in user.roles]
-        self.assertEqual(0, len(json.loads(resp.body)[key]))
         roles = [Role.create(f"test_user_owned_role_{i}") for i in range(11)]
         user.add_roles([role.name for role in roles])
         [user.add_ownership(role) for role in roles]

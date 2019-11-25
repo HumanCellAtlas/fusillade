@@ -45,7 +45,8 @@ cat "$config_json" | jq ".stages.$stage.tags.FUS_DEPLOY_ORIGIN=env.DEPLOY_ORIGIN
                          .stages.$stage.tags.owner=env.FUS_OWNER_TAG | \
                          .stages.$stage.tags.env=env.stage | \
                          .stages.$stage.tags.Name=env.Name | \
-                         .stages.$stage.api_gateway_stage=env.stage" | sponge "$config_json"
+                         .stages.$stage.api_gateway_stage=env.stage | \
+                         .stages.$stage.app_name=env.lambda_name" | sponge "$config_json"
 env_json=$(aws ssm get-parameter --name /${FUS_PARAMETER_STORE}/${FUS_DEPLOYMENT_STAGE}/environment | jq -r .Parameter.Value)
 for var in $(echo $env_json | jq -r keys[]); do
     val=$(echo $env_json | jq .$var)

@@ -41,7 +41,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
         scopes_combination = [["openid", "email", "profile", "offline"], ["openid", "email", "profile", "offline"]]
         tests = product(states, scopes_combination)
         OPENID_PROVIDER = os.environ["OPENID_PROVIDER"]
-        redirect_url_host = [OPENID_PROVIDER, os.environ["API_DOMAIN_NAME"]]
+        redirect_url_host = [OPENID_PROVIDER]
         query_params_client_id = {
             "response_type": "code",
             "redirect_uri": REDIRECT_URI,

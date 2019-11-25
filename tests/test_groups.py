@@ -6,19 +6,21 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.errors import FusilladeHTTPException
-from fusillade.clouddirectory import User, Group, cd_client, cleanup_directory, cleanup_schema, get_json_file, \
-    default_group_policy_path, Role
-from tests.common import new_test_directory, create_test_statement
+from fusillade.directory import User, Group, cd_client, cleanup_directory, cleanup_schema, \
+    default_group_policy_path, Role, clear_cd
+from fusillade.utils.json import get_json_file
+from tests.common import new_test_directory, create_test_IAMPolicy, normalize_json
 from tests.infra.testmode import standalone
+from tests.json_mixin import AssertJSONMixin
 
 
 @standalone
-class TestGroup(unittest.TestCase):
+class TestGroup(unittest.TestCase, AssertJSONMixin):
 
     @classmethod
     def setUpClass(cls):
         cls.directory, cls.schema_arn = new_test_directory()
-        cls.default_group_statement = get_json_file(default_group_policy_path)
+        cls.default_group_statement = normalize_json(get_json_file(default_group_policy_path))
 
     @classmethod
     def tearDownClass(cls):
@@ -26,42 +28,42 @@ class TestGroup(unittest.TestCase):
         cleanup_schema(cls.schema_arn)
 
     def tearDown(self):
-        self.directory.clear()
+        clear_cd(self.directory)
 
     def test_create_group(self):
         with self.subTest("an error is returned when creating a group with an invalid statement."):
             with self.assertRaises(FusilladeHTTPException):
-                group = Group.create("new_group1", "does things")
+                group = Group.create("new_group1", {"random": "fields"})
 
         with self.subTest("The group is returned when the group has been created with default valid statement"):
             group = Group.create("new_group2")
             self.assertEqual(group.name, "new_group2")
-            self.assertEqual(group.get_policy(), self.default_group_statement)
+            self.assertJSONEqual(group.get_policy(), self.default_group_statement)
 
         with self.subTest("The group is returned when the group has been created with specified valid statement."):
             group_name = "NewGroup1234"
-            statement = create_test_statement(group_name)
+            statement = create_test_IAMPolicy(group_name)
             group = Group.create("new_group3", statement)
             self.assertEqual(group.name, "new_group3")
-            self.assertEqual(group.get_policy(), statement)
+            self.assertJSONEqual(group.get_policy(), statement)
 
     def test_policy(self):
         group = Group.create("new_group")
         with self.subTest("Only one policy is attached when lookup policy is called on a group without any roles"):
             policies = [p['policy'] for p in group.get_authz_params()['policies']]
             self.assertEqual(len(policies), 1)
-            self.assertEqual(policies[0], self.default_group_statement)
+            self.assertJSONEqual(policies[0], self.default_group_statement)
 
         group_name = "NewGroup1234"
-        statement = create_test_statement(group_name)
+        statement = create_test_IAMPolicy(group_name)
         with self.subTest("The group policy changes when satement is set"):
             group.set_policy(statement)
             policies = [p['policy'] for p in group.get_authz_params()['policies']]
-            self.assertEqual(policies[0], statement)
+            self.assertJSONEqual(policies[0], statement)
 
         with self.subTest("error raised when invalid statement assigned to group.get_policy()."):
             with self.assertRaises(FusilladeHTTPException):
-                group.set_policy("invalid statement")
+                group.set_policy({"Statement": "Something else"})
 
     def test_users(self):
         emails = ["test@test.com", "why@not.com", "hello@world.com"]
@@ -100,14 +102,15 @@ class TestGroup(unittest.TestCase):
 
     def test_roles(self):
         roles = ['role1', 'role2']
-        role_objs = [Role.create(name, create_test_statement(name)) for name in roles]
+        role_objs = [Role.create(name, create_test_IAMPolicy(name)) for name in roles]
         with self.subTest("multiple roles return when multiple roles are attached to group."):
             group = Group.create("test_roles")
             group.add_roles(roles)
             self.assertEqual(len(group.roles), 2)
         with self.subTest("policies inherited from roles are returned when lookup policies is called"):
-            group_policies = sorted([p['policy'] for p in group.get_authz_params()['policies']])
-            role_policies = sorted([role.get_policy() for role in role_objs] + [self.default_group_statement])
+            group_policies = sorted([normalize_json(p['policy']) for p in group.get_authz_params()['policies']])
+            role_policies = sorted([normalize_json(role.get_policy()) for role in role_objs] + [
+                self.default_group_statement])
             self.assertListEqual(group_policies, role_policies)
 
 

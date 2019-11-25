@@ -8,9 +8,9 @@ sys.path.insert(0, pkg_root)  # noqa
 
 from tests.infra.testmode import standalone
 from tests.common import random_hex_string, service_accounts
-from fusillade.clouddirectory import cd_client, cleanup_directory, cleanup_schema, publish_schema, create_directory, \
-    CloudDirectory, CloudNode
-from fusillade import Config
+from fusillade.directory import cd_client, cleanup_directory, cleanup_schema, publish_schema, create_directory, \
+    CloudNode
+from fusillade import Config, CloudDirectory
 
 admin_email = "test_email1@domain.com,test_email2@domain.com, test_email3@domain.com "
 
@@ -66,7 +66,7 @@ class TestCloudDirectory(unittest.TestCase):
         directory = create_directory(directory_name, schema_arn, [service_accounts['admin']['client_email']])
         self.addCleanup(cleanup_directory, CloudDirectory.from_name(directory_name)._dir_arn)
 
-        folders = ['user', 'role', 'group', 'policy']
+        folders = ['user', 'role', 'group', 'policy', 'resource']
         for folder in folders:
             with self.subTest(f"{folder} node is created when directory is created"):
                 resp = directory.get_object_information(f'/{folder}')

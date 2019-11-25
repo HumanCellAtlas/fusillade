@@ -6,21 +6,23 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.errors import FusilladeHTTPException
-from fusillade.clouddirectory import User, Group, Role, cd_client, cleanup_directory, cleanup_schema, \
-    get_json_file, default_user_policy_path, default_user_role_path, default_group_policy_path
-from tests.common import new_test_directory, create_test_statement
+from fusillade.directory import User, Group, Role, cd_client, cleanup_directory, cleanup_schema, \
+    get_json_file, default_user_policy_path, default_user_role_path, default_group_policy_path, clear_cd
+from fusillade.utils.json import get_json_file
+from tests.common import new_test_directory, create_test_IAMPolicy, normalize_json
 from tests.infra.testmode import standalone
+from tests.json_mixin import AssertJSONMixin
 
 
 @standalone
-class TestUser(unittest.TestCase):
+class TestUser(unittest.TestCase, AssertJSONMixin):
     @classmethod
     def setUpClass(cls):
         cls.directory, cls.schema_arn = new_test_directory()
         cls.default_policy = get_json_file(default_user_policy_path)
         cls.default_user_policies = sorted([
-            get_json_file(default_user_role_path),
-           get_json_file(default_group_policy_path)
+            normalize_json(get_json_file(default_user_role_path)),
+            normalize_json(get_json_file(default_group_policy_path))
         ])
 
     @classmethod
@@ -29,13 +31,13 @@ class TestUser(unittest.TestCase):
         cleanup_schema(cls.schema_arn)
 
     def tearDown(self):
-        self.directory.clear()
+        clear_cd(self.directory)
 
     def test_user_statement(self):
         name = "user_statement@test.com"
         User.provision_user(name, statement=self.default_policy)
         test_user = User(name)
-        self.assertEqual(test_user.get_policy(), self.default_policy)
+        self.assertJSONEqual(test_user.get_policy(), self.default_policy)
 
     def test_get_attributes(self):
         name = "test_get_attributes@test.com"
@@ -47,17 +49,18 @@ class TestUser(unittest.TestCase):
         user = User(name)
         with self.subTest("new user is automatically provisioned on demand with default settings when "
                           "lookup_policy is called for a new user."):
-            self.assertEqual(sorted([p['policy'] for p in user.get_authz_params()['policies']]),
-                             self.default_user_policies)
+            self.assertJSONListEqual([p['policy'] for p in user.get_authz_params()['policies']],
+                                     self.default_user_policies)
         with self.subTest("error is returned when provision_user is called for an existing user"):
             self.assertRaises(FusilladeHTTPException, user.provision_user, name)
         with self.subTest("an existing users info is retrieved when instantiating User class for an existing user"):
             user = User(name)
-            self.assertEqual(sorted([p['policy'] for p in user.get_authz_params()['policies']]), self.default_user_policies)
+            self.assertJSONListEqual([p['policy'] for p in user.get_authz_params()['policies']],
+                                     self.default_user_policies)
 
     def test_get_groups(self):
         name = "test_get_groups@test.com"
-        test_groups = [(f"group_{i}", create_test_statement(f"GroupPolicy{i}")) for i in range(5)]
+        test_groups = [(f"group_{i}", create_test_IAMPolicy(f"GroupPolicy{i}")) for i in range(5)]
         groups = [Group.create(*i) for i in test_groups]
 
         user = User.provision_user(name)
@@ -85,14 +88,14 @@ class TestUser(unittest.TestCase):
             self.assertEqual(len(user.groups), 6)
 
         with self.subTest("A user inherits the groups policies when joining a group"):
-            policies = set([p['policy'] for p in user.get_authz_params()['policies']])
-            expected_policies = set([i[1] for i in test_groups])
+            policies = set([normalize_json(p['policy']) for p in user.get_authz_params()['policies']])
+            expected_policies = set([normalize_json(i[1]) for i in test_groups])
             expected_policies.update(self.default_user_policies)
-            self.assertEqual(policies, expected_policies)
+            self.assertSetEqual(policies, expected_policies)
 
     def test_remove_groups(self):
         name = "test_remove_group@test.com"
-        test_groups = [(f"group_{i}", create_test_statement(f"GroupPolicy{i}")) for i in range(5)]
+        test_groups = [(f"group_{i}", create_test_IAMPolicy(f"GroupPolicy{i}")) for i in range(5)]
         groups = [Group.create(*i).name for i in test_groups]
         user = User.provision_user(name)
         with self.subTest("A user is removed from a group when remove_group is called for a group the user belongs "
@@ -117,24 +120,24 @@ class TestUser(unittest.TestCase):
         with self.subTest("The initial user policy is None, when the user is first created"):
             self.assertFalse(user.get_policy())
 
-        statement = create_test_statement(f"UserPolicySomethingElse")
+        statement = create_test_IAMPolicy(f"UserPolicySomethingElse")
         user.set_policy(statement)
         with self.subTest("The user policy is set when statement setter is used."):
             expected_statement = statement
-            self.assertEqual(user.get_policy(), expected_statement)
-            self.assertIn(expected_statement, [p['policy'] for p in user.get_authz_params()['policies']])
+            self.assertJSONEqual(user.get_policy(), expected_statement)
+            self.assertJSONIn(expected_statement, [p['policy'] for p in user.get_authz_params()['policies']])
 
-        statement = create_test_statement(f"UserPolicySomethingElse2")
+        statement = create_test_IAMPolicy(f"UserPolicySomethingElse2")
         user.set_policy(statement)
         with self.subTest("The user policy changes when set_policy is used."):
             expected_statement = statement
-            self.assertEqual(user.get_policy(), expected_statement)
-            self.assertIn(expected_statement, [p['policy'] for p in user.get_authz_params()['policies']])
+            self.assertJSONEqual(user.get_policy(), expected_statement)
+            self.assertJSONIn(expected_statement, [p['policy'] for p in user.get_authz_params()['policies']])
 
         with self.subTest("Error raised when setting policy to an invalid statement"):
             with self.assertRaises(FusilladeHTTPException):
-                user.set_policy("Something else")
-            self.assertEqual(user.get_policy(), expected_statement)
+                user.set_policy({"Statement": "Something else"})
+            self.assertJSONEqual(user.get_policy(), expected_statement)
 
     def test_status(self):
         name = "test_set_policy@test.com"
@@ -151,7 +154,7 @@ class TestUser(unittest.TestCase):
 
     def test_roles(self):
         name = "test_sete_policy@test.com"
-        test_roles = [(f"Role_{i}", create_test_statement(f"RolePolicy{i}")) for i in range(5)]
+        test_roles = [(f"Role_{i}", create_test_IAMPolicy(f"RolePolicy{i}")) for i in range(5)]
         roles = [Role.create(*i).name for i in test_roles]
         role_names, _ = zip(*test_roles)
         role_names = sorted(role_names)
@@ -181,9 +184,7 @@ class TestUser(unittest.TestCase):
         user.set_policy(self.default_policy)
         with self.subTest("A user inherits a roles policies when a role is added to a user."):
             policies = [p['policy'] for p in user.get_authz_params()['policies']]
-            self.assertListEqual(sorted(policies),
-                                 sorted([user.get_policy(), role_statement,
-                                         *self.default_user_policies]))
+            self.assertJSONListEqual(policies, [user.get_policy(), role_statement, *self.default_user_policies])
 
         with self.subTest("A role is removed from user when remove role is called."):
             user.remove_roles([role_name])
@@ -196,8 +197,7 @@ class TestUser(unittest.TestCase):
 
         with self.subTest("A user inherits multiple role policies when the user has multiple roles."):
             policies = [p['policy'] for p in user.get_authz_params()['policies']]
-            self.assertListEqual(sorted(policies),
-                                 sorted([user.get_policy(), *self.default_user_policies, *role_statements]))
+            self.assertJSONListEqual(policies, [user.get_policy(), *self.default_user_policies, *role_statements])
 
         with self.subTest("A user's roles are listed when a listing a users roles."):
             user_role_names = [Role(None, role).name for role in user.roles]
@@ -213,12 +213,12 @@ class TestUser(unittest.TestCase):
         """
         name = "test_set_policy@test.com"
         user = User.provision_user(name)
-        test_groups = [(f"group_{i}", create_test_statement(f"GroupPolicy{i}")) for i in range(5)]
+        test_groups = [(f"group_{i}", create_test_IAMPolicy(f"GroupPolicy{i}")) for i in range(5)]
         [Group.create(*i) for i in test_groups]
         group_names, _ = zip(*test_groups)
         group_names = sorted(group_names)
         group_statements = [i[1] for i in test_groups]
-        test_roles = [(f"role_{i}", create_test_statement(f"RolePolicy{i}")) for i in range(5)]
+        test_roles = [(f"role_{i}", create_test_IAMPolicy(f"RolePolicy{i}")) for i in range(5)]
         [Role.create(*i) for i in test_roles]
         role_names, _ = zip(*test_roles)
         role_names = sorted(role_names)
@@ -233,11 +233,10 @@ class TestUser(unittest.TestCase):
         self.assertListEqual(sorted(user_role_names), role_names)
         self.assertEqual(sorted(user_group_names), group_names + ['user_default'])
         authz_params = user.get_authz_params()
-        self.assertSequenceEqual(sorted([p['policy'] for p in authz_params['policies']]), sorted(
-            [user.get_policy(), *self.default_user_policies] + group_statements + role_statements)
-                                 )
         self.assertListEqual(sorted(authz_params['roles']), sorted(['default_user'] + role_names))
         self.assertListEqual(sorted(authz_params['groups']), sorted(['user_default'] + group_names))
+        self.assertJSONListEqual([p['policy'] for p in authz_params['policies']],
+                                 [user.get_policy(), *self.default_user_policies] + group_statements + role_statements)
 
     def test_ownership(self):
         user = User.provision_user('test_user')

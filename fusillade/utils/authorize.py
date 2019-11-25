@@ -1,5 +1,7 @@
 import functools
+import json
 import logging
+import typing
 from typing import List, Dict, Optional, Union, Any
 
 from dcplib.aws import clients as aws_clients
@@ -225,3 +227,22 @@ def authorize(actions: List[str],
         return call
 
     return decorate
+
+
+def health_checks() -> typing.Dict[str, str]:
+    try:
+        iam.simulate_custom_policy(
+            PolicyInputList=[json.dumps({
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Sid": "DefaultRole",
+                    "Effect": "Deny",
+                    "Action": ["fake:action"],
+                    "Resource": "fake:resource"
+                }]})],
+            ActionNames=["fake:action"],
+            ResourceArns=["arn:aws:iam::123456789012:user/Bob"])
+    except Exception:
+        return dict(iam_health_status='unhealthy')
+    else:
+        return dict(iam_health_status='ok')

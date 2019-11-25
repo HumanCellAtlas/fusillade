@@ -15,12 +15,13 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from tests.base_api_test import BaseAPITest
-from tests.common import get_auth_header, service_accounts, create_test_statement
+from tests.common import get_auth_header, service_accounts, create_test_IAMPolicy
 from tests.data import TEST_NAMES_NEG, TEST_NAMES_POS
-from fusillade.clouddirectory import Role, Group, User
+from fusillade.directory import Role
+from tests.json_mixin import AssertJSONMixin
 
 
-class TestRoleApi(BaseAPITest, unittest.TestCase):
+class TestRoleApi(BaseAPITest, unittest.TestCase, AssertJSONMixin):
     def tearDown(self):
         self.clear_directory(
             users=[
@@ -38,7 +39,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         4. retrieve modified role
         """
         role_id = 'test_positive'
-        policy = create_test_statement(role_id)
+        policy = create_test_IAMPolicy(role_id)
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
 
@@ -60,7 +61,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         self.assertEqual(expected_body, json.loads(resp.body))
 
         url = furl(f'/v1/role/{role_id}/policy')
-        policy = create_test_statement('ABCD')
+        policy = create_test_IAMPolicy('ABCD')
         data = json.dumps({
             'policy': policy
         })
@@ -79,7 +80,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
     def test_missing_custom_claim(self):
         headers = {'Content-Type': "application/json"}
         self._test_custom_claim(self.app.get, f'/v1/roles', headers, '')
-        
+
     def test_get_roles(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
@@ -88,7 +89,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
                 '/v1/role',
                 headers=headers,
                 data=json.dumps({"role_id": f"test_put_role{i}",
-                                 'policy': create_test_statement("test_role")})
+                                 'policy': create_test_IAMPolicy("test_role")})
 
             )
             self.assertEqual(201, resp.status_code)
@@ -98,7 +99,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         url = furl('/v1/role')
         data = json.dumps({
             'role_id': 'test_put_role',
-            'policy': create_test_statement("test_role")
+            'policy': create_test_IAMPolicy("test_role")
         })
         admin_auth_header = get_auth_header(service_accounts['admin'])
         tests = [
@@ -138,7 +139,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
             {
                 'name': '400 returned when creating a role with no name.',
                 'data': json.dumps({
-                    'policy': create_test_statement("test_role")
+                    'policy': create_test_IAMPolicy("test_role")
                 }),
                 'headers': admin_auth_header,
                 'expected_resp': 400
@@ -157,7 +158,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
                 'name': f'201 returned when creating a role when name is {description}',
                 'data': json.dumps({
                     'role_id': name,
-                    'policy': create_test_statement("test_role")
+                    'policy': create_test_IAMPolicy("test_role")
                 }),
                 'headers': admin_auth_header,
                 'expected_resp': 201
@@ -168,7 +169,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
                 'name': f'400 returned when creating a role when name is {description}',
                 'data': json.dumps({
                     'role_id': name,
-                    'policy': create_test_statement("test_role")
+                    'policy': create_test_IAMPolicy("test_role")
                 }),
                 'headers': admin_auth_header,
                 'expected_resp': 400
@@ -226,7 +227,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
                 'expected_resp': 400
             } for role_id, description in TEST_NAMES_NEG if role_id is not ''
         ])
-        policy = create_test_statement("test_role")
+        policy = create_test_IAMPolicy("test_role")
         role = Role.create(role_id, policy)
         expected_policy = policy
         [Role.create(role_id, policy) for role_id, _ in TEST_NAMES_POS]
@@ -246,8 +247,8 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
 
     def test_put_role_id_policy(self):
         role_id = 'test_put_role_id_policy'
-        policy_1 = create_test_statement(role_id)
-        policy_2 = create_test_statement('ABCD')
+        policy_1 = create_test_IAMPolicy(role_id)
+        policy_2 = create_test_IAMPolicy('ABCD')
         policy_invalid = "invalid policy"
         Role.create(role_id, policy_1)
         admin_auth_header = get_auth_header(service_accounts['admin'])
@@ -307,7 +308,6 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
                 resp = self.app.put(url.url, data=data, headers=headers)
                 self.assertEqual(test['expected_resp'], resp.status_code)
 
-
     def test_delete_role(self):
         headers = {'Content-Type': "application/json"}
         headers.update(get_auth_header(service_accounts['admin']))
@@ -316,27 +316,27 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         with self.subTest("Role delete with users and groups."):
             group = "group_test_delete_role"
             user = "user_test_delete_role"
-            policy = create_test_statement("policy_04")
+            policy = create_test_IAMPolicy("policy_04")
 
             resp = self.app.post(f'/v1/role',
-                     headers=headers,
-                     data=json.dumps({
-                         "role_id": role_id,
-                         "policy": policy
-                     }))
+                                 headers=headers,
+                                 data=json.dumps({
+                                     "role_id": role_id,
+                                     "policy": policy
+                                 }))
             resp.raise_for_status()
             resp = self.app.post(f'/v1/group',
-                     headers=headers,
-                     data=json.dumps({
-                         "group_id": group,
-                         "roles": [role_id]
-                     }))
+                                 headers=headers,
+                                 data=json.dumps({
+                                     "group_id": group,
+                                     "roles": [role_id]
+                                 }))
             resp.raise_for_status()
             resp = self.app.post(f'/v1/user',
-                     headers=headers,
-                     data=json.dumps({
-                         "user_id": user,
-                         "roles": [role_id]}))
+                                 headers=headers,
+                                 data=json.dumps({
+                                     "user_id": user,
+                                     "roles": [role_id]}))
             resp.raise_for_status()
 
             resp = self.app.delete(f'/v1/role/{role_id}', headers=headers)
@@ -353,6 +353,7 @@ class TestRoleApi(BaseAPITest, unittest.TestCase):
         with self.subTest("delete a role that does not exist."):
             resp = self.app.delete(f'/v1/role/ghost', headers=headers)
             self.assertEqual(resp.status_code, 404)
+
 
 if __name__ == '__main__':
     unittest.main()

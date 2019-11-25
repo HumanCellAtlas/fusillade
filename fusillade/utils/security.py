@@ -2,19 +2,18 @@
 """
 Used by connexion to verify the JWT in Authorization header of the request.
 """
-import functools, base64, typing
-
-import requests
-import jwt
+import base64
+import functools
 import logging
+import typing
 
-from cryptography.hazmat.primitives.asymmetric import rsa
+import jwt
+import requests
 from cryptography.hazmat.backends import default_backend
-
-from furl import furl
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 from fusillade import Config
-from fusillade.errors import FusilladeHTTPException
+from fusillade.errors import FusilladeHTTPException, FusilladeTooManyRequestsException
 
 logger = logging.getLogger(__name__)
 
@@ -24,26 +23,27 @@ gserviceaccount_domain = "iam.gserviceaccount.com"
 # recycling the same session for all requests.
 session = requests.Session()
 
+openid_config = dict()
+
 
 @functools.lru_cache(maxsize=32)
-def get_openid_config(openid_provider=None):
+def get_openid_config(openid_provider: str) -> dict:
     """
 
     :param openid_provider: the openid provider's domain.
     :return: the openid configuration
     """
-    if not openid_provider:
-        openid_provider = Config.get_openid_provider()
-    elif openid_provider.endswith(gserviceaccount_domain):
+    if openid_provider.endswith(gserviceaccount_domain):
         openid_provider = 'accounts.google.com'
-    elif openid_provider.startswith("https://"):
-        openid_provider = furl(openid_provider).host
+    else:
+        openid_provider = Config.get_openid_provider()
     res = requests.get(f"https://{openid_provider}/.well-known/openid-configuration")
     res.raise_for_status()
-    return res.json()
+    openid_config[openid_provider] = res.json()
+    return openid_config[openid_provider]
 
 
-def get_jwks_uri(openid_provider):
+def get_jwks_uri(openid_provider) -> str:
     if openid_provider.endswith(gserviceaccount_domain):
         return f"https://www.googleapis.com/service_accounts/v1/jwk/{openid_provider}"
     else:
@@ -51,20 +51,72 @@ def get_jwks_uri(openid_provider):
 
 
 @functools.lru_cache(maxsize=32)
-def get_public_keys(openid_provider):
+def get_public_keys(issuer: str) -> typing.Dict[str, bytearray]:
     """
-    Fetches the public key from an OIDC Identity provider to verify the JWT.
-    :param openid_provider: the openid provider's domain.
-    :return: Public Keys
+    Fetches the public keys from an OIDC Identity provider to verify the JWT and caching for later use.
+    :param issuer: the openid provider's domain.
+    :param kid: the key identifier for verifying the JWT
+    :return: A Public Keys
     """
-    keys = session.get(get_jwks_uri(openid_provider)).json()["keys"]
+    resp = session.get(get_jwks_uri(issuer))
+    try:
+        resp.raise_for_status()
+    except requests.exceptions.HTTPError:
+        logger.error({"message": f"Get {get_jwks_uri(issuer)} Failed",
+                      "text": resp.text,
+                      "status_code": resp.status_code,
+                      })
+        raise FusilladeHTTPException(503, 'Service Unavailable', "Failed to fetched public key from openid provider.")
+    else:
+        logger.info({
+            "message": f"Get {get_jwks_uri(issuer)} Succeeded",
+            "response": resp.json(),
+            "status_code": resp.status_code
+        })
+
     return {
         key["kid"]: rsa.RSAPublicNumbers(
             e=int.from_bytes(base64.urlsafe_b64decode(key["e"] + "==="), byteorder="big"),
             n=int.from_bytes(base64.urlsafe_b64decode(key["n"] + "==="), byteorder="big")
         ).public_key(backend=default_backend())
-        for key in keys
+        for key in resp.json()["keys"]
     }
+
+
+def get_public_key(issuer: str, kid: str) -> bytearray:
+    """
+    Fetches the public keys from an OIDC Identity provider to verify the JWT. If the key is not found in the public
+    key cache, the cache is cleared and a retry is performed.
+    :param issuer: the openid provider's domain.
+    :param kid: the key identifier for verifying the JWT
+    :return: A Public Key
+    """
+    public_keys = get_public_keys(issuer)
+    try:
+        return public_keys[kid]
+    except KeyError:
+        logger.error({"message": "Failed to fetched public key from openid provider.",
+                      "public_keys": public_keys,
+                      "issuer": issuer,
+                      "kid": kid})
+        logger.debug({"message": "Clearing public key cache."})
+        get_public_keys.cache_clear()
+        public_keys = get_public_keys(issuer)
+        try:
+            return public_keys[kid]
+        except KeyError:
+            raise FusilladeHTTPException(401,
+                                         'Unauthorized',
+                                         f"Unable to verify JWT. KID:{kid} does not exists for issuer:{issuer}.")
+
+
+@functools.lru_cache(32)  # TODO cache in a way that's visible to all lambdas to avoid rate limits.
+def get_tokeninfo(uri, access_token) -> dict:
+    response = requests.get(uri, headers={'Authorization': f"Bearer {access_token}"})
+    if response.status_code == 429:
+        raise FusilladeTooManyRequestsException()
+    else:
+        return response.json()
 
 
 def verify_jwt(token: str) -> typing.Optional[typing.Mapping]:
@@ -84,15 +136,7 @@ def verify_jwt(token: str) -> typing.Optional[typing.Mapping]:
         raise FusilladeHTTPException(401, 'Unauthorized', 'Failed to decode token.')
 
     issuer = unverified_token['iss']
-    public_keys = get_public_keys(issuer)
-    try:
-        public_key = public_keys[token_header["kid"]]
-    except KeyError:
-        logger.error({"message": "Failed to fetched public key from openid provider.",
-                      "public_keys": public_keys,
-                      "issuer": issuer,
-                      "kid": token_header["kid"]})
-        raise FusilladeHTTPException(503, 'Service Unavailable', "Failed to fetched public key from openid provider.")
+    public_key = get_public_key(issuer, token_header["kid"])
     try:
         verified_tok = jwt.decode(token,
                                   key=public_key,
@@ -104,4 +148,11 @@ def verify_jwt(token: str) -> typing.Optional[typing.Mapping]:
     except jwt.PyJWTError as ex:  # type: ignore
         logger.debug({"message": "Failed to validate token."}, exc_info=True)
         raise FusilladeHTTPException(401, 'Unauthorized', 'Authorization token is invalid') from ex
-    return verified_tok
+    tokeninfo_endpoint = [i for i in verified_tok['aud'] if i.endswith('userinfo') or i.endswith('tokeninfo')]
+    if tokeninfo_endpoint:
+        # Use the OIDC tokeninfo endpoint to get info about the user.
+        return get_tokeninfo(tokeninfo_endpoint[0], token)
+    else:
+        # If No OIDC tokeninfo endpoint is present then this is a google service account and there is no info to
+        # retrieve
+        return verified_tok

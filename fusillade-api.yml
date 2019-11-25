@@ -20,8 +20,11 @@ info:
     The client should recognize and parse the `Link` header appropriately according
     to RFC 5988, and retrieve the next page if requested by the user, or if all
     results are being retrieved.
+    Additional Pagination Headers are returned to assist with client pagination these are:
+    `X-OpenAPI-Pagination` - boolean that indicates if there are more pages.
+    `X-OpenAPI-Paginated-Content-Key` - string that indicates which key in the response will be paged.
 
-  version: "0.0.1"
+  version: $FUS_VERSION
 servers:
   - url: https://$API_DOMAIN_NAME/v1
 paths:
@@ -29,8 +32,8 @@ paths:
     get:
       summary: Establish the users identity using the OIDC provider
       description: Send the user agent to an identity provider selector and
-       generate a user account to establish the user's identity. This is a
-       redirect endpoint.
+        generate a user account to establish the user's identity. This is a
+        redirect endpoint.
       operationId: fusillade.api.oauth.login
       tags:
         - oauth
@@ -55,8 +58,8 @@ paths:
     get:
       summary: Logout the user from current sessions with the OIDC provider.
       description: Logout the user from current sessions with the OIDC provider. You can log the users out from a
-       specific application if the you know the client_id for the application. Otherwise the user will be logged out
-       of the default application by oauth2_config.
+        specific application if the you know the client_id for the application. Otherwise the user will be logged out
+        of the default application by oauth2_config.
       operationId: fusillade.api.oauth.logout
       tags:
         - oauth
@@ -73,9 +76,9 @@ paths:
   /.well-known/openid-configuration:
     get:
       summary: See documentation at
-       [Provider Config](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
+        [Provider Config](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
       description: This endpoint is part of OIDC, see documentation at
-       [Provider Config](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
+        [Provider Config](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
       tags:
         - oauth
       parameters:
@@ -94,7 +97,7 @@ paths:
     get:
       summary: This endpoint is part of OIDC
       description: Provide the public key used to sign all JWTs minted by the OIDC provider.
-       See [JSON Web Key Set](https://auth0.com/docs/jwks) for more info.
+        See [JSON Web Key Set](https://auth0.com/docs/jwks) for more info.
       tags:
         - oauth
       operationId: fusillade.api.oauth.serve_jwks_json
@@ -105,7 +108,7 @@ paths:
     get:
       summary: See [Auth Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
       description: This endpoint is part of OIDC and is used to redirect to an openid provider.
-       See [Auth Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
+        See [Auth Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
       operationId: fusillade.api.oauth.authorize
       tags:
         - oauth
@@ -234,7 +237,7 @@ paths:
         - oauth
       responses:
         200:
-          description: OK.
+          $ref: '#/components/responses/userinfo'
         401:
           $ref: '#/components/responses/401'
     post:
@@ -248,7 +251,7 @@ paths:
         - oauth
       responses:
         200:
-          description: OK.
+          $ref: '#/components/responses/userinfo'
         401:
           $ref: '#/components/responses/401'
   /echo:
@@ -263,7 +266,7 @@ paths:
     post:
       summary: Evaluate a user's permissions
       description: Given a set of principals, actions, and resources, return a
-       set of access control decisions.
+        set of access control decisions.
       operationId: fusillade.api.evaluate.evaluate_policy_api
       security:
         - BearerAuth: []
@@ -355,7 +358,7 @@ paths:
                   items:
                     $ref: '#/components/schemas/custom_identifier'
                 policy:
-                  type: string
+                  type: object
       tags:
         - user
       responses:
@@ -563,7 +566,7 @@ paths:
               type: object
               properties:
                 policy:
-                  type: string
+                  type: object
       responses:
         200:
           description: Policy modified.
@@ -616,7 +619,7 @@ paths:
                 group_id:
                   $ref: '#/components/schemas/custom_identifier'
                 policy:
-                  type: string
+                  type: object
                 roles:
                   type: array
                   items:
@@ -799,7 +802,7 @@ paths:
               type: object
               properties:
                 policy:
-                  type: string
+                  type: object
       responses:
         200:
           description: Policy modified.
@@ -853,7 +856,7 @@ paths:
                 role_id:
                   $ref: '#/components/schemas/custom_identifier'
                 policy:
-                  type: string
+                  type: object
       responses:
         201:
           description: Role was created.
@@ -922,7 +925,7 @@ paths:
               type: object
               properties:
                 policy:
-                  type: string
+                  type: object
       responses:
         200:
           description: Policy modified.
@@ -1051,9 +1054,51 @@ components:
         policies:
           type: object
   responses:
+    userinfo:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              sub:
+                description: A unique identifier for the user. This is part of the OIDC standard.
+                type: string
+              email:
+                description: The user's email associated with access token.
+                type: string
+              https://$API_DOMAIN_NAME/app_metadata:
+                description: Contains information about what the user has access too.
+                type: object
+                properties:
+                  authorization:
+                    type: object
+                    properties:
+                      role:
+                        description: A list of roles the user can use.
+                        type: array
+                        items:
+                          type: string
+                      group:
+                        description: A list of groups the user is in.
+                        type: array
+                        items:
+                          type: string
+                      scope:
+                        description: A list of actions the user can perform.
+                        type: array
+                        items:
+                          type: string
     206:
       description: A single page of results was retrieved.
       headers:
+        X-OpenAPI-Pagination:
+          schema:
+            type: boolean
+        X-OpenAPI-Paginated-Content-Key:
+          schema:
+            type: string
+          description: The JSON response body key containing an array of results that are paginated.
         Link:
           description: URL to retrieve the next page of results.
           schema:
@@ -1069,14 +1114,14 @@ components:
       description: The users credentials failed to authenticate.
     403:
       description: The user is not authorized because they do not have adequate
-       permission to perform the action.
+        permission to perform the action.
     404:
       description: Resource not found.
     409:
       description: The object already exists.
   securitySchemes:
-      BearerAuth:
-        type: http
-        scheme: bearer
-        bearerFormat: JWT
-        x-bearerInfoFunc: fusillade.utils.security.verify_jwt
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      x-bearerInfoFunc: fusillade.utils.security.verify_jwt

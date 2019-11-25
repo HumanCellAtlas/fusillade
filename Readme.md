@@ -43,13 +43,21 @@ To do this, your application should define an access control model consisting of
   }
   ```
 
+## [WIP] [GA4GH AAI](https://github.com/ga4gh/data-security/tree/master/AAI) Compatibility
+Fusillade will provide support for GA4GH Passport claims using the OIDC userinfo endpoint. A user can sign into 
+multiple different identities and they will be linked together as the same user. Server side 
+applications can view this information using the userinfo endpoint.
+
+See https://github.com/HumanCellAtlas/fusillade/issues/307 for current progress.
+
+
 ## AWS Cloud Architecture
 
 ![AWS Cloud Architecture](https://www.lucidchart.com/publicSegments/view/b3470977-3924-4fb3-a07f-ce97be59dac1/image.png)
 
 ## Cloud Directory Structure
 
-![Cloud Directory Structure](https://www.lucidchart.com/publicSegments/view/3f6f3cdc-7429-460c-b45f-33ae35d9e07c/image.png)
+![Cloud Directory Structure](https://www.lucidchart.com/publicSegments/view/b08deb5a-881c-4eec-94af-9917f82d285f/image.png)
 
 # Installing and configuring Fusillade
 
@@ -217,19 +225,38 @@ staging and dev environment.
 
 ### Resource
 
-For resource set the `partition` to `hca`, set your `service` name to the name of your component, and set the 
-`account-id` to the deployment stage. All other fields can be used as needed or use \* for wild cards. Resource names
- are case sensitive.
-
+For resource, set the `partition` to `hca`, set your `service` name to the name of your component, and set the 
+`account-id` to the deployment stage. The field **resourcetype** can optionally be the name of a `resource_type` defined
+ in fusillade. If `resourcetype` matches a `resource_type` defined in fusillade then a resource policy will be used to
+ evaluate user access. All other fields can be used as needed or use \* for wild cards. Resource names are 
+ case sensitive.
+ 
 #### Examples
 
-- arn:**hca**:**fusillade**:region:**dev**:resource
-- arn:**hca**:**dss**:region:**staging**:resourcetype/resource
-- arn:**hca**:**query**:region:**integration**:resourcetype/resource/qualifier
-- arn:**hca**:**ingest**:region:**prod**:resourcetype/resource:qualifier
-- arn:**hca**:**azul**:region:**dev**:resourcetype:resource
-- arn:**hca**:**matrix**:region:**staging**:resourcetype:resource:qualifier
+- arn:**hca**:**fusillade**:region:**dev**:**resourcetype**
+- arn:**hca**:**dss**:region:**staging**:**resourcetype**/resource
+- arn:**hca**:**query**:region:**integration**:**resourcetype**/resource/qualifier
 
+#### Resource ACL 
+A new `resource_type` is created by providing the name of the `resource_type`, and the actions that can be performed on it. 
+ Once a `resource_type` is created you can store `resource_id`s of that `resource_type` to apply ACLs.
+ 
+An `access_policy` is a policy associated with a `resource_type` and is used to define the different access levels 
+ between principals and `resource_id`s. A principal may have only one level of access to a `resource_id`. All 
+ `resource_id`s use the same pool of access policies for that particular `resource_type`. This mean that modifying an `access_policy`, 
+ modifies it for all principals with that access level to a `resource_id`. New access policies can be defined for a 
+ `resource_type` after the `resource_type` has been created. Deleting an `access_policy` removes access for all principals 
+ with that level of access between a `resource_id`.
+ Access policies can only define policies that use actions supported by that `resource_type`. 
+ Actions can be added and removed after a `resource_type` has been created.
+ 
+The creator of a `resource_id` is automatically designated as the owner of the resource. The owner of a
+ `resource_id` can add additional owners, and assign access levels to principals for that `resource_id`. A principal only 
+ has access to resource they are give access to, either directly or through group membership.
+
+If a `resource_type` is deleted, all access policies and 
+ `resource_id`s associated with that type are deleted.
+ 
 # Using Fusillade as a library
 
 # Using Fusillade as a proxy

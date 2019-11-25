@@ -10,8 +10,8 @@ if not is_integration():
     old_directory_name = os.getenv("FUSILLADE_DIR", None)
 
 from fusillade import Config
-from fusillade.clouddirectory import cleanup_directory, User, get_published_schema_from_directory, cleanup_schema
-
+from fusillade.directory import cleanup_directory, User, get_published_schema_from_directory, cleanup_schema
+from fusillade.directory import clear_cd
 
 class BaseAPITest():
 
@@ -59,7 +59,7 @@ class BaseAPITest():
         kwargs["users"] = kwargs.get('users', []) + [*Config.get_admin_emails()] + cls.saved_users
         kwargs["groups"] = kwargs.get('groups', []) + cls.saved_groups
         kwargs["roles"] = kwargs.get('roles', []) + cls.saved_roles
-        Config.get_directory().clear(**kwargs)
+        clear_cd(Config.get_directory(), **kwargs)
 
     @classmethod
     def tearDownClass(cls):
@@ -79,6 +79,8 @@ class BaseAPITest():
         self.assertEqual(206, resp.status_code)
         self.assertEqual(per_page, len(json.loads(resp.body)[key]))
         self.assertTrue("Link" in resp.headers)
+        self.assertTrue ("X-OpenAPI-Pagination", resp.headers)
+        self.assertEqual(resp.headers['X-OpenAPI-Paginated-Content-Key'], key)
         while "Link" in resp.headers:
             next_url = resp.headers['Link'].split(';')[0][1:-1]
             resp = self.app.get(next_url, headers=headers)

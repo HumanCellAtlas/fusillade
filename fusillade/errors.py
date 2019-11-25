@@ -52,3 +52,11 @@ class FusilladeForbiddenException(FusilladeHTTPException):
                          title="Forbidden",
                          detail=detail,
                          *args, **kwargs)
+
+class FusilladeTooManyRequestsException(FusilladeHTTPException):
+    def __init__(self, detail: str = "Rate limit reached. Try again in 30 seconds.",
+                 *args, **kwargs) -> None:
+        super().__init__(status=requests.codes.forbidden,
+                         title="Too Many Requests",
+                         detail=detail,
+                         *args, **kwargs)

@@ -3,7 +3,7 @@ info:
   title: Fusillade Internal API Documentation
   description: |
     Human Cell Atlas Data Coordination Platform Fusillade internal APIs.
-  version: "0.0.1"
+  version: $FUS_VERSION
 servers:
   - url: https://$API_DOMAIN_NAME/internal
 paths:

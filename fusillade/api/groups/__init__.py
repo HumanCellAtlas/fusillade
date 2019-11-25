@@ -18,7 +18,7 @@ def post_group(token_info: dict):
 @authorize(['fus:GetGroup'], ['arn:hca:fus:*:*:group'])
 def get_groups(token_info: dict):
     next_token, per_page = get_next_token(request.args)
-    return get_page(Group.list_all, next_token, per_page)
+    return get_page(Group.list_all, next_token, per_page, 'groups')
 
 
 @authorize(['fus:GetGroup'], ['arn:hca:fus:*:*:group/{group_id}/'], ['group_id'], {'fus:group_id': 'group_id'})
@@ -38,14 +38,14 @@ def put_group_policy(token_info: dict, group_id: str):
 def get_group_users(token_info: dict, group_id: str):
     next_token, per_page = get_next_token(request.args)
     group = Group(group_id)
-    return get_page(group.get_users_page, next_token, per_page)
+    return get_page(group.get_users_page, next_token, per_page, 'users')
 
 
 @authorize(['fus:GetRole'], ['arn:hca:fus:*:*:group/{group_id}/roles'], ['group_id'], {'fus:group_id': 'group_id'})
 def get_groups_roles(token_info: dict, group_id: str):
     next_token, per_page = get_next_token(request.args)
     group = Group(group_id)
-    return get_page(group.get_roles, next_token, per_page)
+    return get_page(group.get_roles, next_token, per_page, 'roles')
 
 
 @authorize(['fus:PutRole'], ['arn:hca:fus:*:*:group/{group_id}/roles'], ['group_id'], {'fus:group_id': 'group_id'})

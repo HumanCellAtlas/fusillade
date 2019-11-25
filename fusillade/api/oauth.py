@@ -13,7 +13,7 @@ from furl import furl
 
 from fusillade import Config
 from fusillade.errors import FusilladeHTTPException
-from fusillade.utils.security import get_openid_config, get_public_keys
+from fusillade.utils.security import get_openid_config, get_public_key
 
 
 def login():
@@ -71,7 +71,8 @@ proxied_endpoints = dict(authorization_endpoint=f"https://{os.environ['API_DOMAI
                          token_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/token",
                          jwks_uri=f"https://{os.environ['API_DOMAIN_NAME']}/.well-known/jwks.json",
                          revocation_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/revoke",
-                         userinfo_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/userinfo"
+                         userinfo_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/oauth/userinfo",
+                         logout_endpoint=f"https://{os.environ['API_DOMAIN_NAME']}/logout"
                          )
 
 
@@ -79,13 +80,13 @@ def serve_openid_config():
     """
     Part of OIDC
     """
-    openid_config = get_openid_config(Config.get_openid_provider())
     auth_host = request.headers['host']
     if auth_host != os.environ["API_DOMAIN_NAME"]:
         raise FusilladeHTTPException(
             status=400,
             title="Bad Request",
             detail=f"host: {auth_host}, is not supported. host must be {os.environ['API_DOMAIN_NAME']}.")
+    openid_config = get_openid_config(Config.get_openid_provider()).copy()
     openid_config.update(**proxied_endpoints)
     return ConnexionResponse(body=openid_config, status_code=requests.codes.ok)
 
@@ -120,8 +121,17 @@ def userinfo(token_info):
     """
     Part of OIDC
     """
-    openid_config = get_openid_config(Config.get_openid_provider())
-    return proxy_response(openid_config["userinfo_endpoint"])
+    from fusillade.directory import User, Group, Role
+    user = User(token_info['email'])
+    # TODO save user info in fusillade at the same time.
+    token_info[f"https://{os.environ['API_DOMAIN_NAME']}/app_metadata"] = {
+        'authorization': {
+            'groups': Group.get_names(user.groups),
+            'roles': Role.get_names(user.roles),
+            'scope': [i for i in user.get_actions()]
+        }
+    }
+    return make_response(json.jsonify(**token_info), requests.codes.ok)
 
 
 def get_userinfo(token_info):
@@ -180,9 +190,9 @@ def cb():
         except requests.exceptions.HTTPError:
             return make_response(res.text, res.status_code, res.headers.items())
         token_header = jwt.get_unverified_header(res.json()["id_token"])
-        public_keys = get_public_keys(openid_provider)
+        public_key = get_public_key(openid_provider, token_header["kid"])
         tok = jwt.decode(res.json()["id_token"],
-                         key=public_keys[token_header["kid"]],
+                         key=public_key,
                          audience=oauth2_config[openid_provider]["client_id"])
         assert tok["email_verified"]
         if redirect_uri:

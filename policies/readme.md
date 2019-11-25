@@ -19,3 +19,8 @@ specified.
 
 Defines the permissions assigned to a new user upon created if no policy is
 specified.
+
+# default_resource_owner_policy.json
+
+Defines the permission assigned to the owner of a resource. The owner of a resource is generally the one who created 
+the resource, but can be changed after the resources has been created.

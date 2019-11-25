@@ -6,7 +6,8 @@ import typing
 import jwt
 from dcplib.aws import clients
 
-from fusillade.clouddirectory import publish_schema, create_directory, CloudDirectory
+from fusillade.directory import publish_schema, create_directory
+from fusillade import CloudDirectory
 from fusillade.config import Config
 from tests import schema_name, random_hex_string
 
@@ -24,7 +25,16 @@ except FileNotFoundError:
         json.dump(service_accounts, fh)
 
 
-def create_test_statement(name: str):
+def normalize_json(src: typing.Union[str, dict]):
+    "Normalize the shape of json to make comparing easier"
+    if isinstance(src, dict):
+        pass
+    if isinstance(src, str):
+        src = json.loads(src)
+    return json.dumps(src, sort_keys=True)
+
+
+def create_test_IAMPolicy(name: str, actions: typing.List[str] = None) -> dict:
     """Assists with the creation of policy statements for testing"""
     statement = {
         "Version": "2012-10-17",
@@ -32,18 +42,36 @@ def create_test_statement(name: str):
             {
                 "Sid": "DefaultRole",
                 "Effect": "Deny",
-                "Action": [
-                    "fake:action"
-                ],
+                "Action": actions if actions else ["fake:action"],
                 "Resource": "fake:resource"
             }
         ]
     }
     statement["Statement"][0]["Sid"] = name
-    return json.dumps(statement)
+
+    return statement
 
 
-def create_test_statements(length=1):
+def create_test_ResourcePolicy(name: str, actions: typing.List[str] = None) -> dict:
+    """Assists with the creation of policy statements for testing"""
+    statement = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Principal": "*",
+                "Sid": "DefaultRole",
+                "Effect": "Deny",
+                "Action": actions if actions else ["fake:action"],
+                "Resource": "arn:dcp:fus:us-east-1:dev:project/*"
+            }
+        ]
+    }
+    statement["Statement"][0]["Sid"] = name
+
+    return statement
+
+
+def create_test_statements(length=1) -> dict:
     """Assists with the creation of policy statements for testing"""
     statement = {
         "Version": "2012-10-17",
@@ -57,10 +85,10 @@ def create_test_statements(length=1):
             } for i in range(length)
         ]
     }
-    return json.dumps(statement)
+    return statement
 
 
-def new_test_directory(directory_name=None) -> typing.Tuple[CloudDirectory, str, str]:
+def new_test_directory(directory_name=None) -> typing.Tuple[CloudDirectory, str]:
     directory_name = directory_name if directory_name else "test_dir_" + random_hex_string()
     schema_arn = publish_schema(schema_name, 'T' + random_hex_string())
     Config._directory = None
