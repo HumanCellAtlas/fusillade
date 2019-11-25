@@ -24,12 +24,6 @@ user_header.update(get_auth_header(service_accounts['user']))
 
 class TestApi(BaseAPITest, unittest.TestCase):
 
-    def setUp(self):
-        self.rt = resp = self.app.post(
-            '/v1/resource/sample_resource',
-            data=json.dumps({'actions': ['rt:get', 'rt:put', 'rt:update', 'rt:delete']}),
-            headers=admin_headers)
-
     def test_create_resource(self):
         """A resource type is created and destroyed using the API"""
         test_resource = 'test_resource'  # the name of the resource type to create
@@ -73,7 +67,7 @@ class TestApi(BaseAPITest, unittest.TestCase):
         self.assertEqual(resp.status_code, 201)
         resp = self.app.put(f"/v1/user/{service_accounts['user']['client_email']}/roles?action=add",
                             data=json.dumps({'roles': [role_name]}),
-                            headers=admin_headers,)
+                            headers=admin_headers)
         self.assertEqual(resp.status_code, 200)
 
         with self.subTest("Permission is granted"):
@@ -87,6 +81,56 @@ class TestApi(BaseAPITest, unittest.TestCase):
         self._test_paging('/v1/resource', admin_headers, 10, 'resources')
 
     def test_resource_policy(self):
+        pass
+
+    def test_resource_actions(self):
+        """Add and remove actions from a resource type"""
+        test_resource = 'sample_resource'
+        expected_actions = sorted(['rt:get', 'rt:put', 'rt:update', 'rt:delete'])
+        self.app.post(
+            f'/v1/resource/{test_resource}',
+            data=json.dumps({'actions': expected_actions}),
+            headers=admin_headers)
+
+        # Get the actions for a resource type
+        resp = self.app.get(f'/v1/resource/{test_resource}/actions', headers=admin_headers)
+        self.assertEqual(resp.status_code, 200)
+        actions = json.loads(resp.body)['actions']
+        self.assertEqual(actions, expected_actions)
+
+        # Delete actions from a resource type
+        modify_actions = expected_actions[-2:]
+        resp = self.app.delete(f'/v1/resource/{test_resource}/actions',
+                               data=json.dumps({'actions': modify_actions}),
+                               headers=admin_headers)
+        self.assertEqual(resp.status_code, 200)
+        resp = self.app.get(f'/v1/resource/{test_resource}/actions',
+                            data=json.dumps({'actions': modify_actions}),
+                            headers=admin_headers)
+        actions = sorted(json.loads(resp.body)['actions'])
+        self.assertEqual(actions, expected_actions[:2])
+
+        # OK returned when deleting actions not part of a resource type
+        resp = self.app.delete(f'/v1/resource/{test_resource}/actions',
+                               data=json.dumps({'actions': modify_actions}),
+                               headers=admin_headers)
+
+        # Put actions into a resource type
+        resp = self.app.put(f'/v1/resource/{test_resource}/actions',
+                            data=json.dumps({'actions': modify_actions}),
+                            headers=admin_headers)
+        self.assertEqual(resp.status_code, 200)
+        resp = self.app.get(f'/v1/resource/{test_resource}/actions',
+                            data=json.dumps({'actions': modify_actions}),
+                            headers=admin_headers)
+        actions = sorted(json.loads(resp.body)['actions'])
+        self.assertEqual(actions, expected_actions)
+
+        # OK returned when putting actions already a part of a resource type.
+        resp = self.app.put(f'/v1/resource/{test_resource}/actions',
+                            data=json.dumps({'actions': modify_actions}),
+                            headers=admin_headers)
+        self.assertEqual(resp.status_code, 200)
 
 
 if __name__ == '__main__':
