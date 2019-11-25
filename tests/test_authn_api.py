@@ -23,7 +23,7 @@ from tests.base_api_test import BaseAPITest
 
 class TestAuthentication(BaseAPITest, unittest.TestCase):
     def test_login(self):
-        url = furl('/login')
+        url = furl('/v1/login')
         query_params = {
             'state': 'ABC',
             'redirect_uri': "http://localhost:8080"
@@ -36,7 +36,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
     def test_authorize(self):
         CLIENT_ID = "qtMgNk9fqVeclLtZl6WkbdJ59dP3WeAt"
         REDIRECT_URI = "http://localhost:8080"
-        path = "v1/oauth/authorize"
+        path = "/v1/oauth/authorize"
         states = [str(uuid4()), '\n\n']
         scopes_combination = [["openid", "email", "profile", "offline"], ["openid", "email", "profile", "offline"]]
         tests = product(states, scopes_combination)
@@ -94,7 +94,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
 
         with self.subTest("openid configuration returned when host is provided in header."):
             host = os.environ['API_DOMAIN_NAME']
-            resp = self.app.get('v1/.well-known/openid-configuration', headers={'host': host})
+            resp = self.app.get('/v1/.well-known/openid-configuration', headers={'host': host})
             resp.raise_for_status()
             body = json.loads(resp.body)
             for key in expected_keys:
@@ -108,16 +108,16 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
 
         if is_integration():
             with self.subTest("openid config is returned when no host is provided in the header"):
-                resp = self.app.get('v1/.well-known/openid-configuration')
+                resp = self.app.get('/v1/.well-known/openid-configuration')
                 self.assertEqual(200, resp.status_code)
 
             with self.subTest("Error return when invalid host is provided in header."):
                 host = 'localhost:8080'
-                resp = self.app.get('v1/.well-known/openid-configuration', headers={'host': host})
+                resp = self.app.get('/v1/.well-known/openid-configuration', headers={'host': host})
                 self.assertEqual(403, resp.status_code)
 
     def test_serve_jwks_json(self):
-        resp = self.app.get('v1/.well-known/jwks.json')
+        resp = self.app.get('/v1/.well-known/jwks.json')
         body = json.loads(resp.body)
         self.assertIn('keys', body)
         self.assertEqual(200, resp.status_code)
@@ -125,7 +125,7 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
     @unittest.skip("Not currently supported.")
     def test_revoke(self):
         with self.subTest("revoke denied when no token is included."):
-            resp = self.app.get('v1/oauth/revoke')
+            resp = self.app.get('/v1/oauth/revoke')
             self.assertEqual(403, resp.status_code)  # TODO fix
 
     def test_userinfo(self):
@@ -140,25 +140,25 @@ class TestAuthentication(BaseAPITest, unittest.TestCase):
         ]
         for test in tests:
             with self.subTest("POST " + test["description"]):
-                resp = self.app.post('v1/oauth/userinfo', headers=test['headers'])
+                resp = self.app.post('/v1/oauth/userinfo', headers=test['headers'])
                 self.assertEqual(test["expected_status_code"], resp.status_code)
             with self.subTest("GET " + test["description"]):
-                resp = self.app.get('v1/oauth/userinfo', headers=test['headers'])
+                resp = self.app.get('/v1/oauth/userinfo', headers=test['headers'])
                 self.assertEqual(test["expected_status_code"], resp.status_code)
 
     def test_serve_oauth_token(self):
         # TODO: login
         # TODO: get token
         with self.subTest("token denied when no query params provided."):
-            resp = self.app.post('v1/oauth/token', headers={'Content-Type': "application/x-www-form-urlencoded"})
+            resp = self.app.post('/v1/oauth/token', headers={'Content-Type': "application/x-www-form-urlencoded"})
             self.assertEqual(401, resp.status_code)  # TODO fix
 
     def test_cb(self):
-        resp = self.app.get('v1/internal/cb')
+        resp = self.app.get('/internal/cb')
         self.assertEqual(400, resp.status_code)  # TODO fix
 
     def test_logout(self):
-        resp = self.app.get('v1/logout')
+        resp = self.app.get('/v1/logout')
         self.assertEqual(200, resp.status_code)  # TODO fix
 
 if __name__ == '__main__':

@@ -85,7 +85,7 @@ class TestApi(BaseAPITest, unittest.TestCase):
 
     def test_echo(self):
         body = 'Hello World!'
-        resp = self.app.get('/echo', data=body)
+        resp = self.app.get('/v1/echo', data=body)
         resp.raise_for_status()
 
     def test_version(self):
