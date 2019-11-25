@@ -7,8 +7,8 @@ sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.utils.json import json_equal
 from fusillade.directory.authorization import get_resource_authz_parameters
-
-from fusillade.directory import cleanup_directory, cleanup_schema, User, clear_cd
+from fusillade.utils.authorize import evaluate_policy
+from fusillade.directory import cleanup_directory, cleanup_schema, User, clear_cd, Role
 from fusillade.errors import FusilladeForbiddenException
 from fusillade.directory.resource import ResourceType
 from tests.common import new_test_directory
@@ -69,6 +69,57 @@ class TestEvaluate(unittest.TestCase):
             params = get_resource_authz_parameters(user.name, resource)
             self.assertTrue(json_equal(params['ResourcePolicy'], resource_policy))
             self.assertEqual(['Reader'], params['resources'])
+
+    def test_eval(self):
+        actions = ['test:readproject', 'test:writeproject', 'test:deleteproject']
+        arn_prefix = "arn:dcp:fus:us-east-1:dev:"
+        resource_type = 'test_type'
+        test_type = ResourceType.create(resource_type, actions)
+        access_level = 'Reader'
+        resource_policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Principal": "*",
+                    "Sid": "project_reader",
+                    "Effect": "Allow",
+                    "Action": ['test:readproject'],
+                    "Resource": f"{arn_prefix}{resource_type}/*"
+                }
+            ]
+        }
+        test_type.create_policy(access_level, resource_policy, 'ResourcePolicy')
+        user = User.provision_user('test_user')
+        type_id = '1234455'
+        resource = f'{arn_prefix}{resource_type}/{type_id}'
+
+        with self.subTest("A user does not have access when they only have permitting resource_policy and no "
+                          "permitting IAMPolicy"):
+            test_id = test_type.create_id(type_id)
+            test_id.add_principals([user], access_level)
+            x = get_resource_authz_parameters(user.name, resource)
+            resp = evaluate_policy(user.name, ['test:readproject'], [resource], x['IAMPolicy'], x['ResourcePolicy'])
+            self.assertFalse(resp['result'])
+
+        with self.subTest("A user has a access when they have a permitting resource policy and IAMPolicy"):
+            IAMpolicy = {
+                "Statement": [
+                    {
+                        "Sid": "project_reader",
+                        "Effect": "Allow",
+                        "Action": [
+                            "test:readproject"
+                        ],
+                        "Resource": f"{arn_prefix}{resource_type}/*"
+                    }
+                ]
+            }
+            role = Role.create('project_reader', IAMpolicy)
+
+            user.add_roles([role.name])
+            x = get_resource_authz_parameters(user.name, resource)
+            resp = evaluate_policy(user.name, ['test:readproject'], [resource], x['IAMPolicy'], x['ResourcePolicy'])
+            self.assertTrue(resp['result'])
 
 
 if __name__ == '__main__':
