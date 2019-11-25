@@ -29,6 +29,8 @@ servers:
   - url: https://$API_DOMAIN_NAME/v1
 paths:
   /login:
+    servers:
+    - url: https://$API_DOMAIN_NAME
     get:
       summary: Establish the users identity using the OIDC provider
       description: Send the user agent to an identity provider selector and
@@ -55,6 +57,8 @@ paths:
         default:
           description: Unexpected error.
   /logout:
+    servers:
+      - url: https://$API_DOMAIN_NAME
     get:
       summary: Logout the user from current sessions with the OIDC provider.
       description: Logout the user from current sessions with the OIDC provider. You can log the users out from a
@@ -74,6 +78,8 @@ paths:
         default:
           description: Unexpected error.
   /.well-known/openid-configuration:
+    servers:
+      - url: https://$API_DOMAIN_NAME
     get:
       summary: See documentation at
         [Provider Config](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig)
@@ -94,6 +100,8 @@ paths:
         200:
           description: Returns the supported openid endpoints.
   /.well-known/jwks.json:
+    servers:
+      - url: https://$API_DOMAIN_NAME
     get:
       summary: This endpoint is part of OIDC
       description: Provide the public key used to sign all JWTs minted by the OIDC provider.
@@ -105,6 +113,8 @@ paths:
         200:
           description: Returns the well known jwks.
   /oauth/authorize:
+    servers:
+      - url: https://$API_DOMAIN_NAME
     get:
       summary: See [Auth Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest)
       description: This endpoint is part of OIDC and is used to redirect to an openid provider.
@@ -151,6 +161,8 @@ paths:
         default:
           description: Unexpected error.
   /oauth/revoke:
+    servers:
+      - url: https://$API_DOMAIN_NAME
     post:
       summary: Revoke a refresh token
       description: Revokes a refresh token from a client making all future token refresh requests fail.
@@ -177,6 +189,8 @@ paths:
         default:
           description: Unexpected error.
   /oauth/token:
+    servers:
+      - url: https://$API_DOMAIN_NAME
     post:
       summary: Retrieve the authentications token
       description: This endpoint is part of OIDC and is used to redirect to an openid provider.
@@ -226,6 +240,8 @@ paths:
         default:
           description: Unexpected error.
   /oauth/userinfo:
+    servers:
+      - url: https://$API_DOMAIN_NAME
     get:
       summary: See [User Info](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)
       description: This endpoint is part of OIDC and is used to redirect to an openid provider.
@@ -255,6 +271,8 @@ paths:
         401:
           $ref: '#/components/responses/401'
   /echo:
+    servers:
+      - url: https://$API_DOMAIN_NAME
     get:
       summary: echoes the response
       description: Echoes the response back.
