@@ -26,15 +26,17 @@ class TestApi(BaseAPITest, unittest.TestCase):
 
     def test_create_resource(self):
         """A resource type is created and destroyed using the API"""
-        resp = self.app.get('/v1/resource/trPost', headers=admin_headers)
+        test_resource = 'test_resource'  # the name of the resource type to create
+        resp = self.app.get(f'/v1/resource/{test_resource}', headers=admin_headers)
         self.assertEqual(resp.status_code, 404)
-        resp = self.app.post('/v1/resource/trPost', data=json.dumps({'actions': ['tr:action1']}), headers=admin_headers)
+        resp = self.app.post(f'/v1/resource/{test_resource}', data=json.dumps({'actions': ['tr:action1']}),
+                             headers=admin_headers)
         self.assertEqual(resp.status_code, 201)
-        resp = self.app.get('/v1/resource/trPost', headers=admin_headers)
+        resp = self.app.get(f'/v1/resource/{test_resource}', headers=admin_headers)
         self.assertEqual(resp.status_code, 200)
-        resp = self.app.delete('/v1/resource/trPost', headers=admin_headers)
+        resp = self.app.delete(f'/v1/resource/{test_resource}', headers=admin_headers)
         self.assertEqual(resp.status_code, 200)
-        resp = self.app.get('/v1/resource/trPost', headers=admin_headers)
+        resp = self.app.get(f'/v1/resource/{test_resource}', headers=admin_headers)
         self.assertEqual(resp.status_code, 404)
 
     def test_access_resource(self):

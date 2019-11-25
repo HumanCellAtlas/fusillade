@@ -937,8 +937,8 @@ paths:
         - role
   /v1/resource:
     get:
-      summary:  List avaialable resource types
-      description: List avaialable resource types
+      summary:  List available resource types
+      description: List available resource types
       operationId: fusillade.api.resource.get
       security:
         - BearerAuth: []
@@ -1027,7 +1027,7 @@ paths:
         - $ref: '#/components/parameters/resource_type_name'
       responses:
         201:
-          description: The resource has been delete.
+          description: The resource has been deleted.
         401:
           $ref: '#/components/responses/401'
         403:
@@ -1072,7 +1072,7 @@ components:
       name: resource_type_name
       in: path
       required: true
-      description: The Name of a type of resources which a resource policy can be applied.
+      description: The name of a type of resources to which a resource policy can be applied.
       schema:
         $ref: '#/components/schemas/custom_identifier'
     resource_action:
@@ -1123,11 +1123,13 @@ components:
       items:
         type: string
     resource_types:
+      description: A list of resource types.
       type: object
       properties:
         resources:
           $ref: '#/components/schemas/paged_results'
     resource_policy:
+      description: A resource policy, used for controlling access to a resource.
       type: object
       properties:
         Statements:

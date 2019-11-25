@@ -28,8 +28,8 @@ def post(token_info: dict, resource_type_name):
            resource_params=['resource_type_name'])
 def delete(token_info: dict, resource_type_name):
     rt = ResourceType(resource_type_name)
-    rids = rt.list_ids()[0]
-    if rids:
+    rids = rt.list_ids()
+    if len(rids) > 0:
         # TODO write tests for this once create resource_id API is complete
         return make_response(jsonify(
             {'msg': 'All resource ids must be deleted before the resource type can be deleted.',
