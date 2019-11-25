@@ -50,9 +50,9 @@ class BaseAPITest():
                 results.extend(json.loads(resp.body)[key])
             return results
 
-        cls.saved_groups = _iterator('/groups', 'groups')
-        cls.saved_users = _iterator('/users', 'users')
-        cls.saved_roles = _iterator('/roles', 'roles')
+        cls.saved_groups = _iterator('/v1/groups', 'groups')
+        cls.saved_users = _iterator('/v1/users', 'users')
+        cls.saved_roles = _iterator('/v1/roles', 'roles')
 
     @classmethod
     def clear_directory(cls, **kwargs):
