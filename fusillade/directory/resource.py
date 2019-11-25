@@ -339,6 +339,11 @@ class ResourceType(CloudNode):
     def get_id(self, *args, **kwargs) -> 'ResourceId':
         return ResourceId(self.name, *args, **kwargs)
 
+    def get_info(self) -> Dict[str, Any]:
+        info = super(ResourceType, self).get_info()
+        info[f'{self.object_type}_type'] = info.pop(f'{self.object_type}_id')
+        return info
+
 
 class ResourceId(CloudNode):
     """arn:*:resource/{resource_type}/{resource_id}"""
