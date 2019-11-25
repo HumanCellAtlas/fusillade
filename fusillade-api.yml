@@ -1038,6 +1038,103 @@ paths:
           description: Unexpected error.
       tags:
         - resource
+  /v1/resource/{resource_type_name}/actions:
+    get:
+      summary: List all actions for this resource type.
+      description: List all actions for this resource type.
+      operationId: fusillade.api.resource.resource_type_name.actions.get
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/resource_action'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+    put:
+      summary: Add a new resource type action.
+      description: Add a new resource type action.
+      operationId: fusillade.api.resource.resource_type_name.actions.put
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/resource_action'
+      responses:
+        200:
+          description: OK
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+    delete:
+      summary: Delete an existing action for a resource type.
+      description: Delete an existing action for a resource type.
+      operationId: fusillade.api.resource.resource_type_name.actions.delete
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/resource_action'
+      responses:
+        200:
+          description: OK
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
   /v1/resources/{resource_type_name}/policies:
     get:
       summary: List the available policies for this resource type.
@@ -1211,8 +1308,7 @@ components:
       in: path
       required: true
       schema:
-        type: string
-        pattern: '[A-z]\w*[^\W_]:[A-z]\w*[^\W_]'
+        $ref : '#/components/schemas/resource_action'
     action:
       name: action
       in: query
@@ -1259,6 +1355,9 @@ components:
       properties:
         resources:
           $ref: '#/components/schemas/paged_results'
+    resource_action:
+      type: string
+      pattern: '[A-z]\w*[^\W_]:[A-z]\w*[^\W_]'
     resource_policy:
       description: A resource policy, used for controlling access to a resource.
       type: object
