@@ -24,6 +24,12 @@ user_header.update(get_auth_header(service_accounts['user']))
 
 class TestApi(BaseAPITest, unittest.TestCase):
 
+    def setUp(self):
+        self.rt = resp = self.app.post(
+            '/v1/resource/sample_resource',
+            data=json.dumps({'actions': ['rt:get', 'rt:put', 'rt:update', 'rt:delete']}),
+            headers=admin_headers)
+
     def test_create_resource(self):
         """A resource type is created and destroyed using the API"""
         test_resource = 'test_resource'  # the name of the resource type to create
@@ -79,6 +85,8 @@ class TestApi(BaseAPITest, unittest.TestCase):
         for i in range(11):
             self.app.post(f'/v1/resource/tr{i}', data=json.dumps({'actions': ['tr:action1']}), headers=admin_headers)
         self._test_paging('/v1/resource', admin_headers, 10, 'resources')
+
+    def test_resource_policy(self):
 
 
 if __name__ == '__main__':
