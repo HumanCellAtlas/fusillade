@@ -18,9 +18,14 @@ from tests.common import get_auth_header, service_accounts
 admin_headers = {'Content-Type': "application/json"}
 admin_headers.update(get_auth_header(service_accounts['admin']))
 
+user_header = {'Content-Type': "application/json"}
+user_header.update(get_auth_header(service_accounts['user']))
+
+
 class TestApi(BaseAPITest, unittest.TestCase):
 
     def test_create_resource(self):
+        """A resource type is created and destroyed using the API"""
         resp = self.app.get('/v1/resource/trPost', headers=admin_headers)
         self.assertEqual(resp.status_code, 404)
         resp = self.app.post('/v1/resource/trPost', data=json.dumps({'actions': ['tr:action1']}), headers=admin_headers)
@@ -32,7 +37,43 @@ class TestApi(BaseAPITest, unittest.TestCase):
         resp = self.app.get('/v1/resource/trPost', headers=admin_headers)
         self.assertEqual(resp.status_code, 404)
 
+    def test_access_resource(self):
+        """A user does not have access to a resource when they do not have permission."""
+        rt_name = 'thing'
+        role_name = 'test_role'
+        resp = self.app.post(f'/v1/resource/{rt_name}', data=json.dumps({'actions': ['tr:action1']}),
+                             headers=admin_headers)
+        self.assertEqual(resp.status_code, 201)
+        with self.subTest("Permission is denied"):
+            resp = self.app.get(f'/v1/resource/{rt_name}', headers=user_header)
+            self.assertEqual(resp.status_code, 403)
+
+        role_request_body = {
+            "role_id": role_name,
+            "policy": {
+                'Statement': [{
+                    'Sid': role_name,
+                    'Action': [
+                        "fus:DeleteResources",
+                        "fus:GetResources"],
+                    'Effect': 'Allow',
+                    'Resource': [f"arn:hca:fus:*:*:resource/{rt_name}"]
+                }]
+            }
+        }
+        resp = self.app.post(f'/v1/role', data=json.dumps(role_request_body), headers=admin_headers)
+        self.assertEqual(resp.status_code, 201)
+        resp = self.app.put(f"/v1/user/{service_accounts['user']['client_email']}/roles?action=add",
+                            data=json.dumps({'roles': [role_name]}),
+                            headers=admin_headers,)
+        self.assertEqual(resp.status_code, 200)
+
+        with self.subTest("Permission is granted"):
+            resp = self.app.get(f'/v1/resource/{rt_name}', headers=user_header)
+            self.assertEqual(resp.status_code, 200)
+
     def test_get_resource(self):
+        """Pages of resource are retrieved when using the get resource API"""
         for i in range(11):
             self.app.post(f'/v1/resource/tr{i}', data=json.dumps({'actions': ['tr:action1']}), headers=admin_headers)
         self._test_paging('/v1/resource', admin_headers, 10, 'resources')

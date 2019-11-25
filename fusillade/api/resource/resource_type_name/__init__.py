@@ -4,7 +4,9 @@ from fusillade.directory.resource import ResourceType
 from fusillade.utils.authorize import authorize
 
 
-@authorize(["fus:GetResources"], ["arn:hca:fus:*:*:resource/*"])
+@authorize(["fus:GetResources"],
+           ["arn:hca:fus:*:*:resource/{resource_type_name}"],
+           resource_params=['resource_type_name'])
 def get(token_info: dict, resource_type_name):
     rt = ResourceType(resource_type_name)
     rt._exists([rt.name])
@@ -12,14 +14,18 @@ def get(token_info: dict, resource_type_name):
     return make_response(info, 200)
 
 
-@authorize(["fus:PostResources"], ["arn:hca:fus:*:*:resource/*"])
+@authorize(["fus:PostResources"],
+           ["arn:hca:fus:*:*:resource/{resource_type_name}"],
+           resource_params=['resource_type_name'])
 def post(token_info: dict, resource_type_name):
     json_body = request.json
     rt = ResourceType.create(resource_type_name, json_body['actions'])
     return make_response(f"New resource type {rt.name} created.", 201)
 
 
-@authorize(["fus:PostResources"], ["arn:hca:fus:*:*:resource/*"])
+@authorize(["fus:DeleteResources"],
+           ["arn:hca:fus:*:*:resource/{resource_type_name}"],
+           resource_params=['resource_type_name'])
 def delete(token_info: dict, resource_type_name):
     rt = ResourceType(resource_type_name)
     rids = rt.list_ids()[0]
