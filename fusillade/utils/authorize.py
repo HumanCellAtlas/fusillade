@@ -31,12 +31,12 @@ def get_policy_statement(evaluation_results: List[Dict[str, Any]],
                 policy_index = int(ms['SourcePolicyId'].split('.')[-1]) - 1
             except ValueError:
                 if resource_policy:
-                    ms['statement'] = resource_policy[begin:end]
+                    ms['Statement'] = resource_policy[begin:end]
                     ms['SourcePolicyId'] = 'ResourcePolicy'
                     ms['SourcePolicyType'] = 'ResourcePolicy'
                 else:
                     logging.warning({"msg": "Failed to parse evaluation response.",
-                                     "matched_statement": ms,
+                                     "MatchedStatements": ms,
                                      "policies": policies,
                                      "resource_policy": resource_policy})
                     continue
