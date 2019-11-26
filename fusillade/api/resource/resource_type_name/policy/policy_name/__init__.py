@@ -1,3 +1,5 @@
+import json
+
 from flask import request, make_response, jsonify
 
 from fusillade.directory.resource import ResourceType
@@ -31,7 +33,7 @@ def put(token_info: dict, resource_type_name, policy_name):
     json_body = request.json
     rt = ResourceType(resource_type_name)
     rt.update_policy(policy_name, json_body['policy'], 'ResourcePolicy')
-    return make_response(f"Modified resource/{resource_type_name}/policy/{policy_name}.", 201)
+    return make_response(f"Modified resource/{resource_type_name}/policy/{policy_name}.", 200)
 
 
 @authorize(["fus:DeleteResources"],

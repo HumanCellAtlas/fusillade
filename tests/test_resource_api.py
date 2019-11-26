@@ -9,6 +9,8 @@ import os
 import sys
 import unittest
 
+from tests.json_mixin import AssertJSONMixin
+
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
@@ -22,7 +24,7 @@ user_header = {'Content-Type': "application/json"}
 user_header.update(get_auth_header(service_accounts['user']))
 
 
-class TestApi(BaseAPITest, unittest.TestCase):
+class TestApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
 
     def test_create_resource(self):
         """A resource type is created and destroyed using the API"""
@@ -89,6 +91,85 @@ class TestApi(BaseAPITest, unittest.TestCase):
                           data=json.dumps(create_test_ResourcePolicy('tp{i}', actions=['trp:action1'])),
                           headers=admin_headers)
         self._test_paging('/v1/resource', admin_headers, 10, 'policies')
+
+    def test_resource_policy(self):
+        """Create delete and update a resource policy"""
+        expected_actions = sorted(['rt:get', 'rt:put', 'rt:update', 'rt:delete'])
+        test_resource = 'sample_resource'
+        test_policy_name = 'test_policy'
+        test_policy = create_test_ResourcePolicy('tp{i}', actions=expected_actions)
+        self.app.post(
+            f'/v1/resource/{test_resource}',
+            data=json.dumps({'actions': expected_actions}),
+            headers=admin_headers)
+
+        # 400 returned when creating a policy with invalid actions
+        test_policy = create_test_ResourcePolicy('tp{i}', actions=['invalid:actions'])
+        resp = self.app.post(
+            f"/v1/resource/{test_resource}/policy/{test_policy_name}",
+            data=json.dumps({'policy': test_policy}),
+            headers=admin_headers
+        )
+        self.assertEqual(resp.status_code, 400)
+        resp = self.app.get(
+            f"/v1/resource/{test_resource}/policy/{test_policy_name}",
+            headers=admin_headers
+        )
+        self.assertEqual(resp.status_code, 404)
+
+        # 201 return when creating a valid resource policy
+        test_policy = create_test_ResourcePolicy('tp{i}', actions=expected_actions)
+        resp = self.app.post(
+            f"/v1/resource/{test_resource}/policy/{test_policy_name}",
+            data=json.dumps({'policy': test_policy}),
+            headers=admin_headers
+        )
+        self.assertEqual(resp.status_code, 201)
+        resp = self.app.get(
+            f"/v1/resource/{test_resource}/policy/{test_policy_name}",
+            headers=admin_headers
+        )
+        self.assertJSONEqual(json.loads(resp.body)['policy_document'], test_policy)
+
+        # 200 returned when modifying the policy with valid actions
+        test_policy = create_test_ResourcePolicy('tp{i}', actions=expected_actions[:2])
+        resp = self.app.put(
+            f"/v1/resource/{test_resource}/policy/{test_policy_name}",
+            data=json.dumps({'policy': test_policy}),
+            headers=admin_headers
+        )
+        self.assertEqual(resp.status_code, 200)
+        resp = self.app.get(
+            f"/v1/resource/{test_resource}/policy/{test_policy_name}",
+            headers=admin_headers
+        )
+        self.assertJSONEqual(json.loads(resp.body)['policy_document'], test_policy)
+
+        # 400 returned when modifying the policy with invalid actions
+        test_policy2 = create_test_ResourcePolicy('tp{i}', actions=['invalid:actions'])
+        resp = self.app.put(
+            f"/v1/resource/{test_resource}/policy/{test_policy_name}",
+            data=json.dumps({'policy': test_policy2}),
+            headers=admin_headers
+        )
+        self.assertEqual(resp.status_code, 400)
+        resp = self.app.get(
+            f"/v1/resource/{test_resource}/policy/{test_policy_name}",
+            headers=admin_headers
+        )
+        self.assertJSONEqual(json.loads(resp.body)['policy_document'], test_policy)
+
+        # delete the policy
+        resp = self.app.delete(
+            f"/v1/resource/{test_resource}/policy/{test_policy_name}",
+            headers=admin_headers
+        )
+        self.assertEqual(resp.status_code, 200)
+        resp = self.app.get(
+            f"/v1/resource/{test_resource}/policy/{test_policy_name}",
+            headers=admin_headers
+        )
+        self.assertEqual(resp.status_code, 404)
 
     def test_resource_actions(self):
         """Add and remove actions from a resource type"""

@@ -999,7 +999,7 @@ paths:
               type: object
               properties:
                 owner_policy:
-                  $ref: '#/components/schemas/resource_policy'
+                  $ref: '#/components/schemas/policy_document'
                 actions:
                   type: array
                   items:
@@ -1135,11 +1135,11 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resources/{resource_type_name}/policy:
+  /v1/resource/{resource_type_name}/policy:
     get:
       summary: List the available policies for this resource type.
       description: List the available policies for this resource type.
-      operationId: fusillade.api.resource.resource_type_name.policies.get
+      operationId: fusillade.api.resource.resource_type_name.policy.get
       security:
         - BearerAuth: []
       parameters:
@@ -1161,11 +1161,11 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resources/{resource_type_name}/policy/{policy_name}:
+  /v1/resource/{resource_type_name}/policy/{policy_name}:
     get:
       summary: Retrieve information about resource policy
       description: Retrieve information about resource policy.
-      operationId: fusillade.api.resource.resource_type_name.policies.policy_name.get
+      operationId: fusillade.api.resource.resource_type_name.policy.policy_name.get
       security:
         - BearerAuth: []
       parameters:
@@ -1180,6 +1180,11 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                    policy_document:
+                      $ref: '#/components/schemas/policy_document'
+                    policy_type:
+                      $ref: '#/components/schemas/policy_type'
         401:
           $ref: '#/components/responses/401'
         403:
@@ -1191,7 +1196,7 @@ paths:
     post:
       summary: Add a new resource policy
       description: Add a new resource policy. This makes the resource policy available for all resources of that type. Once added, the new resource policy can be applied to members by using PUT /v1/resource/{resource_type_name}/{resource_id}/policies/{policy_name}/members/{type}/{entity_id}.
-      operationId: fusillade.api.resource.resource_type_name.policies.policy_name.post
+      operationId: fusillade.api.resource.resource_type_name.policy.policy_name.post
       security:
         - BearerAuth: []
       parameters:
@@ -1201,7 +1206,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/policy'
+              type: object
+              properties:
+                policy:
+                  type: object
+                  properties:
+                    document:
+                      $ref: '#/components/schemas/policy_document'
+                    type:
+                      $ref: '#/components/schemas/policy_type'
       tags:
         - resource
       responses:
@@ -1220,7 +1233,7 @@ paths:
     put:
       summary: Modify an existing resource policy
       description: Modify an existing resource policy. This will affect all members that use this resource policy to access a {resource_type_name}/{resource_ids}.
-      operationId: fusillade.api.resource.resource_type_name.policies.policy_name.put
+      operationId: fusillade.api.resource.resource_type_name.policy.policy_name.put
       security:
         - BearerAuth: []
       parameters:
@@ -1230,7 +1243,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/policy'
+              type: object
+              properties:
+                policy:
+                  $ref: '#/components/schemas/policy_document'
       responses:
         200:
           description: Modified the {policy_name} policy for {resource_type_name}.
@@ -1247,7 +1263,7 @@ paths:
     delete:
       summary: Delete an existing resource policy
       description: Delete an existing resource policy. This will affect all members that use this resource policy to access a {resource_type_name}/{resource_ids}.
-      operationId: fusillade.api.resource.resource_type_name.policies.policy_name.delete
+      operationId: fusillade.api.resource.resource_type_name.policy.policy_name.delete
       security:
         - BearerAuth: []
       parameters:
@@ -1308,7 +1324,7 @@ components:
       in: path
       required: true
       schema:
-        $ref : '#/components/schemas/resource_action'
+        $ref: '#/components/schemas/resource_action'
     action:
       name: action
       in: query
@@ -1349,6 +1365,9 @@ components:
       type: array
       items:
         type: string
+    policy_type:
+      type: string
+      enum: ['ResourcePolicy', 'IAMPolicy']
     resource_types:
       description: A list of resource types.
       type: object
@@ -1358,7 +1377,7 @@ components:
     resource_action:
       type: string
       pattern: '[A-z]\w*[^\W_]:[A-z]\w*[^\W_]'
-    resource_policy:
+    policy_document:
       description: A resource policy, used for controlling access to a resource.
       type: object
       properties:
