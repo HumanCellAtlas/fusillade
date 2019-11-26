@@ -49,7 +49,7 @@ class TestResourceType(unittest.TestCase):
         self.assertTrue(set(test_type.actions) == set(actions))
 
         # owner policy exists
-        self.assertIn(f'/resource/{resource_type}/policy/Owner', test_type.list_policies()[0])
+        self.assertIn(f'/resource/{resource_type}/policy/Owner', test_type.list_policies()[0]['policies'])
 
         # create an additional resource type
         resource_type2 = 'test_type2'
@@ -76,8 +76,8 @@ class TestResourceType(unittest.TestCase):
 
         # retrieve all policies
         policies, _ = test_type.list_policies()
-        self.assertIn(f'/resource/{resource_type}/policy/Reader', policies)
-        self.assertIn(f'/resource/{resource_type}/policy/Owner', policies)
+        self.assertIn(f'/resource/{resource_type}/policy/Reader', policies['policies'])
+        self.assertIn(f'/resource/{resource_type}/policy/Owner', policies['policies'])
 
         # update a policy
         expected_policy = create_test_ResourcePolicy("updated", actions[0:1])

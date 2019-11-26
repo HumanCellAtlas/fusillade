@@ -13,7 +13,7 @@ pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noq
 sys.path.insert(0, pkg_root)  # noqa
 
 from tests.base_api_test import BaseAPITest
-from tests.common import get_auth_header, service_accounts
+from tests.common import get_auth_header, service_accounts, create_test_ResourcePolicy
 
 admin_headers = {'Content-Type': "application/json"}
 admin_headers.update(get_auth_header(service_accounts['admin']))
@@ -80,8 +80,15 @@ class TestApi(BaseAPITest, unittest.TestCase):
             self.app.post(f'/v1/resource/tr{i}', data=json.dumps({'actions': ['tr:action1']}), headers=admin_headers)
         self._test_paging('/v1/resource', admin_headers, 10, 'resources')
 
-    def test_resource_policy(self):
-        pass
+    def test_get_resource_policy(self):
+        """Pages of resource are retrieved when using the get resource API"""
+        self.app.post(f'/v1/resource/trp', data=json.dumps({'actions': ['trp:action1']}),
+                      headers=admin_headers)
+        for i in range(11):
+            self.app.post(f'/v1/resource/trp/policies/tp{i}',
+                          data=json.dumps(create_test_ResourcePolicy('tp{i}', actions=['trp:action1'])),
+                          headers=admin_headers)
+        self._test_paging('/v1/resource', admin_headers, 10, 'policies')
 
     def test_resource_actions(self):
         """Add and remove actions from a resource type"""

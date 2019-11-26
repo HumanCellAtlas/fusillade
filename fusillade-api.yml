@@ -1135,7 +1135,7 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resources/{resource_type_name}/policies:
+  /v1/resources/{resource_type_name}/policy:
     get:
       summary: List the available policies for this resource type.
       description: List the available policies for this resource type.
@@ -1161,7 +1161,7 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resources/{resource_type_name}/policies/{policy_name}:
+  /v1/resources/{resource_type_name}/policy/{policy_name}:
     get:
       summary: Retrieve information about resource policy
       description: Retrieve information about resource policy.
