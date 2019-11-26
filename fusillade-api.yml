@@ -1319,12 +1319,6 @@ components:
       description: The name of a type of resources to which a resource policy can be applied.
       schema:
         $ref: '#/components/schemas/custom_identifier'
-    resource_action:
-      name: action
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/resource_action'
     action:
       name: action
       in: query
