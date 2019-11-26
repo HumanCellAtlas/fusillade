@@ -9,11 +9,10 @@ import os
 import sys
 import unittest
 
-from tests.json_mixin import AssertJSONMixin
-
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
+from tests.json_mixin import AssertJSONMixin
 from tests.base_api_test import BaseAPITest
 from tests.common import get_auth_header, service_accounts, create_test_ResourcePolicy
 
