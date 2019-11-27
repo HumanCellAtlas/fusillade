@@ -141,13 +141,6 @@ paths:
           in: query
           schema:
             type: string
-        - name: cookie
-          in: query
-          schema:
-            type: boolean
-            default: false
-          description: If authentication is required for a single page application set this parameter to true. This
-           will return a browser cookie that can be used for future authentication requests.
       responses:
         302:
           description: Redirecting to authentication server.
@@ -240,6 +233,7 @@ paths:
       operationId: fusillade.api.oauth.get_userinfo
       security:
         - BearerAuth: []
+        - CookieAuth: []
       tags:
         - oauth
       responses:
@@ -254,6 +248,7 @@ paths:
       operationId: fusillade.api.oauth.post_userinfo
       security:
         - BearerAuth: []
+        - CookieAuth: []
       tags:
         - oauth
       responses:
@@ -277,6 +272,7 @@ paths:
       operationId: fusillade.api.evaluate.evaluate_policy_api
       security:
         - BearerAuth: []
+        - CookieAuth: []
       requestBody:
         content:
           application/json:
@@ -321,6 +317,7 @@ paths:
       operationId: fusillade.api.users.get_users
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/next_token'
         - $ref: '#/components/parameters/per_page'
@@ -346,6 +343,7 @@ paths:
       operationId: fusillade.api.users.post_user
       security:
         - BearerAuth: []
+        - CookieAuth: []
       requestBody:
         content:
           application/json:
@@ -382,6 +380,7 @@ paths:
       operationId: fusillade.api.users.get_user
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
       tags:
@@ -404,6 +403,7 @@ paths:
       operationId: fusillade.api.users.put_user
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - $ref: '#/components/parameters/status'
@@ -423,6 +423,7 @@ paths:
       operationId: fusillade.api.users.get_users_owns
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - $ref: '#/components/parameters/next_token'
@@ -452,6 +453,7 @@ paths:
       operationId: fusillade.api.users.get_users_groups
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - $ref: '#/components/parameters/next_token'
@@ -477,6 +479,7 @@ paths:
       operationId: fusillade.api.users.put_users_groups
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - $ref: '#/components/parameters/action'
@@ -508,6 +511,7 @@ paths:
       operationId: fusillade.api.users.get_users_roles
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - $ref: '#/components/parameters/next_token'
@@ -533,6 +537,7 @@ paths:
       operationId: fusillade.api.users.put_users_roles
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
         - $ref: '#/components/parameters/action'
@@ -564,6 +569,7 @@ paths:
       operationId: fusillade.api.users.put_user_policy
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
       requestBody:
@@ -590,6 +596,7 @@ paths:
       operationId: fusillade.api.groups.get_groups
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/next_token'
         - $ref: '#/components/parameters/per_page'
@@ -615,6 +622,7 @@ paths:
       operationId: fusillade.api.groups.post_group
       security:
         - BearerAuth: []
+        - CookieAuth: []
       requestBody:
         content:
           application/json:
@@ -647,6 +655,7 @@ paths:
       operationId: fusillade.api.groups.get_group
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
       responses:
@@ -668,6 +677,7 @@ paths:
       operationId: fusillade.api.groups.delete_group
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
       responses:
@@ -686,6 +696,7 @@ paths:
       operationId: fusillade.api.groups.get_groups_roles
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
         - $ref: '#/components/parameters/next_token'
@@ -711,6 +722,7 @@ paths:
       operationId: fusillade.api.groups.put_groups_roles
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
         - $ref: '#/components/parameters/action'
@@ -742,6 +754,7 @@ paths:
       operationId: fusillade.api.groups.get_group_users
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
         - $ref: '#/components/parameters/next_token'
@@ -767,6 +780,7 @@ paths:
       operationId: fusillade.api.groups.put_groups_users
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
         - $ref: '#/components/parameters/action'
@@ -800,6 +814,7 @@ paths:
       operationId: fusillade.api.groups.put_group_policy
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/group_id'
       requestBody:
@@ -826,6 +841,7 @@ paths:
       operationId: fusillade.api.roles.get_roles
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/next_token'
         - $ref: '#/components/parameters/per_page'
@@ -851,6 +867,7 @@ paths:
       operationId: fusillade.api.roles.post_role
       security:
         - BearerAuth: []
+        - CookieAuth: []
       requestBody:
         content:
           application/json:
@@ -884,6 +901,7 @@ paths:
       operationId: fusillade.api.roles.get_role
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/role_id'
       responses:
@@ -905,6 +923,7 @@ paths:
       operationId: fusillade.api.roles.delete_role
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/role_id'
       responses:
@@ -923,6 +942,7 @@ paths:
       operationId: fusillade.api.roles.put_role_policy
       security:
         - BearerAuth: []
+        - CookieAuth: []
       parameters:
         - $ref: '#/components/parameters/role_id'
       requestBody:
@@ -1132,3 +1152,8 @@ components:
       scheme: bearer
       bearerFormat: JWT
       x-bearerInfoFunc: fusillade.utils.security.verify_jwt
+    CookieAuth:
+      type: apiKey
+      name: session
+      in: cookie
+      x-apikeyInfoFunc: fusillade.utils.security.verify_session

@@ -7,9 +7,8 @@ import os
 
 import jwt
 import requests
-import time
 from connexion.lifecycle import ConnexionResponse
-from flask import json, request, make_response
+from flask import json, request, make_response, session
 from furl import furl
 
 from fusillade import Config
@@ -18,9 +17,10 @@ from fusillade.utils.security import get_openid_config, get_public_key
 
 
 def login():
+    query_params = request.args
     return ConnexionResponse(
         status_code=requests.codes.moved,
-        headers=dict(Location='/oauth/authorize'))
+        headers=dict(Location=furl('/oauth/authorize', query_params=query_params).url))
 
 
 def logout():
@@ -30,18 +30,9 @@ def logout():
     client_id = oauth2_config[openid_provider]["client_id"] if not query_params else query_params.get('client_id')
     url = furl(f"https://{openid_provider}/v2/logout",
                query_params=dict(client_id=client_id)).url
+    session.pop('access_token')
     return ConnexionResponse(status_code=requests.codes.found,
-                             headers={
-                                 'Location': url,
-                                 'set-cookie': ';'.join(
-                                     [f"access_token=",
-                                      "SameSite=Strict",
-                                      "Domain=humancellatlas.org",
-                                      "Secure",
-                                      "HttpOnly",
-                                      f"Expires={int(time.time()) - Config.cookie_age}",
-                                      "path=/"])
-                             })
+                             headers={'Location': url})
 
 
 def authorize():
@@ -203,20 +194,9 @@ def cb():
                          key=public_key,
                          audience=oauth2_config[openid_provider]["client_id"])
         assert tok["email_verified"]  # TODO return a specific error when email is not verfied.
-
         headers = dict()
         resp = res.json()
-        if state.get('cookie'):
-            # Return the access token as a cookie.
-            headers['set-cookie'] = ';'.join([f"access_token={resp.pop('access_token')}",
-                                              "SameSite=Strict",
-                                              "Domain=humancellatlas.org",
-                                              "Secure",
-                                              "HttpOnly",
-                                              f"Max-Age={Config.cookie_age}",  # in seconds
-                                              f"Expires={int(time.time()) + Config.cookie_age}",
-                                              "path=/"])
-
+        session['access_token'] = resp['access_token']
         if redirect_uri:
             # Simple flow - redirect with QS
             resp_params = dict(resp, decoded_token=json.dumps(tok), state=state.get("state"))
