@@ -190,12 +190,12 @@ class ResourceType(CloudNode):
         """
         return name
 
-    def list_policies(self, per_page=None, next=None):
-        children, next_token = self.cd.list_object_children_paged(f"{self.object_ref}/policy", next, per_page)
+    def list_policies(self, next_token=None, per_page=None) -> Dict[str, str]:
+        children, next_token = self.cd.list_object_children_paged(f"{self.object_ref}/policy", next_token, per_page)
         return {'policies': [f"/resource/{self.name}/policy/{child}" for child in children.keys()]}, next_token
 
-    def list_ids(self, per_page=None, next=None):
-        children, next_token = self.cd.list_object_children_paged(f"{self.object_ref}/id", next, per_page)
+    def list_ids(self, next_token=None,  per_page=None):
+        children, next_token = self.cd.list_object_children_paged(f"{self.object_ref}/id", next_token, per_page)
         return [f"/resource/{self.name}/id/{child}" for child in children.keys()], next_token
 
     def get_policy_reference(self, policy_name: str) -> str:

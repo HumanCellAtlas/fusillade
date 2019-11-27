@@ -83,13 +83,15 @@ class TestApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
 
     def test_get_resource_policy(self):
         """Pages of resource are retrieved when using the get resource API"""
-        self.app.post(f'/v1/resource/trp', data=json.dumps({'actions': ['trp:action1']}),
+        resp = self.app.post(f'/v1/resource/trp', data=json.dumps({'actions': ['trp:action1']}),
                       headers=admin_headers)
+        self.assertEqual(resp.status_code, 201)
         for i in range(11):
-            self.app.post(f'/v1/resource/trp/policies/tp{i}',
-                          data=json.dumps(create_test_ResourcePolicy('tp{i}', actions=['trp:action1'])),
+            resp = self.app.post(f'/v1/resource/trp/policy/tp{i}',
+                          data=json.dumps({'policy':create_test_ResourcePolicy('tp{i}', actions=['trp:action1'])}),
                           headers=admin_headers)
-        self._test_paging('/v1/resource', admin_headers, 10, 'policies')
+            self.assertEqual(resp.status_code, 201)
+        self._test_paging('/v1/resource/trp/policy', admin_headers, 10, 'policies')
 
     def test_resource_policy(self):
         """Create delete and update a resource policy"""

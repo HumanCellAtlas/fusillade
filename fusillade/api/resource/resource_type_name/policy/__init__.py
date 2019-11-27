@@ -10,4 +10,5 @@ from fusillade.utils.authorize import authorize
            resource_params=['resource_type_name'])
 def get(token_info: dict, resource_type_name):
     next_token, per_page = get_next_token(request.args)
-    return get_page(ResourceType.list_policies(), next_token, per_page, content_key='policies')
+    rt = ResourceType(resource_type_name)
+    return get_page(rt.list_policies, next_token, per_page, content_key='policies')
