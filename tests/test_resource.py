@@ -71,7 +71,7 @@ class TestResourceType(unittest.TestCase):
 
         # retrieve a specific access policy
         test_policy = test_type.get_policy('Reader')
-        self.assertDictEqual(expected_policy, json.loads(test_policy['policy_document']))
+        self.assertDictEqual(expected_policy, test_policy['policy_document'])
         self.assertEqual('ResourcePolicy', test_policy['policy_type'])
 
         # retrieve all policies
@@ -83,7 +83,7 @@ class TestResourceType(unittest.TestCase):
         expected_policy = create_test_ResourcePolicy("updated", actions[0:1])
         test_type.update_policy('Reader', expected_policy, 'ResourcePolicy')
         test_policy = test_type.get_policy('Reader')
-        self.assertDictEqual(expected_policy, json.loads(test_policy['policy_document']))
+        self.assertDictEqual(expected_policy, test_policy['policy_document'])
         self.assertEqual('ResourcePolicy', test_policy['policy_type'])
 
         # invalid actions raise an exception
