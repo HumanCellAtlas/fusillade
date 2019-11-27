@@ -194,7 +194,7 @@ class ResourceType(CloudNode):
         children, next_token = self.cd.list_object_children_paged(f"{self.object_ref}/policy", next_token, per_page)
         return {'policies': [f"/resource/{self.name}/policy/{child}" for child in children.keys()]}, next_token
 
-    def list_ids(self, next_token=None,  per_page=None):
+    def list_ids(self, next_token=None, per_page=None):
         children, next_token = self.cd.list_object_children_paged(f"{self.object_ref}/id", next_token, per_page)
         return [f"/resource/{self.name}/id/{child}" for child in children.keys()], next_token
 
