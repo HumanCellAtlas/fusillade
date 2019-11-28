@@ -999,7 +999,7 @@ paths:
               type: object
               properties:
                 owner_policy:
-                  $ref: '#/components/schemas/resource_policy'
+                  $ref: '#/components/schemas/policy_document'
                 actions:
                   type: array
                   items:
@@ -1038,6 +1038,250 @@ paths:
           description: Unexpected error.
       tags:
         - resource
+  /v1/resource/{resource_type_name}/actions:
+    get:
+      summary: List all actions for this resource type.
+      description: List all actions for this resource type.
+      operationId: fusillade.api.resource.resource_type_name.actions.get
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/resource_action'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+    put:
+      summary: Add a new action for a resource type.
+      description: Add a new action for a resource type.
+      operationId: fusillade.api.resource.resource_type_name.actions.put
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/resource_action'
+      responses:
+        200:
+          description: OK
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+    delete:
+      summary: Delete an existing action for a resource type.
+      description: Delete an existing action for a resource type.
+      operationId: fusillade.api.resource.resource_type_name.actions.delete
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/resource_action'
+      responses:
+        200:
+          description: OK
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+  /v1/resource/{resource_type_name}/policy:
+    get:
+      summary: List the available policies for this resource type.
+      description: List the available policies for this resource type.
+      operationId: fusillade.api.resource.resource_type_name.policy.get
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/next_token'
+        - $ref: '#/components/parameters/per_page'
+      responses:
+        200:
+          $ref: '#/components/responses/200_paged'
+        206:
+          $ref: '#/components/responses/206'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+  /v1/resource/{resource_type_name}/policy/{policy_name}:
+    get:
+      summary: Retrieve information about resource policy
+      description: Retrieve information about resource policy.
+      operationId: fusillade.api.resource.resource_type_name.policy.policy_name.get
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/policy_name'
+      tags:
+        - resource
+      responses:
+        200:
+          description: The {policy_name} policy for {resource_type_name} returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                    policy_document:
+                      $ref: '#/components/schemas/policy_document'
+                    policy_type:
+                      $ref: '#/components/schemas/policy_type'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error.
+    post:
+      summary: Add a new resource policy for the specified resource type.
+      description: Add a new resource policy. This makes the resource policy available for all resources of that type. Once added, the new resource policy can be applied to members by using PUT /v1/resource/{resource_type_name}/{resource_id}/policies/{policy_name}/members/{type}/{entity_id}.
+      operationId: fusillade.api.resource.resource_type_name.policy.policy_name.post
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/policy_name'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policy:
+                  type: object
+                  properties:
+                    document:
+                      $ref: '#/components/schemas/policy_document'
+                    type:
+                      $ref: '#/components/schemas/policy_type'
+      tags:
+        - resource
+      responses:
+        200:
+          description: Created the {policy_name} policy for {resource_type_name}.
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        409:
+          $ref: '#/components/responses/409'
+        default:
+          description: Unexpected error.
+    put:
+      summary: Modify an existing resource policy for the specified resource type
+      description: Modify an existing resource policy. This will affect all members that use this resource policy to access a {resource_type_name}/{resource_ids}.
+      operationId: fusillade.api.resource.resource_type_name.policy.policy_name.put
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/policy_name'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                policy:
+                  $ref: '#/components/schemas/policy_document'
+      responses:
+        200:
+          description: Modified the {policy_name} policy for {resource_type_name}.
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+    delete:
+      summary: Delete an existing resource policy for the specified resource type.
+      description: Delete an existing resource policy. This will affect all members that use this resource policy to access a {resource_type_name}/{resource_ids}.
+      operationId: fusillade.api.resource.resource_type_name.policy.policy_name.delete
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/policy_name'
+      tags:
+        - resource
+      responses:
+        200:
+          description: Deleted the {policy_name} policy for {resource_type_name}.
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error.
 components:
   parameters:
     user_id:
@@ -1075,13 +1319,6 @@ components:
       description: The name of a type of resources to which a resource policy can be applied.
       schema:
         $ref: '#/components/schemas/custom_identifier'
-    resource_action:
-      name: action
-      in: path
-      required: true
-      schema:
-        type: string
-        pattern: '[A-z]\w*[^\W_]:[A-z]\w*[^\W_]'
     action:
       name: action
       in: query
@@ -1122,13 +1359,19 @@ components:
       type: array
       items:
         type: string
+    policy_type:
+      type: string
+      enum: ['ResourcePolicy', 'IAMPolicy']
     resource_types:
       description: A list of resource types.
       type: object
       properties:
         resources:
           $ref: '#/components/schemas/paged_results'
-    resource_policy:
+    resource_action:
+      type: string
+      pattern: '[A-z]\w*[^\W_]:[A-z]\w*[^\W_]'
+    policy_document:
       description: A resource policy, used for controlling access to a resource.
       type: object
       properties:

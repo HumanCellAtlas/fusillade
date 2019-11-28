@@ -83,7 +83,7 @@ class CloudDirectory:
     @retry(**cd_read_retry_parameters)
     def list_object_children_paged(self, object_ref: str,
                                    next_token: Optional[str] = None,
-                                   per_page=None, **kwargs) -> Tuple[dict, Optional[str]]:
+                                   per_page: Optional[int] = None, **kwargs) -> Tuple[dict, Optional[str]]:
         """
         a wrapper around CloudDirectory.Client.list_object_children with paging
 
