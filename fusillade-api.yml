@@ -1070,7 +1070,7 @@ paths:
       tags:
         - resource
     put:
-      summary: Add a new resource type action.
+      summary: Add a new action for a resource type.
       description: Add a new resource type action.
       operationId: fusillade.api.resource.resource_type_name.actions.put
       security:
