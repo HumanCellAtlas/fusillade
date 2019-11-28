@@ -1071,7 +1071,7 @@ paths:
         - resource
     put:
       summary: Add a new action for a resource type.
-      description: Add a new resource type action.
+      description: Add a new action for a resource type.
       operationId: fusillade.api.resource.resource_type_name.actions.put
       security:
         - BearerAuth: []
