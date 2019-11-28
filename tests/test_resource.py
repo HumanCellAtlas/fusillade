@@ -50,7 +50,7 @@ class TestResourceType(unittest.TestCase):
         self.assertTrue(set(test_type.actions) == set(actions))
 
         # owner policy exists
-        self.assertIn(f'/resource/{resource_type}/policy/Owner', test_type.list_policies()[0])
+        self.assertIn(f'/resource/{resource_type}/policy/Owner', test_type.list_policies()[0]['policies'])
 
         # create an additional resource type
         resource_type2 = 'test_type2'
@@ -72,19 +72,19 @@ class TestResourceType(unittest.TestCase):
 
         # retrieve a specific access policy
         test_policy = test_type.get_policy('Reader')
-        self.assertDictEqual(expected_policy, json.loads(test_policy['policy_document']))
+        self.assertDictEqual(expected_policy, test_policy['policy_document'])
         self.assertEqual('ResourcePolicy', test_policy['policy_type'])
 
         # retrieve all policies
         policies, _ = test_type.list_policies()
-        self.assertIn(f'/resource/{resource_type}/policy/Reader', policies)
-        self.assertIn(f'/resource/{resource_type}/policy/Owner', policies)
+        self.assertIn(f'/resource/{resource_type}/policy/Reader', policies['policies'])
+        self.assertIn(f'/resource/{resource_type}/policy/Owner', policies['policies'])
 
         # update a policy
         expected_policy = create_test_ResourcePolicy("updated", actions[0:1])
         test_type.update_policy('Reader', expected_policy, 'ResourcePolicy')
         test_policy = test_type.get_policy('Reader')
-        self.assertDictEqual(expected_policy, json.loads(test_policy['policy_document']))
+        self.assertDictEqual(expected_policy, test_policy['policy_document'])
         self.assertEqual('ResourcePolicy', test_policy['policy_type'])
 
         # invalid actions raise an exception
