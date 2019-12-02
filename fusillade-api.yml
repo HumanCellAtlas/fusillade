@@ -1182,10 +1182,10 @@ paths:
               schema:
                 type: object
                 properties:
-                    policy_document:
-                      $ref: '#/components/schemas/policy_document'
-                    policy_type:
-                      $ref: '#/components/schemas/policy_type'
+                  policy_document:
+                    $ref: '#/components/schemas/policy_document'
+                  policy_type:
+                    $ref: '#/components/schemas/policy_type'
         401:
           $ref: '#/components/responses/401'
         403:
@@ -1196,7 +1196,9 @@ paths:
           description: Unexpected error.
     post:
       summary: Add a new resource policy for the specified resource type.
-      description: Add a new resource policy. This makes the resource policy available for all resources of that type. Once added, the new resource policy can be applied to members by using PUT /v1/resource/{resource_type_name}/{resource_id}/policies/{policy_name}/members/{type}/{entity_id}.
+      description: Add a new resource policy. This makes the resource policy available for all resources of that type
+        . Once added, the new resource policy can be applied to members by using PUT
+        /v1/resource/{resource_type_name}/id/{resource_id}/members
       operationId: fusillade.api.resource.resource_type_name.policy.policy_name.post
       security:
         - BearerAuth: []
@@ -1283,7 +1285,7 @@ paths:
           $ref: '#/components/responses/404'
         default:
           description: Unexpected error.
-  /v1/resources/{resource_type_name}/{resource_id}:
+  /v1/resources/{resource_type_name}/id/{resource_id}:
     get:
       summary: check if a resource exists.
       description: Check if a resource exists.
@@ -1350,10 +1352,10 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resources/{resource_type_name}/{resource_id}/members/{type}:
+  /v1/resources/{resource_type_name}/id/{resource_id}/members:
     get:
       summary: List all members that have access to this resource.
-      description: List all members that have access to this resource. Members include roles, users, and groups that any
+      description: List all members that have access to this resource. Members include users, and groups with any
         level of access to this resource.
       operationId: fusillade.api.resource.resource_type_name.resource_id.members.get
       security:
@@ -1363,13 +1365,6 @@ paths:
         - $ref: '#/components/parameters/resource_id'
         - $ref: '#/components/parameters/next_token'
         - $ref: '#/components/parameters/per_page'
-        - name: type
-          in: path
-          required: true
-          description: The type of member to find.
-          schema:
-            type: string
-            enum: [user, group]
       responses:
         200:
           description: All results have been returned.
@@ -1393,87 +1388,6 @@ paths:
           $ref: '#/components/responses/403'
         404:
           $ref: '#/components/responses/404'
-  /v1/resource/{resource_type_name}/{resource_id}/policies/{policy_name}/members/{type}:
-    get:
-      summary: List all members that have access to {resource_type_name}/{resource_id} through {policy_name}.
-      description: List all members that have access to {resource_type_name}/{resource_id} through {policy_name}.
-      operationId: fusillade.api.resource.resource_type_name.resource_id.policies.policy_name.members.get
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/resource_type_name'
-        - $ref: '#/components/parameters/resource_id'
-        - $ref: '#/components/parameters/next_token'
-        - $ref: '#/components/parameters/per_page'
-        - $ref: '#/components/parameters/policy_name'
-        - name: type
-          in: path
-          required: true
-          description: The type of member to find.
-          schema:
-            type: string
-            enum: [user, group]
-      responses:
-        200:
-          $ref: '#/components/responses/200_paged'
-        206:
-          $ref: '#/components/responses/206'
-        401:
-          $ref: '#/components/responses/401'
-        403:
-          $ref: '#/components/responses/403'
-        404:
-          $ref: '#/components/responses/404'
-        default:
-          description: Unexpected error.
-      tags:
-        - resource
-  /v1/resource/{resource_type_name}/{resource_id}/policies/{policy_name}/members/{type}/{entity_id}:
-    get:
-      summary: Check if entity {type}/{entity_id} has access to this {resource_type_name}/{resource_id}
-        through {policy_name}.
-      description: Check if entity {type}/{entity_id} has access to this  {resource_type_name}/{resource_id} through
-        {policy_name}.
-      operationId: fusillade.api.resource.resource_type_name.resource_id.policies.policy_name.members.type.entity_id.get
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/resource_type_name'
-        - $ref: '#/components/parameters/resource_id'
-        - $ref: '#/components/parameters/policy_name'
-        - name: entity_id
-          in: path
-          required: true
-          description: Either a user or group ID.
-          schema:
-            $ref: '#/components/schemas/custom_identifier'
-        - name: type
-          in: path
-          required: true
-          description: The type of member to find.
-          schema:
-            type: string
-            enum: [user, group]
-      tags:
-        - resource
-      responses:
-        200:
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  public:
-                    type: boolean
-        401:
-          $ref: '#/components/responses/401'
-        403:
-          $ref: '#/components/responses/403'
-        404:
-          $ref: '#/components/responses/404'
-        default:
-          description: Unexpected error.
     put:
       summary: Give entity {type}/{entity_id} permission to {resource_type_name}/{resource_id} through {policy_name}.
       description: Give entity {type}/{entity_id} permission to {resource_type_name}/{resource_id} through {policy_name}.
@@ -1484,19 +1398,20 @@ paths:
         - $ref: '#/components/parameters/resource_type_name'
         - $ref: '#/components/parameters/resource_id'
         - $ref: '#/components/parameters/policy_name'
+      requestBody:
+        - name: type
+          in: path
+          required: true
+          description: The type of member to find.
+          schema:
+            type: string
+            enum: [user, group]
         - name: entity_id
           in: path
           required: true
           description: Either a user or group ID.
           schema:
             $ref: '#/components/schemas/custom_identifier'
-        - name: type
-          in: path
-          required: true
-          description: The type of member to add.
-          schema:
-            type: string
-            enum: [user, group]
       responses:
         200:
           description: The {type}/{entity_id} has been added to the policy.
@@ -1520,19 +1435,20 @@ paths:
         - $ref: '#/components/parameters/resource_type_name'
         - $ref: '#/components/parameters/resource_id'
         - $ref: '#/components/parameters/policy_name'
+      requestBody:
+        - name: type
+          in: path
+          required: true
+          description: The type of member to find.
+          schema:
+            type: string
+            enum: [user, group]
         - name: entity_id
           in: path
           required: true
           description: Either a user or group ID.
           schema:
             $ref: '#/components/schemas/custom_identifier'
-        - name: type
-          in: path
-          required: true
-          description: The type of member to remove.
-          schema:
-            type: string
-            enum: [user, group]
       responses:
         200:
           description: The {type}/{entity_id} has been added to the policy.
@@ -1546,83 +1462,6 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resource/{resource_type_name}/{resource_id}/policies/{policy_name}/public:
-    get:
-      summary: Check if public access is available to this {resource_type_name}/{resource_id} through {policy_name}.
-      description: Check if public access is available to this {resource_type_name}/{resource_id} through {policy_name}.
-      operationId: fusillade.api.resource.resource_type_name.resource_id.policies.policy_name.public.get
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/resource_type_name'
-        - $ref: '#/components/parameters/resource_id'
-        - $ref: '#/components/parameters/policy_name'
-      tags:
-        - resource
-      responses:
-        200:
-          description: Success
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  public:
-                    type: boolean
-        401:
-          $ref: '#/components/responses/401'
-        403:
-          $ref: '#/components/responses/403'
-        404:
-          $ref: '#/components/responses/404'
-        default:
-          description: Unexpected error.
-    put:
-      summary: Set public access to this {resource_type_name}/{resource_id} through {policy_name}.
-      description: Set public access to this {resource_type_name}/{resource_id} through {policy_name}.
-      operationId: fusillade.api.resource.resource_type_name.resource_id.policies.policy_name.public.put
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/resource_type_name'
-        - $ref: '#/components/parameters/resource_id'
-        - $ref: '#/components/parameters/policy_name'
-      responses:
-        200:
-          description: Success
-        401:
-          $ref: '#/components/responses/401'
-        403:
-          $ref: '#/components/responses/403'
-        404:
-          $ref: '#/components/responses/404'
-        default:
-          description: Unexpected error.
-      tags:
-        - resource
-    delete:
-      summary: Remove public access to this {resource_type_name}/{resource_id} through {policy_name}.
-      description: Remove public access to this {resource_type_name}/{resource_id} through {policy_name}.
-      operationId: fusillade.api.resource.resource_type_name.resource_id.policies.policy_name.public.delete
-      security:
-        - BearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/resource_type_name'
-        - $ref: '#/components/parameters/resource_id'
-        - $ref: '#/components/parameters/policy_name'
-      tags:
-        - resource
-      responses:
-        200:
-          description: Success
-        401:
-          $ref: '#/components/responses/401'
-        403:
-          $ref: '#/components/responses/403'
-        404:
-          $ref: '#/components/responses/404'
-        default:
-          description: Unexpected error.
 components:
   parameters:
     user_id:
@@ -1703,6 +1542,10 @@ components:
       schema:
         type: string
   schemas:
+    principal_type: type
+      schema:
+        type: string
+        enum: [user, group]
     paged_results:
       type: array
       items:

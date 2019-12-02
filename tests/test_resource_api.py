@@ -23,7 +23,7 @@ user_header = {'Content-Type': "application/json"}
 user_header.update(get_auth_header(service_accounts['user']))
 
 
-class TestApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
+class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
 
     def test_create_resource(self):
         """A resource type is created and destroyed using the API"""
@@ -84,12 +84,13 @@ class TestApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
     def test_get_resource_policy(self):
         """Pages of resource are retrieved when using the get resource API"""
         resp = self.app.post(f'/v1/resource/trp', data=json.dumps({'actions': ['trp:action1']}),
-                      headers=admin_headers)
+                             headers=admin_headers)
         self.assertEqual(resp.status_code, 201)
         for i in range(11):
             resp = self.app.post(f'/v1/resource/trp/policy/tp{i}',
-                          data=json.dumps({'policy':create_test_ResourcePolicy('tp{i}', actions=['trp:action1'])}),
-                          headers=admin_headers)
+                                 data=json.dumps(
+                                     {'policy': create_test_ResourcePolicy('tp{i}', actions=['trp:action1'])}),
+                                 headers=admin_headers)
             self.assertEqual(resp.status_code, 201)
         self._test_paging('/v1/resource/trp/policy', admin_headers, 10, 'policies')
 
@@ -220,6 +221,48 @@ class TestApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
                             data=json.dumps({'actions': modify_actions}),
                             headers=admin_headers)
         self.assertEqual(resp.status_code, 200)
+
+
+class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(BaseAPITest, cls).setUpClass()
+        cls.test_resource = 'sample_resource'
+        cls.actions = sorted(['rt:get', 'rt:put', 'rt:update', 'rt:delete'])
+        cls.app.post(
+            f'/v1/resource/{cls.test_resource}',
+            data=json.dumps({'actions': cls.actions}),
+            headers=admin_headers)
+
+        cls.app.post(
+            f"/v1/resource/{cls.test_resource}/policy/read",
+            data=json.dumps({'policy': create_test_ResourcePolicy('read', actions=['rt:get'])}),
+            headers=admin_headers
+        )
+
+        cls.app.post(
+            f"/v1/resource/{cls.test_resource}/policy/write",
+            data=json.dumps({
+                'policy': create_test_ResourcePolicy('write',
+                                                     actions=['rt:get', 'rt:put', 'rt:update', 'rt:delete'])}),
+            headers=admin_headers
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        super(BaseAPITest, cls).setUpClass()
+        # list the ids
+        # delete all of the ids
+        # delete the resource type
+
+        cls.app.delete(
+            f"/v1/resource/{cls.test_resource}/policy/write",
+            data=json.dumps({
+                'policy': create_test_ResourcePolicy('write',
+                                                     actions=['rt:get', 'rt:put', 'rt:update', 'rt:delete'])}),
+            headers=admin_headers
+        )
 
 
 if __name__ == '__main__':
