@@ -53,7 +53,7 @@ class BaseAPITest():
         cls.saved_groups = _iterator('/v1/groups', 'groups')
         cls.saved_users = _iterator('/v1/users', 'users')
         cls.saved_roles = _iterator('/v1/roles', 'roles')
-        cls.saved_resources = _iterator('/v1/resource')
+        cls.saved_resources = _iterator('/v1/resource', 'resources')
 
     @classmethod
     def clear_directory(cls, **kwargs):
