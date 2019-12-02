@@ -5,7 +5,8 @@ import typing
 from typing import List, Dict, Optional, Union, Any
 
 from dcplib.aws import clients as aws_clients
-from fusillade import User, Config
+from fusillade import Config
+from fusillade.directory import User
 from fusillade.errors import FusilladeForbiddenException, AuthorizationException, FusilladeBadRequestException
 
 logger = logging.getLogger(__name__)

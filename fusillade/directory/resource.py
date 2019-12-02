@@ -19,8 +19,9 @@ from collections import defaultdict
 from typing import List, Dict, Any, Type, Union
 
 from fusillade.config import proj_path
-from fusillade.directory import CloudNode, Principal, cd_client, ConsistencyLevel, logger, \
+from fusillade.directory import CloudNode, cd_client, ConsistencyLevel, logger, \
     UpdateObjectParams, ValueTypes, UpdateActions, User
+from fusillade.directory.principal import Principal
 from fusillade.directory.identifiers import get_obj_type_path
 from fusillade.errors import FusilladeHTTPException, FusilladeNotFoundException, FusilladeBadRequestException
 from fusillade.policy.validator import verify_policy

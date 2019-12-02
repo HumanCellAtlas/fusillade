@@ -7,7 +7,8 @@ sys.path.insert(0, pkg_root)  # noqa
 
 from fusillade.errors import FusilladeHTTPException
 from fusillade.directory import User, Group, cd_client, cleanup_directory, cleanup_schema, \
-    default_group_policy_path, Role, clear_cd
+    Role, clear_cd
+from fusillade.directory.principal import default_group_policy_path
 from fusillade.utils.json import get_json_file
 from tests.common import new_test_directory, create_test_IAMPolicy, normalize_json
 from tests.infra.testmode import standalone

@@ -1,6 +1,7 @@
 from flask import request, make_response, jsonify
 
-from fusillade import Role, Config
+from fusillade import Config
+from fusillade.directory import Role
 from fusillade.api.paging import get_next_token, get_page
 from fusillade.utils.authorize import authorize, get_email_claim
 
