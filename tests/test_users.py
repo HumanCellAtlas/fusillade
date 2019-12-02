@@ -5,8 +5,9 @@ import unittest
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
+from dcplib.aws.clients import clouddirectory as cd_client
 from fusillade.errors import FusilladeHTTPException
-from fusillade.directory import User, Group, Role, cd_client, cleanup_directory, cleanup_schema, \
+from fusillade.directory import User, Group, Role, cleanup_directory, cleanup_schema, \
     get_json_file, default_user_policy_path, default_user_role_path, clear_cd
 from fusillade.directory.principal import default_group_policy_path
 from fusillade.utils.json import get_json_file
