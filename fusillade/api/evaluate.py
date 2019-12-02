@@ -4,7 +4,7 @@ from threading import Thread
 
 from flask import make_response, jsonify
 
-from fusillade import User
+from fusillade.directory import User
 from fusillade.errors import AuthorizationException
 from fusillade.utils.authorize import assert_authorized, evaluate_policy, restricted_context_entries, get_email_claim
 

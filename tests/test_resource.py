@@ -6,7 +6,8 @@ import unittest
 pkg_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))  # noqa
 sys.path.insert(0, pkg_root)  # noqa
 
-from fusillade.directory import cleanup_directory, cleanup_schema, default_group_policy_path, User, clear_cd
+from fusillade.directory import cleanup_directory, cleanup_schema, User, clear_cd
+from fusillade.directory.principal import default_group_policy_path
 from fusillade.utils.json import get_json_file
 from fusillade.errors import FusilladeBadRequestException, FusilladeNotFoundException, FusilladeHTTPException
 from fusillade.directory.resource import ResourceType
