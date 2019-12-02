@@ -14,18 +14,21 @@ The owner policy is added to the resource type and is used to determine what act
 perform on a resource.
 """
 import json
+import logging
 import os
 from collections import defaultdict
 from typing import List, Dict, Any, Type, Union
 
+from dcplib.aws.clients import clouddirectory as cd_client
 from fusillade.config import proj_path, Config
-from fusillade.directory import CloudNode, cd_client, ConsistencyLevel, logger, \
-    UpdateObjectParams, ValueTypes, UpdateActions, User
-from fusillade.directory.principal import Principal
+from fusillade.directory.cloudnode import CloudNode
 from fusillade.directory.identifiers import get_obj_type_path
+from fusillade.directory.principal import Principal, User
+from fusillade.directory.structs import ConsistencyLevel, UpdateObjectParams, ValueTypes, UpdateActions
 from fusillade.errors import FusilladeHTTPException, FusilladeNotFoundException, FusilladeBadRequestException
 from fusillade.policy.validator import verify_policy
 
+logger = logging.getLogger(__name__)
 default_resource_owner_policy = os.path.join(proj_path, '..', 'policies', 'default_resource_owner_policy.json')
 
 

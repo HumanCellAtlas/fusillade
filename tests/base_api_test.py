@@ -53,12 +53,14 @@ class BaseAPITest():
         cls.saved_groups = _iterator('/v1/groups', 'groups')
         cls.saved_users = _iterator('/v1/users', 'users')
         cls.saved_roles = _iterator('/v1/roles', 'roles')
+        cls.saved_resources = _iterator('/v1/resource', 'resources')
 
     @classmethod
     def clear_directory(cls, **kwargs):
         kwargs["users"] = kwargs.get('users', []) + [*Config.get_admin_emails()] + cls.saved_users
         kwargs["groups"] = kwargs.get('groups', []) + cls.saved_groups
         kwargs["roles"] = kwargs.get('roles', []) + cls.saved_roles
+        kwargs["resources"] = kwargs.get('resources', []) + cls.saved_resources
         clear_cd(Config.get_directory(), **kwargs)
 
     @classmethod

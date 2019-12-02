@@ -15,6 +15,7 @@ from fusillade.directory.clouddirectory import CloudDirectory
 from fusillade.directory.cloudnode import CloudNode
 from fusillade.directory.identifiers import obj_type_path, get_obj_type_path
 from fusillade.directory.principal import User, Group, Role
+from fusillade.directory.resource import ResourceType
 from fusillade.directory.structs import UpdateActions, ValueTypes, ConsistencyLevel, UpdateObjectParams
 from fusillade.utils.json import get_json_file
 
@@ -141,20 +142,24 @@ def verify_directory(directory: 'CloudDirectory'):
 def clear_cd(directory: 'CloudDirectory',
              users: List[str] = None,
              groups: List[str] = None,
-             roles: List[str] = None) -> None:
+             roles: List[str] = None,
+             resources: List[str] = None) -> None:
     """
-
+    :param directory: the directory to clear
     :param users: a list of users to keep
     :param groups: a list of groups to keep
     :param roles: a list of roles to keep
+    :param resources: a list of resource types to keep
     :return:
     """
     users = users if users else []
     groups = groups if groups else []
     roles = roles if roles else []
+    resources = resources if resources else []
     protected_users = [User.hash_name(name) for name in ['public'] + users]
     protected_groups = [Group.hash_name(name) for name in ['user_default'] + groups]
     protected_roles = [Role.hash_name(name) for name in ["fusillade_admin", "default_user"] + roles]
+    protected_resources = [ResourceType.hash_name(name) for name in resources]
 
     for name, obj_ref in directory.list_object_children('/user/', ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
         if name not in protected_users:
@@ -167,4 +172,5 @@ def clear_cd(directory: 'CloudDirectory',
             directory.delete_object(obj_ref)
     for name, obj_ref in directory.list_object_children('/resource/',
                                                         ConsistencyLevel=ConsistencyLevel.SERIALIZABLE.name):
-        directory.delete_object(obj_ref, delete_children=True)
+        if name not in protected_resources:
+            directory.delete_object(obj_ref, delete_children=True)
