@@ -241,5 +241,80 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
 
 
+class TestResourceIdApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.test_resource = resource_type_name()
+        cls.actions = sorted(['rt:get', 'rt:put', 'rt:update', 'rt:delete'])
+        cls.app.post(
+            f'/v1/resource/{cls.test_resource}',
+            data=json.dumps({'actions': cls.actions}),
+            headers=admin_headers)
+
+        cls.app.post(
+            f"/v1/resource/{cls.test_resource}/policy/read",
+            data=json.dumps({'policy': create_test_ResourcePolicy('read', actions=['rt:get'])}),
+            headers=admin_headers
+        )
+
+        cls.app.post(
+            f"/v1/resource/{cls.test_resource}/policy/write",
+            data=json.dumps({
+                'policy': create_test_ResourcePolicy('write',
+                                                     actions=['rt:get', 'rt:put', 'rt:update', 'rt:delete'])}),
+            headers=admin_headers
+        )
+
+    def test_get_resource_ids(self):
+        """Pages of resource ids are retrieved when using the get resource API"""
+        test_resource = resource_type_name()
+        self.app.post(f'/v1/resource/{test_resource}', data=json.dumps({'actions': ['rt:get']}), headers=admin_headers)
+        for i in range(11):
+            self.app.post(f'/v1/resource/{test_resource}/id/test{i}', headers=admin_headers)
+        self._test_paging(f'/v1/resource/{test_resource}/id', admin_headers, 10, 'resource_ids')
+
+    def test_resource_id(self):
+        """Create a resource id, check that it exists, and delete it"""
+        resource_id = '1234-1234-1234'
+
+        # resource id does not exist
+        resp = self.app.get(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 404)
+
+        # create a resource ID
+        resp = self.app.post(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 201)
+
+        # resource id exists
+        resp = self.app.get(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 200)
+
+        # cannot create twice
+        resp = self.app.post(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 409)
+
+        # delete resource id
+        resp = self.app.delete(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 200)
+
+        # resource id does not exist
+        resp = self.app.get(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 404)
+
+
 if __name__ == '__main__':
     unittest.main()
