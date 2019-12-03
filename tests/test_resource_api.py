@@ -22,33 +22,51 @@ admin_headers.update(get_auth_header(service_accounts['admin']))
 user_header = {'Content-Type': "application/json"}
 user_header.update(get_auth_header(service_accounts['user']))
 
+rt_count = 0
 
-class TestApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
+
+def resource_type_name():
+    global rt_count
+    rt_count += 1
+    return f'sample_rt_{rt_count}'
+
+
+class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
 
     def test_create_resource(self):
         """A resource type is created and destroyed using the API"""
-        test_resource = 'test_resource'  # the name of the resource type to create
+        test_resource = resource_type_name()  # the name of the resource type to create
+
+        # the resource type should not exist yet
         resp = self.app.get(f'/v1/resource/{test_resource}', headers=admin_headers)
         self.assertEqual(resp.status_code, 404)
+
+        # create the resource type
         resp = self.app.post(f'/v1/resource/{test_resource}', data=json.dumps({'actions': ['tr:action1']}),
                              headers=admin_headers)
         self.assertEqual(resp.status_code, 201)
+
+        # the resource type exists
         resp = self.app.get(f'/v1/resource/{test_resource}', headers=admin_headers)
         self.assertEqual(resp.status_code, 200)
+
+        # delete the resource type
         resp = self.app.delete(f'/v1/resource/{test_resource}', headers=admin_headers)
         self.assertEqual(resp.status_code, 200)
+
+        # the resource type should not exist
         resp = self.app.get(f'/v1/resource/{test_resource}', headers=admin_headers)
         self.assertEqual(resp.status_code, 404)
 
     def test_access_resource(self):
         """A user does not have access to a resource when they do not have permission."""
-        rt_name = 'thing'
+        test_resource = resource_type_name()
         role_name = 'test_role'
-        resp = self.app.post(f'/v1/resource/{rt_name}', data=json.dumps({'actions': ['tr:action1']}),
+        resp = self.app.post(f'/v1/resource/{test_resource}', data=json.dumps({'actions': ['tr:action1']}),
                              headers=admin_headers)
         self.assertEqual(resp.status_code, 201)
         with self.subTest("Permission is denied"):
-            resp = self.app.get(f'/v1/resource/{rt_name}', headers=user_header)
+            resp = self.app.get(f'/v1/resource/{test_resource}', headers=user_header)
             self.assertEqual(resp.status_code, 403)
 
         role_request_body = {
@@ -60,7 +78,7 @@ class TestApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
                         "fus:DeleteResources",
                         "fus:GetResources"],
                     'Effect': 'Allow',
-                    'Resource': [f"arn:hca:fus:*:*:resource/{rt_name}"]
+                    'Resource': [f"arn:hca:fus:*:*:resource/{test_resource}"]
                 }]
             }
         }
@@ -72,31 +90,34 @@ class TestApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
 
         with self.subTest("Permission is granted"):
-            resp = self.app.get(f'/v1/resource/{rt_name}', headers=user_header)
+            resp = self.app.get(f'/v1/resource/{test_resource}', headers=user_header)
             self.assertEqual(resp.status_code, 200)
 
     def test_get_resource(self):
         """Pages of resource are retrieved when using the get resource API"""
         for i in range(11):
-            self.app.post(f'/v1/resource/tr{i}', data=json.dumps({'actions': ['tr:action1']}), headers=admin_headers)
+            self.app.post(f'/v1/resource/{resource_type_name()}', data=json.dumps({'actions': ['tr:action1']}),
+                          headers=admin_headers)
         self._test_paging('/v1/resource', admin_headers, 10, 'resources')
 
     def test_get_resource_policy(self):
         """Pages of resource are retrieved when using the get resource API"""
-        resp = self.app.post(f'/v1/resource/trp', data=json.dumps({'actions': ['trp:action1']}),
-                      headers=admin_headers)
+        test_resource = resource_type_name()
+        resp = self.app.post(f'/v1/resource/{test_resource}', data=json.dumps({'actions': ['trp:action1']}),
+                             headers=admin_headers)
         self.assertEqual(resp.status_code, 201)
         for i in range(11):
-            resp = self.app.post(f'/v1/resource/trp/policy/tp{i}',
-                          data=json.dumps({'policy':create_test_ResourcePolicy('tp{i}', actions=['trp:action1'])}),
-                          headers=admin_headers)
+            resp = self.app.post(f'/v1/resource/{test_resource}/policy/tp{i}',
+                                 data=json.dumps(
+                                     {'policy': create_test_ResourcePolicy('tp{i}', actions=['trp:action1'])}),
+                                 headers=admin_headers)
             self.assertEqual(resp.status_code, 201)
-        self._test_paging('/v1/resource/trp/policy', admin_headers, 10, 'policies')
+        self._test_paging(f'/v1/resource/{test_resource}/policy', admin_headers, 10, 'policies')
 
     def test_resource_policy(self):
         """Create delete and update a resource policy"""
         expected_actions = sorted(['rt:get', 'rt:put', 'rt:update', 'rt:delete'])
-        test_resource = 'sample_resource'
+        test_resource = resource_type_name()
         test_policy_name = 'test_policy'
         test_policy = create_test_ResourcePolicy('tp{i}', actions=expected_actions)
         self.app.post(
@@ -174,7 +195,7 @@ class TestApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
 
     def test_resource_actions(self):
         """Add and remove actions from a resource type"""
-        test_resource = 'sample_resource'
+        test_resource = resource_type_name()
         expected_actions = sorted(['rt:get', 'rt:put', 'rt:update', 'rt:delete'])
         self.app.post(
             f'/v1/resource/{test_resource}',
