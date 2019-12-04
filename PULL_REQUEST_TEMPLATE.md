@@ -18,7 +18,7 @@ merged. Uncomment below:
 
 <!--
 Describe any special instructions to the operator who will deploy your code to
-the integration, staging and production deployments. Uncomment below:
+the integration, staging and prod deployments. Uncomment below:
 
 ### Deployment instructions & migrations
 -->
