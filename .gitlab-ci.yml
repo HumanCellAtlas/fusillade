@@ -137,7 +137,7 @@ promote_staging:
     - integration
   when: manual
 
-promote_production:
+promote_prod:
   extends: .release
   variables:
     RELEASE_COMMAND: scripts/promote.py prod
