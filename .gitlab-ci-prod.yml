@@ -26,4 +26,4 @@ deploy_branch:
     - scripts/populate_deployment_environment.py $CI_COMMIT_REF_NAME -p > environment.local
     - make deploy
   only:
-    - production
+    - prod
