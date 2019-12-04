@@ -287,7 +287,7 @@ paths:
                   description: The action the principal is attempting to perform.
                   type: array
                   items:
-                    type: string
+                    $ref: '#/components/schemas/policy_action'
                 resource:
                   description: The resource the principal will perform the action against.
                   type: array
@@ -1003,7 +1003,7 @@ paths:
                 actions:
                   type: array
                   items:
-                    type: string
+                    $ref: '#/components/schemas/policy_action'
       responses:
         201:
           description: The new resource type has been created.
@@ -1058,7 +1058,7 @@ paths:
                   actions:
                     type: array
                     items:
-                      $ref: '#/components/schemas/resource_action'
+                      $ref: '#/components/schemas/policy_action'
         401:
           $ref: '#/components/responses/401'
         403:
@@ -1086,7 +1086,7 @@ paths:
                 actions:
                   type: array
                   items:
-                    $ref: '#/components/schemas/resource_action'
+                    $ref: '#/components/schemas/policy_action'
       responses:
         200:
           description: OK
@@ -1119,7 +1119,7 @@ paths:
                 actions:
                   type: array
                   items:
-                    $ref: '#/components/schemas/resource_action'
+                    $ref: '#/components/schemas/policy_action'
       responses:
         200:
           description: OK
@@ -1368,7 +1368,7 @@ components:
       properties:
         resources:
           $ref: '#/components/schemas/paged_results'
-    resource_action:
+    policy_action:
       type: string
       pattern: '[A-z]\w*[^\W_]:[A-z]\w*[^\W_]'
     policy_document:
