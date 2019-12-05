@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 import unittest
@@ -51,15 +50,6 @@ class TestResourceType(unittest.TestCase):
 
         # owner policy exists
         self.assertIn(f'/resource/{resource_type}/policy/Owner', test_type.list_policies()[0]['policies'])
-
-        # create an additional resource type
-        resource_type2 = 'test_type2'
-        self._create_resource_type(resource_type2, actions)
-        test_type2 = ResourceType(resource_type2)
-
-        # list resources
-        resource_types = ResourceType.get_types()
-        self.assertEqual([resource_type, resource_type2], resource_types)
 
         # create an additional resource type
         resource_type2 = 'test_type2'
