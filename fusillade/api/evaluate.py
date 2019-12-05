@@ -5,7 +5,7 @@ from threading import Thread
 from flask import make_response, jsonify
 
 from fusillade.directory.authorization import get_resource_authz_parameters
-from fusillade.errors import AuthorizationException
+from fusillade.errors import AuthorizationException, ResourceNotFound
 from fusillade.utils.authorize import assert_authorized, evaluate_policy, restricted_context_entries, get_email_claim
 
 
@@ -17,7 +17,9 @@ def evaluate_policy_api(token_info, body):  # TODO allow context variables to be
         try:
             authz_params = get_resource_authz_parameters(body['principal'], body['resource'])
         except AuthorizationException:
-            response = {'result': False, 'reason': "The user is disabled."}
+            response = {'result': False, 'reason': "UserDisabled"}
+        except ResourceNotFound as ex:
+            response = {'result': False, 'reason': ex.reason, 'details': 'The requested resource does not exist.'}
         else:
             response = evaluate_policy(
                 body['principal'],

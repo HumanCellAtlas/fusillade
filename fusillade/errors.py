@@ -20,6 +20,12 @@ class AuthorizationException(FusilladeException):
         self.reason = reason
 
 
+class ResourceNotFound(FusilladeException):
+    def __init__(self, reason, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.reason = reason
+
+
 class FusilladeHTTPException(ProblemException):
     pass
 
@@ -52,6 +58,7 @@ class FusilladeForbiddenException(FusilladeHTTPException):
                          title="Forbidden",
                          detail=detail,
                          *args, **kwargs)
+
 
 class FusilladeTooManyRequestsException(FusilladeHTTPException):
     def __init__(self, detail: str = "Rate limit reached. Try again in 30 seconds.",

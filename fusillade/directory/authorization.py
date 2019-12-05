@@ -4,7 +4,7 @@ from dcplib.aws.clients import clouddirectory as cd_client
 from fusillade import Config
 from fusillade.directory import User, Group
 from fusillade.directory.resource import ResourceId, ResourceType
-from fusillade.errors import FusilladeForbiddenException
+from fusillade.errors import ResourceNotFound
 from fusillade.policy.resource_policy import combine
 
 
@@ -32,7 +32,7 @@ def get_resource_authz_parameters(user: str, resources: Union[List[str], str]):
         r_id = ResourceId(r_type, r_id)
         resource_policies = r_id.check_access([_user] + [Group(g) for g in groups])
         if not resource_policies:
-            raise FusilladeForbiddenException()
+            raise ResourceNotFound("ResourceNotFound")
         policies.extend(resource_policies)
     policies.extend(list(_user.get_policy_ids()))
     authz_params = Config.get_directory().get_policies(policies)
