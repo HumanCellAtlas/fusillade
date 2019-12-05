@@ -269,7 +269,6 @@ class TestResourceIdApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
 
     def test_get_resource_ids(self):
         """Pages of resource ids are retrieved when using the get resource API"""
-        test_resource = resource_type_name()
         self.app.post(f'/v1/resource/{self.test_resource}', data=json.dumps({'actions': ['rt:get']}), headers=admin_headers)
         for i in range(11):
             self.app.post(f'/v1/resource/{self.test_resource}/id/test{i}', headers=admin_headers)
