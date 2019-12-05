@@ -1310,8 +1310,8 @@ paths:
         - resource
   /v1/resource/{resource_type_name}/id/{resource_id}:
     get:
-      summary: check if a resource exists.
-      description: Check if a resource exists.
+      summary: Check if a resource of type resource_type_name with id resource_id exist.
+      description: Check if a resource of type resource_type_name with id resource_id exist.
       operationId: fusillade.api.resource.resource_type_name.id.resource_id.get
       security:
         - BearerAuth: []
