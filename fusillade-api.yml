@@ -1284,8 +1284,8 @@ paths:
           description: Unexpected error.
   /v1/resource/{resource_type_name}/id:
     get:
-      summary: list all ids of a resource type.
-      description: List all resource id of the specified resource type.
+      summary: List ids of all resources matching the specified resource type.
+      description: List ids of all resources matching the specified resource type.
       operationId: fusillade.api.resource.resource_type_name.id.get
       security:
         - BearerAuth: []

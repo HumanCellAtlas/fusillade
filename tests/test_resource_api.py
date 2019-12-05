@@ -270,10 +270,10 @@ class TestResourceIdApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
     def test_get_resource_ids(self):
         """Pages of resource ids are retrieved when using the get resource API"""
         test_resource = resource_type_name()
-        self.app.post(f'/v1/resource/{test_resource}', data=json.dumps({'actions': ['rt:get']}), headers=admin_headers)
+        self.app.post(f'/v1/resource/{self.test_resource}', data=json.dumps({'actions': ['rt:get']}), headers=admin_headers)
         for i in range(11):
-            self.app.post(f'/v1/resource/{test_resource}/id/test{i}', headers=admin_headers)
-        self._test_paging(f'/v1/resource/{test_resource}/id', admin_headers, 10, 'resource_ids')
+            self.app.post(f'/v1/resource/{self.test_resource}/id/test{i}', headers=admin_headers)
+        self._test_paging(f'/v1/resource/{self.test_resource}/id', admin_headers, 10, 'resource_ids')
 
     def test_resource_id(self):
         """Create a resource id, check that it exists, and delete it"""
