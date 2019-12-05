@@ -23,17 +23,20 @@ user_header = {'Content-Type': "application/json"}
 user_header.update(get_auth_header(service_accounts['user']))
 
 
-class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
+class ResourceTypeName:
     rt_count = 0
 
     @classmethod
-    def resource_type_name(cls):
-        cls.rt_count += 1
-        return f'sample_rt_{cls.rt_count}'
+    def get(self):
+        self.rt_count += 1
+        return f'sample_rt_{self.rt_count}'
+
+
+class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
 
     def test_create_resource(self):
         """A resource type is created and destroyed using the API"""
-        test_resource = self.resource_type_name()  # the name of the resource type to create
+        test_resource = ResourceTypeName.get()  # the name of the resource type to create
 
         # the resource type should not exist yet
         resp = self.app.get(f'/v1/resource/{test_resource}', headers=admin_headers)
@@ -58,7 +61,7 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
 
     def test_access_resource(self):
         """A user does not have access to a resource when they do not have permission."""
-        test_resource = self.resource_type_name()
+        test_resource = ResourceTypeName.get()
         role_name = 'test_role'
         resp = self.app.post(f'/v1/resource/{test_resource}', data=json.dumps({'actions': ['tr:action1']}),
                              headers=admin_headers)
@@ -94,13 +97,13 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
     def test_get_resource(self):
         """Pages of resource are retrieved when using the get resource API"""
         for i in range(11):
-            self.app.post(f'/v1/resource/{self.resource_type_name()}', data=json.dumps({'actions': ['tr:action1']}),
+            self.app.post(f'/v1/resource/{ResourceTypeName.get()}', data=json.dumps({'actions': ['tr:action1']}),
                           headers=admin_headers)
         self._test_paging('/v1/resource', admin_headers, 10, 'resources')
 
     def test_get_resource_policy(self):
         """Pages of resource are retrieved when using the get resource API"""
-        test_resource = self.resource_type_name()
+        test_resource = ResourceTypeName.get()
         resp = self.app.post(f'/v1/resource/{test_resource}', data=json.dumps({'actions': ['trp:action1']}),
                              headers=admin_headers)
         self.assertEqual(resp.status_code, 201)
@@ -115,7 +118,7 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
     def test_resource_policy(self):
         """Create delete and update a resource policy"""
         expected_actions = sorted(['rt:get', 'rt:put', 'rt:update', 'rt:delete'])
-        test_resource = self.resource_type_name()
+        test_resource = ResourceTypeName.get()
         test_policy_name = 'test_policy'
         test_policy = create_test_ResourcePolicy('tp{i}', actions=expected_actions)
         self.app.post(
@@ -193,7 +196,7 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
 
     def test_resource_actions(self):
         """Add and remove actions from a resource type"""
-        test_resource = self.resource_type_name()
+        test_resource = ResourceTypeName.get()
         expected_actions = sorted(['rt:get', 'rt:put', 'rt:update', 'rt:delete'])
         self.app.post(
             f'/v1/resource/{test_resource}',
@@ -239,6 +242,81 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
                             data=json.dumps({'actions': modify_actions}),
                             headers=admin_headers)
         self.assertEqual(resp.status_code, 200)
+
+
+class TestResourceIdApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.test_resource = ResourceTypeName.get()
+        cls.actions = sorted(['rt:get', 'rt:put', 'rt:update', 'rt:delete'])
+        cls.app.post(
+            f'/v1/resource/{cls.test_resource}',
+            data=json.dumps({'actions': cls.actions}),
+            headers=admin_headers)
+
+        cls.app.post(
+            f"/v1/resource/{cls.test_resource}/policy/read",
+            data=json.dumps({'policy': create_test_ResourcePolicy('read', actions=['rt:get'])}),
+            headers=admin_headers
+        )
+
+        cls.app.post(
+            f"/v1/resource/{cls.test_resource}/policy/write",
+            data=json.dumps({
+                'policy': create_test_ResourcePolicy('write',
+                                                     actions=['rt:get', 'rt:put', 'rt:update', 'rt:delete'])}),
+            headers=admin_headers
+        )
+
+    def test_get_resource_ids(self):
+        """Pages of resource ids are retrieved when using the get resource API"""
+        self.app.post(f'/v1/resource/{self.test_resource}', data=json.dumps({'actions': ['rt:get']}),
+                      headers=admin_headers)
+        for i in range(11):
+            self.app.post(f'/v1/resource/{self.test_resource}/id/test{i}', headers=admin_headers)
+        self._test_paging(f'/v1/resource/{self.test_resource}/id', admin_headers, 10, 'resource_ids')
+
+    def test_resource_id(self):
+        """Create a resource id, check that it exists, and delete it"""
+        resource_id = '1234-1234-1234'
+
+        # resource id does not exist
+        resp = self.app.get(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 404)
+
+        # create a resource ID
+        resp = self.app.post(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 201)
+
+        # resource id exists
+        resp = self.app.get(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 200)
+
+        # cannot create twice
+        resp = self.app.post(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 409)
+
+        # delete resource id
+        resp = self.app.delete(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 200)
+
+        # resource id does not exist
+        resp = self.app.get(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 404)
 
 
 if __name__ == '__main__':
