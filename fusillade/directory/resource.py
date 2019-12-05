@@ -408,7 +408,7 @@ class ResourceId(CloudNode):
                              object=dict(type=new_node.object_type, path_name=new_node._path_name)))
             return new_node
 
-    def add_principals(self, principals: List[Type['Principal']], access_level):
+    def add_principals(self, principals: List[Type['Principal']], access_level: str):
         """
         add a typed link from resource to principal with the access type.
         verifies that the policy exists before making link

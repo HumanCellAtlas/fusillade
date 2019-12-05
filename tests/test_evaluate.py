@@ -20,6 +20,7 @@ class TestEvaluate(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.directory, cls.schema_arn = new_test_directory()
+        cls.arn_prefix = "arn:dcp:fus:us-east-1:dev:"
 
     @classmethod
     def tearDownClass(cls):
@@ -31,7 +32,6 @@ class TestEvaluate(unittest.TestCase):
 
     def test_get_authz_params(self):
         actions = ['test:readproject', 'test:writeproject', 'test:deleteproject']
-        arn_prefix = "arn:dcp:fus:us-east-1:dev:"
         resource_type = 'test_type'
         test_type = ResourceType.create(resource_type, actions)
         access_level = 'Reader'
@@ -43,14 +43,14 @@ class TestEvaluate(unittest.TestCase):
                     "Sid": "project_reader",
                     "Effect": "Allow",
                     "Action": ['test:readproject'],
-                    "Resource": f"{arn_prefix}{resource_type}/*"
+                    "Resource": f"{self.arn_prefix}{resource_type}/*"
                 }
             ]
         }
         test_type.create_policy(access_level, resource_policy, 'ResourcePolicy')
         user = User.provision_user('test_user')
         type_id = '1234455'
-        resource = f'{arn_prefix}{resource_type}/{type_id}'
+        resource = f'{self.arn_prefix}{resource_type}/{type_id}'
 
         with self.subTest("A user has no access when no access level set between user and resource"):
             with self.assertRaises(FusilladeForbiddenException):
@@ -58,7 +58,7 @@ class TestEvaluate(unittest.TestCase):
 
         with self.subTest("No resource policy parameters are returned when the user tries to access a resource that "
                           "does not use resource policies"):
-            params = get_resource_authz_parameters(user.name, f"{arn_prefix}non_acl_resource/1234")
+            params = get_resource_authz_parameters(user.name, f"{self.arn_prefix}non_acl_resource/1234")
             self.assertFalse(params.get('ResourcePolicy'))
             self.assertFalse(params.get('resources'))
 
@@ -70,9 +70,15 @@ class TestEvaluate(unittest.TestCase):
             self.assertTrue(json_equal(params['ResourcePolicy'], resource_policy))
             self.assertEqual(['Reader'], params['resources'])
 
+    def test_auto_provision(self):
+        """A user is automatically provision if the user does not exist in cloud directory, when evaluating
+        permissions."""
+        params = get_resource_authz_parameters("test_auto_provision", f"{self.arn_prefix}non_acl_resource/1234")
+        self.assertTrue(params)
+
+
     def test_eval(self):
         actions = ['test:readproject', 'test:writeproject', 'test:deleteproject']
-        arn_prefix = "arn:dcp:fus:us-east-1:dev:"
         resource_type = 'test_type'
         test_type = ResourceType.create(resource_type, actions)
         access_level = 'Reader'
@@ -84,14 +90,14 @@ class TestEvaluate(unittest.TestCase):
                     "Sid": "project_reader",
                     "Effect": "Allow",
                     "Action": ['test:readproject'],
-                    "Resource": f"{arn_prefix}{resource_type}/*"
+                    "Resource": f"{self.arn_prefix}{resource_type}/*"
                 }
             ]
         }
         test_type.create_policy(access_level, resource_policy, 'ResourcePolicy')
         user = User.provision_user('test_user')
         type_id = '1234455'
-        resource = f'{arn_prefix}{resource_type}/{type_id}'
+        resource = f'{self.arn_prefix}{resource_type}/{type_id}'
 
         with self.subTest("A user does not have access when they only have permitting resource_policy and no "
                           "permitting IAMPolicy"):
@@ -110,7 +116,7 @@ class TestEvaluate(unittest.TestCase):
                         "Action": [
                             "test:readproject"
                         ],
-                        "Resource": f"{arn_prefix}{resource_type}/*"
+                        "Resource": f"{self.arn_prefix}{resource_type}/*"
                     }
                 ]
             }
