@@ -200,7 +200,12 @@ class ResourceType(CloudNode):
 
     def list_ids(self, next_token=None, per_page=None):
         children, next_token = self.cd.list_object_children_paged(f"{self.object_ref}/id", next_token, per_page)
-        return [f"/resource/{self.name}/id/{child}" for child in children.keys()], next_token
+        return (
+            {
+                'resource_ids': [f"/resource/{self.name}/id/{child}" for child in children.keys()],
+                'resource_type': self.name
+            },
+            next_token)
 
     def get_policy_reference(self, policy_name: str) -> str:
         """Returns a policy reference that can be used by cloud directory"""

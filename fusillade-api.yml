@@ -1282,6 +1282,99 @@ paths:
           $ref: '#/components/responses/404'
         default:
           description: Unexpected error.
+  /v1/resource/{resource_type_name}/id:
+    get:
+      summary: List ids of all resources matching the specified resource type.
+      description: List ids of all resources matching the specified resource type.
+      operationId: fusillade.api.resource.resource_type_name.id.get
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/next_token'
+        - $ref: '#/components/parameters/per_page'
+      responses:
+        200:
+          $ref: '#/components/responses/200_paged'
+        206:
+          $ref: '#/components/responses/206'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+  /v1/resource/{resource_type_name}/id/{resource_id}:
+    get:
+      summary: Check if a resource of type resource_type_name with id resource_id exist.
+      description: Check if a resource of type resource_type_name with id resource_id exist.
+      operationId: fusillade.api.resource.resource_type_name.id.resource_id.get
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/resource_id'
+      responses:
+        200:
+          description: Resource was found.
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        409:
+          $ref: '#/components/responses/409'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+    post:
+      summary: Create a new resource.
+      description: Create a new resource.
+      operationId: fusillade.api.resource.resource_type_name.id.resource_id.post
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/resource_id'
+      responses:
+        200:
+          description: Resource was created.
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        409:
+          $ref: '#/components/responses/409'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
+    delete:
+      summary: Delete a resource.
+      description: Delete a resource.
+      operationId: fusillade.api.resource.resource_type_name.id.resource_id.delete
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/resource_id'
+      responses:
+        200:
+          description: Resource was deleted.
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
 components:
   parameters:
     user_id:
@@ -1317,6 +1410,13 @@ components:
       in: path
       required: true
       description: The name of a type of resources to which a resource policy can be applied.
+      schema:
+        $ref: '#/components/schemas/custom_identifier'
+    resource_id:
+      name: resource_id
+      in: path
+      required: true
+      description: The id of the resource.
       schema:
         $ref: '#/components/schemas/custom_identifier'
     action:
@@ -1368,6 +1468,14 @@ components:
       properties:
         resources:
           $ref: '#/components/schemas/paged_results'
+    resource_ids:
+      description: A list of resource ids from a resource type.
+      type: object
+      properties:
+        resource_ids:
+          $ref: '#/components/schemas/paged_results'
+        resource_type:
+          type: string
     policy_action:
       type: string
       pattern: '[A-z]\w*[^\W_]:[A-z]\w*[^\W_]'
@@ -1503,6 +1611,7 @@ components:
               - $ref: '#/components/schemas/users'
               - $ref: '#/components/schemas/resource_types'
               - $ref: '#/components/schemas/policies'
+              - $ref: '#/components/schemas/resource_ids'
     206:
       description: A single page of results was retrieved.
       headers:
@@ -1526,6 +1635,7 @@ components:
               - $ref: '#/components/schemas/users'
               - $ref: '#/components/schemas/resource_types'
               - $ref: '#/components/schemas/policies'
+              - $ref: '#/components/schemas/resource_ids'
     401:
       description: The users credentials failed to authenticate.
     403:
