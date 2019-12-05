@@ -496,11 +496,9 @@ class User(Principal):
 
         roles = roles + cls.default_roles if roles else cls.default_roles
         user.add_roles(roles)
-        user._roles = roles
 
         groups = groups + cls.default_groups if groups else cls.default_groups
         user.add_groups(groups)
-        user._groups = groups
         return user
 
     @property
