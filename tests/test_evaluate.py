@@ -9,7 +9,7 @@ from fusillade.utils.json import json_equal
 from fusillade.directory.authorization import get_resource_authz_parameters
 from fusillade.utils.authorize import evaluate_policy
 from fusillade.directory import cleanup_directory, cleanup_schema, User, clear_cd, Role
-from fusillade.errors import FusilladeForbiddenException, ResourceNotFound, AuthorizationException
+from fusillade.errors import ResourceNotFound, AuthorizationException
 from fusillade.directory.resource import ResourceType
 from tests.common import new_test_directory
 from tests.infra.testmode import standalone
