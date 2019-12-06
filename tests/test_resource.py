@@ -61,7 +61,7 @@ class TestResourceType(unittest.TestCase):
         resource_types = ResourceType.get_types()
         self.assertEqual([resource_type, resource_type2], resource_types)
 
-    def test_access_policy(self):
+    def test_resource_policy(self):
         actions = ['readproject', 'writeproject', 'deleteproject']
         resource_type = 'test_type'
         test_type = self._create_resource_type(resource_type, actions)
@@ -160,7 +160,7 @@ class TestResourceType(unittest.TestCase):
         self.assertEqual(test_id.check_access(users), [test_type.get_policy_path('Reader')])
 
         # get policies
-        policies = test_id.get_access_policies(users)
+        policies = test_id.get_resource_policy(users)
         self.assertTrue(test_type.get_policy('Reader'))
 
 

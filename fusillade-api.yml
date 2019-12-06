@@ -1195,7 +1195,9 @@ paths:
           description: Unexpected error.
     post:
       summary: Add a new resource policy for the specified resource type.
-      description: Add a new resource policy. This makes the resource policy available for all resources of that type. Once added, the new resource policy can be applied to members by using PUT /v1/resource/{resource_type_name}/{resource_id}/policies/{policy_name}/members/{type}/{entity_id}.
+      description: Add a new resource policy. This makes the resource policy available for all resources of that type
+        . Once added, the new resource policy can be applied to members by using PUT
+        /v1/resource/{resource_type_name}/id/{resource_id}/members
       operationId: fusillade.api.resource.resource_type_name.policy.policy_name.post
       security:
         - BearerAuth: []
