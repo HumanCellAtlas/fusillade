@@ -16,14 +16,14 @@ perform on a resource.
 import json
 import logging
 import os
-from collections import defaultdict
-from typing import List, Dict, Any, Type, Union
+from collections import defaultdict, deque
+from typing import List, Dict, Any, Type, Union, Tuple
 
 from dcplib.aws.clients import clouddirectory as cd_client
 from fusillade.config import proj_path, Config
 from fusillade.directory.cloudnode import CloudNode
 from fusillade.directory.identifiers import get_obj_type_path
-from fusillade.directory.principal import Principal, User
+from fusillade.directory.principal import Principal, User, Group
 from fusillade.directory.structs import ConsistencyLevel, UpdateObjectParams, ValueTypes, UpdateActions
 from fusillade.errors import FusilladeHTTPException, FusilladeNotFoundException, FusilladeBadRequestException
 from fusillade.policy.validator import verify_policy
@@ -408,6 +408,49 @@ class ResourceId(CloudNode):
                              object=dict(type=new_node.object_type, path_name=new_node._path_name)))
             return new_node
 
+    def list_principals(
+            self,
+            next_token: str = None,
+            per_page: int = None) -> Tuple[Dict[str, List[Dict[str, str]]], str]:
+        """
+        List the principals that have some level of  access to this resource id.
+
+        :param next_token:
+        :param per_page:
+        :return:
+        """
+        _results, next_token = self.cd.list_incoming_typed_links(self.object_ref, [], 'access_link',
+                                                                 next_token=next_token, paged=True, per_page=per_page)
+        result = deque()
+        if _results:
+            ops = []
+            for r in _results:
+                result.append({'member_type': self.cd.parse_attributes(r['IdentityAttributeValues'])['principal']})
+                ops.append(self.cd.batch_get_link_attributes(r, ['access_level']))
+                ops.append(self.cd.batch_get_attributes(
+                    r['SourceObjectReference']['Selector'],
+                    Principal._facet,
+                    ['name']))
+
+            switch = True
+            for resp in self.cd.batch_read(ops)['Responses']:
+                if resp.get('SuccessfulResponse'):
+                    if switch:
+                        temp = result.popleft()
+                        temp.update(self.cd.parse_attributes(
+                            resp['SuccessfulResponse']
+                            ['GetLinkAttributes']
+                            ['Attributes']))
+                        switch = False
+                    else:
+                        temp['member'] = self.cd.parse_attributes(
+                            resp['SuccessfulResponse']
+                            ['GetObjectAttributes']
+                            ['Attributes'])['name']
+                        result.append(temp)
+                        switch = True
+        return {'members': list(result)}, next_token
+
     def add_principals(self, principals: List[Type['Principal']], access_level: str):
         """
         add a typed link from resource to principal with the access type.
@@ -480,7 +523,49 @@ class ResourceId(CloudNode):
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
 
+    def modify_principals(self, principals: List[Dict[str, str]]) -> None:
+        """
+        modify principals by adding, updating or deleting as needed
+
+        :param principals:
+        :return:
+        """
+        ops = []
+        x = []
+        for p in principals:
+            principal = User(p['member']) if p['member_type'] == 'user' else Group(p['member'])
+            x.append((principal, p.get('access_level')))
+            tls = self.cd.make_typed_link_specifier(
+                principal.object_ref,
+                self.object_ref,
+                'access_link',
+                {'principal': principal.object_type,
+                 'resource': self.resource_type.name})
+            ops.append(self.cd.batch_get_link_attributes(tls, ['access_level']))
+
+        try:
+            for x, r in zip(x, self.cd.batch_read(ops)['Responses']):
+                if r.get('SuccessfulResponse'):
+                    current_ap = r['SuccessfulResponse']['GetLinkAttributes']['Attributes'][0]['Value'].popitem()[1]
+                    if x[1] == current_ap:
+                        continue
+                    elif x[1] is None:  # delete
+                        self.remove_principals([x[0]])
+                    elif x[1] != current_ap:  # update
+                        self.update_principal(*x)
+                else:
+                    self.add_principals([x[0]], x[1])
+
+        except cd_client.exceptions.ResourceNotFoundException:
+            return None
+
     def check_access(self, principals: List[Type['Principal']]) -> Union[None, List[str]]:
+        """
+        Given a list of Principals, return a List of access levels given to those Principals
+
+        :param principals:
+        :return:
+        """
         ops = []
         for principal in principals:
             tls = self.cd.make_typed_link_specifier(

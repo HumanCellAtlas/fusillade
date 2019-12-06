@@ -272,8 +272,6 @@ class TestResourceIdApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
 
     def test_get_resource_ids(self):
         """Pages of resource ids are retrieved when using the get resource API"""
-        self.app.post(f'/v1/resource/{self.test_resource}', data=json.dumps({'actions': ['rt:get']}),
-                      headers=admin_headers)
         for i in range(11):
             self.app.post(f'/v1/resource/{self.test_resource}/id/test{i}', headers=admin_headers)
         self._test_paging(f'/v1/resource/{self.test_resource}/id', admin_headers, 10, 'resource_ids')
@@ -318,6 +316,154 @@ class TestResourceIdApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
             headers=admin_headers)
         self.assertEqual(resp.status_code, 404)
 
+    def test_get_member(self):
+        """Pages of resource ids are retrieved when using the get resource API"""
+        test_resource = 'test_get_member'
+        self.app.post(f'/v1/resource/{self.test_resource}/id/{test_resource}', headers=admin_headers)
+
+        # make groups
+        members = []
+        for group in [f'rt_group{i}' for i in range(5)]:
+            resp = self.app.post(
+                f'/v1/group',
+                data=json.dumps({'group_id': group}),
+                headers=admin_headers)
+            self.assertEqual(resp.status_code, 201)
+            members.append({'member': group,
+                            'member_type': 'group',
+                            'access_level': 'read'})
+
+        # make users
+        for user in [f'rt_user{i}' for i in range(6)]:
+            resp = self.app.post(
+                f'/v1/user',
+                data=json.dumps({'user_id': user}),
+                headers=admin_headers)
+            self.assertEqual(resp.status_code, 201)
+            members.append({'member': user,
+                            'member_type': 'user',
+                            'access_level': 'read'})
+        for m in members:
+            resp = self.app.put(
+                f'/v1/resource/{self.test_resource}/id/{test_resource}/members',
+                data=json.dumps([m]),
+                headers=admin_headers)
+            self.assertEqual(resp.status_code, 200)
+        self._test_paging(f'/v1/resource/{self.test_resource}/id/{test_resource}/members', admin_headers, 10, 'members')
+
+    def test_access_levels(self):
+        """Grant access to a principal for a resource"""
+        resource_id = 'protected-data'
+        arn_prefix = "arn:dcp:fus:us-east-1:dev:"
+        user = 'user_test_access_levels'
+        group = 'group_test_access_levels'
+
+        # create the resource to control
+        resp = self.app.post(
+            f'/v1/resource/{self.test_resource}/id/{resource_id}',
+            headers=admin_headers)
+        self.assertEqual(resp.status_code, 201)
+
+        with self.subTest("Check that no one has access by listing who has access"):
+            resp = self.app.get(
+                f'/v1/resource/{self.test_resource}/id/{resource_id}/members',
+                headers=admin_headers)
+            self.assertEqual(resp.status_code, 200)
+            self.assertJSONEqual(resp.body, {'members': []})
+
+        with self.subTest("Toggle user access."):
+            # create a user
+            resp = self.app.post(
+                f'/v1/user',
+                data=json.dumps({'user_id': user}),
+                headers=admin_headers)
+            self.assertEqual(resp.status_code, 201)
+
+            # give a user access
+            request_body = [
+                {'member': user,
+                 'member_type': 'user',
+                 'access_level': 'read'}
+            ]
+            resp = self.app.put(
+                f'/v1/resource/{self.test_resource}/id/{resource_id}/members',
+                data=json.dumps(request_body),
+                headers=admin_headers
+            )
+            self.assertEqual(resp.status_code, 200)
+
+            # Check that the user has access by list who has access
+            resp = self.app.get(
+                f'/v1/resource/{self.test_resource}/id/{resource_id}/members',
+                headers=admin_headers)
+            self.assertEqual(resp.status_code, 200)
+            self.assertJSONEqual(resp.body, {'members': request_body})
+
+            # Remove access for the user
+            request_body = [
+                {'member': user,
+                 'member_type': 'user'}
+            ]
+            resp = self.app.put(
+                f'/v1/resource/{self.test_resource}/id/{resource_id}/members',
+                data=json.dumps(request_body),
+                headers=admin_headers
+            )
+            self.assertEqual(resp.status_code, 200)
+
+            # Check that the user does not have access by listing who has access
+            resp = self.app.get(
+                f'/v1/resource/{self.test_resource}/id/{resource_id}/members',
+                headers=admin_headers)
+            self.assertEqual(resp.status_code, 200)
+            self.assertJSONEqual(resp.body, {'members': []})
+
+        with self.subTest("Toggle group access."):
+            # create a group
+            resp = self.app.post(
+                f'/v1/group',
+                data=json.dumps({'group_id': group}),
+                headers=admin_headers)
+            self.assertEqual(resp.status_code, 201)
+
+            # give a group access
+            request_body = [
+                {'member': group,
+                 'member_type': 'group',
+                 'access_level': 'read'}
+            ]
+            resp = self.app.put(
+                f'/v1/resource/{self.test_resource}/id/{resource_id}/members',
+                data=json.dumps(request_body),
+                headers=admin_headers
+            )
+            self.assertEqual(resp.status_code, 200)
+
+            # Check that the group has access by list who has access
+            resp = self.app.get(
+                f'/v1/resource/{self.test_resource}/id/{resource_id}/members',
+                headers=admin_headers)
+            self.assertEqual(resp.status_code, 200)
+            self.assertJSONEqual(resp.body, {'members': request_body})
+
+            # Remove access for the group
+            request_body = [
+                {'member': group,
+                 'member_type': 'group'}
+            ]
+            resp = self.app.put(
+                f'/v1/resource/{self.test_resource}/id/{resource_id}/members',
+                data=json.dumps(request_body),
+                headers=admin_headers
+            )
+            self.assertEqual(resp.status_code, 200)
+
+            # Check that the group does not have access by listing who has access
+            resp = self.app.get(
+                f'/v1/resource/{self.test_resource}/id/{resource_id}/members',
+                headers=admin_headers)
+            self.assertEqual(resp.status_code, 200)
+            self.assertJSONEqual(resp.body, {'members': []})
 
 if __name__ == '__main__':
     unittest.main()

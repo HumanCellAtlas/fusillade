@@ -1380,6 +1380,69 @@ paths:
           description: Unexpected error.
       tags:
         - resource
+  /v1/resource/{resource_type_name}/id/{resource_id}/members:
+    get:
+      summary: List all members that have access to this resource.
+      description: List all members that have access to this resource. Members include users, and groups with any
+        level of access to this resource.
+      operationId: fusillade.api.resource.resource_type_name.id.resource_id.members.get
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/resource_id'
+        - $ref: '#/components/parameters/next_token'
+        - $ref: '#/components/parameters/per_page'
+      responses:
+        200:
+          description: All results have been returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/members'
+        206:
+          description: All results have been returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/members'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+    put:
+      summary: Give a principal access defined by a {resource_policy} to {resource_type_name}/{resource_id}.
+      description:  Give a principal access defined by {policy_name} to {resource_type_name}/{resource_id}.
+      operationId: fusillade.api.resource.resource_type_name.id.resource_id.members.put
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/resource_type_name'
+        - $ref: '#/components/parameters/resource_id'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/resource_member'
+              maxItems: 1
+              minItems: 1
+      responses:
+        200:
+          description: The {type}/{entity_id} has been added to the policy.
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        default:
+          description: Unexpected error.
+      tags:
+        - resource
 components:
   parameters:
     user_id:
@@ -1460,6 +1523,9 @@ components:
       schema:
         type: string
   schemas:
+    principal_type:
+        type: string
+        enum: [user, group]
     paged_results:
       type: array
       items:
@@ -1481,9 +1547,38 @@ components:
           $ref: '#/components/schemas/paged_results'
         resource_type:
           type: string
+    resource_member:
+      type: object
+      properties:
+        member:
+          type: string
+        member_type:
+          $ref: '#/components/schemas/principal_type'
+        access_level:
+          type: string
+      required:
+        - member
+        - member_type
+      example:
+        Add or update access:
+          value:
+            member: i_am_a_user_name
+            member_type: user
+            access_level: read
+        Remove access:
+          value:
+            member: i_am_a_user_name
+            member_type: user
     policy_action:
       type: string
       pattern: '[A-z]\w*[^\W_]:[A-z]\w*[^\W_]'
+    members:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/resource_member'
     policy_document:
       description: A resource policy, used for controlling access to a resource.
       type: object
@@ -1614,6 +1709,7 @@ components:
               - $ref: '#/components/schemas/groups'
               - $ref: '#/components/schemas/roles'
               - $ref: '#/components/schemas/users'
+              - $ref: '#/components/schemas/members'
               - $ref: '#/components/schemas/resource_types'
               - $ref: '#/components/schemas/policies'
               - $ref: '#/components/schemas/resource_ids'
@@ -1638,6 +1734,7 @@ components:
               - $ref: '#/components/schemas/groups'
               - $ref: '#/components/schemas/roles'
               - $ref: '#/components/schemas/users'
+              - $ref: '#/components/schemas/members'
               - $ref: '#/components/schemas/resource_types'
               - $ref: '#/components/schemas/policies'
               - $ref: '#/components/schemas/resource_ids'
