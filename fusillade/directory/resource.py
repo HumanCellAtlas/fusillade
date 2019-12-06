@@ -6,8 +6,8 @@ to apply access control logic (ACL).
 ### Actions
 This type of resource has certain action that can be performed on or with it, and these actions are store in an
 attribute called `actions`. Any access policy associated with this resource type must only include actions that the
-resource supports. This is checked before new policies are added, and nonconforming access policies are rejected. If an
-actions is removed from the resource type all existing access policies with this action will be removed.
+resource supports. This is checked before new policies are added, and nonconforming resource_policy are rejected. If an
+actions is removed from the resource type all existing resource_policy with this action will be removed.
 
 ### Owner policy
 The owner policy is added to the resource type and is used to determine what actions the owner of a resource Id can
@@ -135,7 +135,7 @@ class ResourceType(CloudNode):
                              ))
             return new_node
 
-    # TODO: Add function to modify actions, this will need to modify all access policies with this actions
+    # TODO: Add function to modify actions, this will need to modify all resource_policy with this actions
     @property
     def actions(self):
         if not self._actions:
@@ -167,7 +167,7 @@ class ResourceType(CloudNode):
                                             ' '.join(_actions),
                                             UpdateActions.CREATE_OR_UPDATE,
                                         )])
-        # TODO remove this actions from all access policies
+        # TODO remove this actions from all resource_policy
         self._actions = None
 
     def check_actions(self, policy: dict):
@@ -501,6 +501,6 @@ class ResourceId(CloudNode):
                 access_levels.add(self.resource_type.get_policy_path(attr[0]['Value'].popitem()[1]))
             return list(access_levels)
 
-    def get_access_policies(self, principals: List[Type['Principal']]):
-        access_policies = self.check_access(principals)
-        return self.cd.get_policies(access_policies)
+    def get_resource_policy(self, principals: List[Type['Principal']]):
+        resource_policy = self.check_access(principals)
+        return self.cd.get_policies(resource_policy)

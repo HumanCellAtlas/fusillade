@@ -241,20 +241,21 @@ For resource, set the `partition` to `hca`, set your `service` name to the name 
 A new `resource_type` is created by providing the name of the `resource_type`, and the actions that can be performed on it. 
  Once a `resource_type` is created you can store `resource_id`s of that `resource_type` to apply ACLs.
  
-An `access_policy` is a policy associated with a `resource_type` and is used to define the different access levels 
+An `resource_policy` refers to a policy associated with a `resource_type` and is used to define different access levels 
  between principals and `resource_id`s. A principal may have only one level of access to a `resource_id`. All 
- `resource_id`s use the same pool of access policies for that particular `resource_type`. This mean that modifying an `access_policy`, 
- modifies it for all principals with that access level to a `resource_id`. New access policies can be defined for a 
- `resource_type` after the `resource_type` has been created. Deleting an `access_policy` removes access for all principals 
- with that level of access between a `resource_id`.
- Access policies can only define policies that use actions supported by that `resource_type`. 
- Actions can be added and removed after a `resource_type` has been created.
+ `resource_id`s use the same pool of resource policies for that particular `resource_type`. This mean that modifying an
+ `resource_policy`, modifies it for all principals with that access level to a `resource_id`. New `resource_policy` can
+  be 
+ defined for a `resource_type` after the `resource_type` has been created. Deleting an `resource_policy` removes access 
+ for all principals with that level of access between a `resource_id`. `resource_policy` can only define policies that 
+ use actions supported by that `resource_type`. Actions can be added and removed after a `resource_type` has been 
+ created.
  
 The creator of a `resource_id` is automatically designated as the owner of the resource. The owner of a
  `resource_id` can add additional owners, and assign access levels to principals for that `resource_id`. A principal only 
  has access to resource they are give access to, either directly or through group membership.
 
-If a `resource_type` is deleted, all access policies and 
+If a `resource_type` is deleted, all `resource_policy` and 
  `resource_id`s associated with that type are deleted.
  
 # Using Fusillade as a library
