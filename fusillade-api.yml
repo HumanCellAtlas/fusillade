@@ -291,8 +291,11 @@ paths:
                 resource:
                   description: The resource the principal will perform the action against.
                   type: array
+                  maxItems: 1
+                  minItems: 1
                   items:
                     type: string
+                    pattern: 'arn:([\w\-\*]+:){2,4}[\w\-\*/]+'
       responses:
         200:
           description: The result of the policy evaluation.
