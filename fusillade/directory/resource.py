@@ -525,16 +525,16 @@ class ResourceId(CloudNode):
 
     def modify_principals(self, principals: List[Dict[str, str]]) -> None:
         """
-        modify principals by adding, updating or deleting as needed
+        modify a principals access to this resource id by adding, updating or deleting access levels as needed.
 
         :param principals:
         :return:
         """
         ops = []
-        x = []
+        modifications = []
         for p in principals:
             principal = User(p['member']) if p['member_type'] == 'user' else Group(p['member'])
-            x.append((principal, p.get('access_level')))
+            modifications.append((principal, p.get('access_level')))
             tls = self.cd.make_typed_link_specifier(
                 principal.object_ref,
                 self.object_ref,
@@ -544,17 +544,17 @@ class ResourceId(CloudNode):
             ops.append(self.cd.batch_get_link_attributes(tls, ['access_level']))
 
         try:
-            for x, r in zip(x, self.cd.batch_read(ops)['Responses']):
+            for modifications, r in zip(modifications, self.cd.batch_read(ops)['Responses']):
                 if r.get('SuccessfulResponse'):
                     current_ap = r['SuccessfulResponse']['GetLinkAttributes']['Attributes'][0]['Value'].popitem()[1]
-                    if x[1] == current_ap:
+                    if modifications[1] == current_ap:
                         continue
-                    elif x[1] is None:  # delete
-                        self.remove_principals([x[0]])
-                    elif x[1] != current_ap:  # update
-                        self.update_principal(*x)
+                    elif modifications[1] is None:  # delete
+                        self.remove_principals([modifications[0]])
+                    elif modifications[1] != current_ap:  # update
+                        self.update_principal(*modifications)
                 else:
-                    self.add_principals([x[0]], x[1])
+                    self.add_principals([modifications[0]], modifications[1])
 
         except cd_client.exceptions.ResourceNotFoundException:
             return None
