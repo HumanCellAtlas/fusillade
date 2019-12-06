@@ -466,17 +466,20 @@ class CloudDirectory:
     @staticmethod
     def parse_attributes(attributes: List[Dict[str, Any]]) -> Dict[str, Any]:
         result = dict()
+        # check if we are parsing object attributes or typed link attributes
+        typed_link = attributes[0].get('Key') is None
         for attr in attributes:
+            key = attr['AttributeName'] if typed_link else attr['Key']['Name']
             if ValueTypes.StringValue.name in attr['Value'].keys():
-                result[attr['Key']['Name']] = attr['Value'][ValueTypes.StringValue.name]
+                result[key] = attr['Value'][ValueTypes.StringValue.name]
             elif ValueTypes.BinaryValue.name in attr['Value'].keys():
-                result[attr['Key']['Name']] = attr['Value'][ValueTypes.BinaryValue.name]
+                result[key] = attr['Value'][ValueTypes.BinaryValue.name]
             elif ValueTypes.BinaryValue.name in attr['Value'].keys():
-                result[attr['Key']['Name']] = attr['Value'][ValueTypes.BooleanValue.name]
+                result[key] = attr['Value'][ValueTypes.BooleanValue.name]
             elif ValueTypes.BinaryValue.name in attr['Value'].keys():
-                result[attr['Key']['Name']] = attr['Value'][ValueTypes.NumberValue.name]
+                result[key] = attr['Value'][ValueTypes.NumberValue.name]
             elif ValueTypes.BinaryValue.name in attr['Value'].keys():
-                result[attr['Key']['Name']] = attr['Value'][ValueTypes.DatetimeValue.name]
+                result[key] = attr['Value'][ValueTypes.DatetimeValue.name]
         return result
 
     def make_typed_link_specifier(
