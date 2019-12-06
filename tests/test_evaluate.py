@@ -9,7 +9,7 @@ from fusillade.utils.json import json_equal
 from fusillade.directory.authorization import get_resource_authz_parameters
 from fusillade.utils.authorize import evaluate_policy
 from fusillade.directory import cleanup_directory, cleanup_schema, User, clear_cd, Role
-from fusillade.errors import FusilladeForbiddenException
+from fusillade.errors import ResourceNotFound, AuthorizationException
 from fusillade.directory.resource import ResourceType
 from tests.common import new_test_directory
 from tests.infra.testmode import standalone
@@ -53,7 +53,7 @@ class TestEvaluate(unittest.TestCase):
         resource = f'{self.arn_prefix}{resource_type}/{type_id}'
 
         with self.subTest("A user has no access when no access level set between user and resource"):
-            with self.assertRaises(FusilladeForbiddenException):
+            with self.assertRaises(ResourceNotFound):
                 get_resource_authz_parameters(user.name, resource)
 
         with self.subTest("No resource policy parameters are returned when the user tries to access a resource that "
@@ -69,6 +69,11 @@ class TestEvaluate(unittest.TestCase):
             params = get_resource_authz_parameters(user.name, resource)
             self.assertTrue(json_equal(params['ResourcePolicy'], resource_policy))
             self.assertEqual(['Reader'], params['resources'])
+
+        with self.subTest("No access when the user is disabled."):
+            user.disable()
+            with self.assertRaises(AuthorizationException):
+                get_resource_authz_parameters(user.name, resource)
 
     def test_auto_provision(self):
         """A user is automatically provision if the user does not exist in cloud directory, when evaluating
