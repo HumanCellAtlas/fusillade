@@ -535,9 +535,9 @@ class ResourceId(CloudNode):
 
     def modify_principals(self, principals: List[Dict[str, str]]) -> None:
         """
-        modify a principals access to this resource id by adding, updating or deleting access levels as needed.
+        Modify a list of principals to grant them access to this resource id by adding, updating or deleting access levels as needed.
 
-        :param principals:
+        :param principals: list of principals to grant access to this resource id
         :return:
         """
         ops = []
@@ -577,10 +577,10 @@ class ResourceId(CloudNode):
 
     def check_access(self, principals: List[Type['Principal']]) -> Union[None, List[str]]:
         """
-        Given a list of Principals, return a List of access levels given to those Principals
+        Given a list of principals, return a list of access levels to this resource id for each principal
 
         :param principals:
-        :return:
+        :return: list of access levels to this resource id, one for each principal
         """
         ops = []
         for principal in principals:

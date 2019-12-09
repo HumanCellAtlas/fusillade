@@ -392,7 +392,7 @@ class TestResourceIdApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
             )
             self.assertEqual(resp.status_code, 200)
 
-            # Check that the user has access by list who has access
+            # Check that the user has access by listing who has access
             resp = self.app.get(
                 f'/v1/resource/{self.test_resource}/id/{resource_id}/members',
                 headers=admin_headers)
@@ -439,7 +439,7 @@ class TestResourceIdApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
             )
             self.assertEqual(resp.status_code, 200)
 
-            # Check that the group has access by list who has access
+            # Check that the group has access by listing who has access
             resp = self.app.get(
                 f'/v1/resource/{self.test_resource}/id/{resource_id}/members',
                 headers=admin_headers)
