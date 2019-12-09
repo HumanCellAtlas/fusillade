@@ -417,7 +417,7 @@ class ResourceId(CloudNode):
 
         :param next_token:
         :param per_page:
-        :return:
+        :return: JSON-formatted list of principals and a token for pagination
         """
         # retrieve the raw list of object references from cloud directory
         _results, next_token = self.cd.list_incoming_typed_links(self.object_ref, [], 'access_link',

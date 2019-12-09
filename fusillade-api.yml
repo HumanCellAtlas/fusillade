@@ -1395,17 +1395,9 @@ paths:
         - $ref: '#/components/parameters/per_page'
       responses:
         200:
-          description: All results have been returned.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/members'
+          $ref: '#/components/responses/200_paged'
         206:
-          description: All results have been returned.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/members'
+          $ref: '#/components/responses/206'
         401:
           $ref: '#/components/responses/401'
         403:

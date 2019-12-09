@@ -83,13 +83,14 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
         group = 'user_default'
 
         # create a resource type
-        self.app.post(
+        resp = self.app.post(
             f'/v1/resource/{resource_type}',
             data=json.dumps({'actions': actions}),
             headers=admin_headers)
+        self.assertEqual(resp.status_code, 201)
 
         # create a resource policy read
-        self.app.post(
+        resp = self.app.post(
             f"/v1/resource/{resource_type}/policy/read",
             data=json.dumps({'policy': create_test_ResourcePolicy(
                 'read',
@@ -99,9 +100,10 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
             )}),
             headers=admin_headers
         )
+        self.assertEqual(resp.status_code, 201)
 
         # create a resource policy rw
-        self.app.post(
+        resp = self.app.post(
             f"/v1/resource/{resource_type}/policy/rw",
             data=json.dumps({
                 'policy': create_test_ResourcePolicy(
@@ -113,6 +115,7 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
             ),
             headers=admin_headers
         )
+        self.assertEqual(resp.status_code, 201)
 
         # create a resource id
         resp = self.app.post(
