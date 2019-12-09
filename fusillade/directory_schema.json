@@ -128,9 +128,27 @@
           "attributeDefinition": {
             "attributeType": "STRING",
             "isImmutable": true,
-            "attributeRules": {}
+            "attributeRules": {
+            }
           },
           "requiredBehavior": "REQUIRED_ALWAYS"
+        },
+        "source": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": false,
+            "attributeRules": {
+            }
+          },
+          "requiredBehavior": "NOT_REQUIRED"
+        },
+        "target": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": false,
+            "attributeRules": {}
+          },
+          "requiredBehavior": "NOT_REQUIRED"
         }
       },
       "identityAttributeOrder": [
@@ -179,6 +197,14 @@
             "attributeRules": {}
           },
           "requiredBehavior": "REQUIRED_ALWAYS"
+        },
+        "access_level": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": false,
+            "attributeRules": {}
+          },
+          "requiredBehavior": "NOT_REQUIRED"
         }
       },
       "identityAttributeOrder": [

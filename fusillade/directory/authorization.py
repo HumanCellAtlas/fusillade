@@ -30,7 +30,7 @@ def get_resource_authz_parameters(user: str, resources: Union[List[str], str]):
     r_type, r_id, *_ = resource.split(':')[-1].split('/')
     if r_type in ResourceType.get_types():
         r_id = ResourceId(r_type, r_id)
-        resource_policies = r_id.check_access([_user] + [Group(g) for g in groups])
+        resource_policies = r_id.check_access([_user] + [Group(object_ref=g) for g in groups])
         if not resource_policies:
             raise ResourceNotFound("ResourceNotFound")
         policies.extend(resource_policies)

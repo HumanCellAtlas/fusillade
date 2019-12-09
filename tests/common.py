@@ -1,17 +1,17 @@
 import json
 import os
-import time
 import typing
 
 import jwt
-from dcplib.aws import clients
+import time
 
-from fusillade.directory import publish_schema, create_directory
+from dcplib.aws import clients
 from fusillade import CloudDirectory
 from fusillade.config import Config
+from fusillade.directory import publish_schema, create_directory
 from tests import schema_name, random_hex_string
 
-test_account_file=f"{os.environ['FUS_HOME']}/test_accounts_{os.environ['FUS_DEPLOYMENT_STAGE']}.json"
+test_account_file = f"{os.environ['FUS_HOME']}/test_accounts_{os.environ['FUS_DEPLOYMENT_STAGE']}.json"
 try:
     with open(test_account_file, 'r') as fh:
         service_accounts = json.load(fh)
@@ -34,16 +34,21 @@ def normalize_json(src: typing.Union[str, dict]):
     return json.dumps(src, sort_keys=True)
 
 
-def create_test_IAMPolicy(name: str, actions: typing.List[str] = None) -> dict:
+def create_test_IAMPolicy(name: str, actions: typing.List[str] = None,
+                          resource_type: str = 'project',
+                          effect='Deny'
+                          ) -> dict:
     """Assists with the creation of policy statements for testing"""
+    if effect not in ['Deny', 'Allow']:
+        effect = 'Deny'
     statement = {
         "Version": "2012-10-17",
         "Statement": [
             {
                 "Sid": "DefaultRole",
-                "Effect": "Deny",
+                "Effect": effect,
                 "Action": actions if actions else ["fake:action"],
-                "Resource": "fake:resource"
+                "Resource": f"arn:dcp:fus:us-east-1:dev:{resource_type}/*"
             }
         ]
     }
@@ -52,17 +57,21 @@ def create_test_IAMPolicy(name: str, actions: typing.List[str] = None) -> dict:
     return statement
 
 
-def create_test_ResourcePolicy(name: str, actions: typing.List[str] = None) -> dict:
+def create_test_ResourcePolicy(name: str, actions: typing.List[str] = None,
+                               resource_type: str = 'project',
+                               effect='Deny') -> dict:
     """Assists with the creation of policy statements for testing"""
+    if effect not in ['Deny', 'Allow']:
+        effect = 'Deny'
     statement = {
         "Version": "2012-10-17",
         "Statement": [
             {
                 "Principal": "*",
                 "Sid": "DefaultRole",
-                "Effect": "Deny",
+                "Effect": effect,
                 "Action": actions if actions else ["fake:action"],
-                "Resource": "arn:dcp:fus:us-east-1:dev:project/*"
+                "Resource": f"arn:dcp:fus:us-east-1:dev:{resource_type}/*"
             }
         ]
     }
