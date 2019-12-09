@@ -241,12 +241,12 @@ For resource, set the `partition` to `hca`, set your `service` name to the name 
 A new `resource_type` is created by providing the name of the `resource_type`, and the actions that can be performed on it. 
  Once a `resource_type` is created you can store `resource_id`s of that `resource_type` to apply ACLs.
  
-An `resource_policy` refers to a policy associated with a `resource_type` and is used to define different access levels 
+A `resource_policy` refers to a policy associated with a `resource_type` and is used to define different access levels 
  between principals and `resource_id`s. A principal may have only one level of access to a `resource_id`. All 
- `resource_id`s use the same pool of resource policies for that particular `resource_type`. This mean that modifying an
+ `resource_id`s use the same pool of resource policies for that particular `resource_type`. This mean that modifying a
  `resource_policy`, modifies it for all principals with that access level to a `resource_id`. New `resource_policy` can
   be 
- defined for a `resource_type` after the `resource_type` has been created. Deleting an `resource_policy` removes access 
+ defined for a `resource_type` after the `resource_type` has been created. Deleting a `resource_policy` removes access 
  for all principals with that level of access between a `resource_id`. `resource_policy` can only define policies that 
  use actions supported by that `resource_type`. Actions can be added and removed after a `resource_type` has been 
  created.
