@@ -16,14 +16,14 @@ perform on a resource.
 import json
 import logging
 import os
-from collections import defaultdict
-from typing import List, Dict, Any, Type, Union
+from collections import defaultdict, deque
+from typing import List, Dict, Any, Type, Union, Tuple
 
 from dcplib.aws.clients import clouddirectory as cd_client
 from fusillade.config import proj_path, Config
 from fusillade.directory.cloudnode import CloudNode
 from fusillade.directory.identifiers import get_obj_type_path
-from fusillade.directory.principal import Principal, User
+from fusillade.directory.principal import Principal, User, Group
 from fusillade.directory.structs import ConsistencyLevel, UpdateObjectParams, ValueTypes, UpdateActions
 from fusillade.errors import FusilladeHTTPException, FusilladeNotFoundException, FusilladeBadRequestException
 from fusillade.policy.validator import verify_policy
@@ -408,6 +408,59 @@ class ResourceId(CloudNode):
                              object=dict(type=new_node.object_type, path_name=new_node._path_name)))
             return new_node
 
+    def list_principals(
+            self,
+            next_token: str = None,
+            per_page: int = None) -> Tuple[Dict[str, List[Dict[str, str]]], str]:
+        """
+        List the principals that have some level of  access to this resource id.
+
+        :param next_token:
+        :param per_page:
+        :return: JSON-formatted list of principals and a token for pagination
+        """
+        # retrieve the raw list of object references from cloud directory
+        _results, next_token = self.cd.list_incoming_typed_links(self.object_ref, [], 'access_link',
+                                                                 next_token=next_token, paged=True, per_page=per_page)
+        result = deque()
+        if _results:
+            ops = []
+            for r in _results:
+                # retrieve the principal attribute from the `r`, this will be returned in the response.
+                result.append({'member_type': self.cd.parse_attributes(r['IdentityAttributeValues'])['principal']})
+                # build the batch_read request list to retrieve the rest of the attributes for the response
+                # We need `access_level` from the typed link
+                ops.append(self.cd.batch_get_link_attributes(r, ['access_level']))
+                # and we need need `name` from the source object.
+                ops.append(self.cd.batch_get_attributes(
+                    r['SourceObjectReference']['Selector'],
+                    Principal._facet,
+                    ['name']))
+                # There are two requests per `r` in `_results`
+
+            # `switch` is used to retrieve the two responses per `r` in `_results`
+            switch = True
+            for resp in self.cd.batch_read(ops)['Responses']:
+                # Below, temp stores the result we are working on. Once we have retrieved both responses and added
+                # the relavent attributes to temp, we append back to the results. This is to sync the results with
+                # the batch read responses.
+                if resp.get('SuccessfulResponse'):
+                    if switch:
+                        temp = result.popleft()
+                        temp.update(self.cd.parse_attributes(
+                            resp['SuccessfulResponse']
+                            ['GetLinkAttributes']
+                            ['Attributes']))
+                        switch = False
+                    else:
+                        temp['member'] = self.cd.parse_attributes(
+                            resp['SuccessfulResponse']
+                            ['GetObjectAttributes']
+                            ['Attributes'])['name']
+                        result.append(temp)
+                        switch = True
+        return {'members': list(result)}, next_token
+
     def add_principals(self, principals: List[Type['Principal']], access_level: str):
         """
         add a typed link from resource to principal with the access type.
@@ -480,7 +533,56 @@ class ResourceId(CloudNode):
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeNotFoundException(f"Failed to delete {self.name}. {self.object_type} does not exist.")
 
+    def modify_principals(self, principals: List[Dict[str, str]]) -> None:
+        """
+        Modify a list of principals to grant them access to this resource id by adding, updating or deleting access
+        levels as needed.
+
+        :param principals: list of principals to grant access to this resource id
+        :return:
+        """
+        ops = []
+        modifications = []
+        for p in principals:
+            principal = User(p['member']) if p['member_type'] == 'user' else Group(p['member'])
+            modifications.append((principal, p.get('access_level')))
+            # tls is a pointer to the edge connecting a principal and resource.
+            tls = self.cd.make_typed_link_specifier(
+                principal.object_ref,
+                self.object_ref,
+                'access_link',
+                {'principal': principal.object_type,
+                 'resource': self.resource_type.name})
+            ops.append(self.cd.batch_get_link_attributes(tls, ['access_level']))
+
+        try:
+            for modifications, r in zip(modifications, self.cd.batch_read(ops)['Responses']):
+                if r.get('SuccessfulResponse'):
+                    current_ap = r['SuccessfulResponse']['GetLinkAttributes']['Attributes'][0]['Value'].popitem()[1]
+                    if modifications[1] == current_ap:  # Pass
+                        # If the old access level of the principal is equal to the new access level, then do nothing.
+                        continue
+                    elif modifications[1] is None:  # delete
+                        # If the access level field is missing, then remove access for the principal
+                        self.remove_principals([modifications[0]])
+                    elif modifications[1] != current_ap:  # update
+                        # If the new access level is not equal to the old access level then we update it to match.
+                        self.update_principal(*modifications)
+                else:
+                    # If the principal had no previous access level, then create a new access level edge in cloud
+                    # directory between the principal and the resource id
+                    self.add_principals([modifications[0]], modifications[1])
+
+        except cd_client.exceptions.ResourceNotFoundException:
+            return None
+
     def check_access(self, principals: List[Type['Principal']]) -> Union[None, List[str]]:
+        """
+        Given a list of principals, return a list of access levels to this resource id for each principal
+
+        :param principals:
+        :return: list of access levels to this resource id, one for each principal
+        """
         ops = []
         for principal in principals:
             tls = self.cd.make_typed_link_specifier(
