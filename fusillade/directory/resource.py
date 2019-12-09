@@ -535,7 +535,8 @@ class ResourceId(CloudNode):
 
     def modify_principals(self, principals: List[Dict[str, str]]) -> None:
         """
-        Modify a list of principals to grant them access to this resource id by adding, updating or deleting access levels as needed.
+        Modify a list of principals to grant them access to this resource id by adding, updating or deleting access
+        levels as needed.
 
         :param principals: list of principals to grant access to this resource id
         :return:
@@ -558,7 +559,7 @@ class ResourceId(CloudNode):
             for modifications, r in zip(modifications, self.cd.batch_read(ops)['Responses']):
                 if r.get('SuccessfulResponse'):
                     current_ap = r['SuccessfulResponse']['GetLinkAttributes']['Attributes'][0]['Value'].popitem()[1]
-                    if modifications[1] == current_ap: # Pass
+                    if modifications[1] == current_ap:  # Pass
                         # If the old access level of the principal is equal to the new access level, then do nothing.
                         continue
                     elif modifications[1] is None:  # delete
