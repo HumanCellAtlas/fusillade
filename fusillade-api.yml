@@ -341,17 +341,22 @@ paths:
         content:
           application/json:
             schema:
-              allOf:
-                - required:
-                  - user_id
-                  type: object
-                  properties:
-                    user_id:
-                      $ref: '#/components/schemas/custom_identifier'
-                    policy:
-                      $ref: '#/components/schemas/policy_document'
-                - $ref: '#/components/schemas/groups'
-                - $ref: '#/components/schemas/roles'
+              required:
+                - user_id
+              type: object
+              properties:
+                user_id:
+                  $ref: '#/components/schemas/custom_identifier'
+                groups:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/custom_identifier'
+                roles:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/custom_identifier'
+                policy:
+                  $ref: '#/components/schemas/policy_document'
       tags:
         - user
       responses:
@@ -418,13 +423,7 @@ paths:
         - user
       responses:
         200:
-          description: All owned resources have been returned. TODO fix paging here
-          content:
-            application/json:
-              schema:
-                anyOf:
-                  - $ref: '#/components/schemas/groups'
-                  - $ref: '#/components/schemas/roles'
+          $ref: '#/components/responses/200_paged'
         206:
           $ref: '#/components/responses/206'
         404:
@@ -1124,10 +1123,10 @@ paths:
               schema:
                 type: object
                 properties:
-                    policy_document:
-                      $ref: '#/components/schemas/policy_document'
-                    policy_type:
-                      $ref: '#/components/schemas/policy_type'
+                  policy_document:
+                    $ref: '#/components/schemas/policy_document'
+                  policy_type:
+                    $ref: '#/components/schemas/policy_type'
         401:
           $ref: '#/components/responses/401'
         403:
@@ -1454,8 +1453,8 @@ components:
         type: string
   schemas:
     principal_type:
-        type: string
-        enum: [user, group]
+      type: string
+      enum: [user, group]
     paged_results:
       type: array
       items:
