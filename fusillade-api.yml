@@ -294,8 +294,7 @@ paths:
                   maxItems: 1
                   minItems: 1
                   items:
-                    type: string
-                    pattern: 'arn:([\w\-\*]+:){2,4}[\w\-\*/]+'
+                    $ref: '#/components/schemas/resource_name'
       responses:
         200:
           description: The result of the policy evaluation.
@@ -322,11 +321,7 @@ paths:
         - $ref: '#/components/parameters/per_page'
       responses:
         200:
-          description: All users have been returned.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/users'
+          $ref: '#/components/responses/200_paged'
         206:
           $ref: '#/components/responses/206'
         404:
@@ -346,22 +341,17 @@ paths:
         content:
           application/json:
             schema:
-              required:
-                - user_id
-              type: object
-              properties:
-                user_id:
-                  $ref: '#/components/schemas/custom_identifier'
-                groups:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/custom_identifier'
-                roles:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/custom_identifier'
-                policy:
+              allOf:
+                - required:
+                  - user_id
                   type: object
+                  properties:
+                    user_id:
+                      $ref: '#/components/schemas/custom_identifier'
+                    policy:
+                      $ref: '#/components/schemas/policy_document'
+                - $ref: '#/components/schemas/groups'
+                - $ref: '#/components/schemas/roles'
       tags:
         - user
       responses:
@@ -402,7 +392,7 @@ paths:
         - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/user_id'
-        - $ref: '#/components/parameters/status'
+        - $ref: '#/components/parameters/user_status'
       tags:
         - user
       responses:
@@ -428,7 +418,7 @@ paths:
         - user
       responses:
         200:
-          description: All owned resources have been returned.
+          description: All owned resources have been returned. TODO fix paging here
           content:
             application/json:
               schema:
@@ -456,11 +446,7 @@ paths:
         - user
       responses:
         200:
-          description: All groups have been returned.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/groups'
+          $ref: '#/components/responses/200_paged'
         206:
           $ref: '#/components/responses/206'
         404:
@@ -480,12 +466,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                groups:
-                  type: array
-                  items:
-                    type: string
+              $ref: '#/components/schemas/groups'
       tags:
         - user
       responses:
@@ -512,11 +493,7 @@ paths:
         - user
       responses:
         200:
-          description: All roles have been returned.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/roles'
+          $ref: '#/components/responses/200_paged'
         206:
           $ref: '#/components/responses/206'
         404:
@@ -536,12 +513,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                roles:
-                  type: array
-                  items:
-                    type: string
+              $ref: '#/components/schemas/roles'
       tags:
         - user
       responses:
@@ -569,7 +541,7 @@ paths:
               type: object
               properties:
                 policy:
-                  type: object
+                  $ref: '#/components/schemas/policy_document'
       responses:
         200:
           description: Policy modified.
@@ -591,11 +563,7 @@ paths:
         - $ref: '#/components/parameters/per_page'
       responses:
         200:
-          description: All groups have been returned.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/groups'
+          $ref: '#/components/responses/200_paged'
         206:
           $ref: '#/components/responses/206'
         404:
@@ -615,18 +583,16 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - group_id
-              properties:
-                group_id:
-                  $ref: '#/components/schemas/custom_identifier'
-                policy:
-                  type: object
-                roles:
-                  type: array
-                  items:
-                    type: string
+              allOf:
+                - type: object
+                  required:
+                    - group_id
+                  properties:
+                    group_id:
+                      $ref: '#/components/schemas/custom_identifier'
+                    policy:
+                      $ref: '#/components/schemas/policy_document'
+                - $ref: '#/components/schemas/roles'
       responses:
         201:
           description: Group was successfully created.
@@ -714,12 +680,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                roles:
-                  type: array
-                  items:
-                    type: string
+              $ref: '#/components/schemas/roles'
       responses:
         200:
           description: Action successful.
@@ -777,7 +738,7 @@ paths:
                   minItems: 1
                   maxItems: 10
                   items:
-                    type: string
+                    $ref: '#/components/schemas/custom_identifier'
       responses:
         200:
           description: Action successful.
@@ -805,7 +766,7 @@ paths:
               type: object
               properties:
                 policy:
-                  type: object
+                  $ref: '#/components/schemas/policy_document'
       responses:
         200:
           description: Policy modified.
@@ -827,11 +788,7 @@ paths:
         - $ref: '#/components/parameters/per_page'
       responses:
         200:
-          description: All roles have been returned.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/roles'
+          $ref: '#/components/responses/200_paged'
         206:
           $ref: '#/components/responses/206'
         404:
@@ -859,7 +816,7 @@ paths:
                 role_id:
                   $ref: '#/components/schemas/custom_identifier'
                 policy:
-                  type: object
+                  $ref: '#/components/schemas/policy_document'
       responses:
         201:
           description: Role was created.
@@ -928,7 +885,7 @@ paths:
               type: object
               properties:
                 policy:
-                  type: object
+                  $ref: '#/components/schemas/policy_document'
       responses:
         200:
           description: Policy modified.
@@ -999,14 +956,12 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                owner_policy:
-                  $ref: '#/components/schemas/policy_document'
-                actions:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/policy_action'
+              allOf:
+                - type: object
+                  properties:
+                    owner_policy:
+                      $ref: '#/components/schemas/policy_document'
+                - $ref: '#/components/schemas/policy_actions'
       responses:
         201:
           description: The new resource type has been created.
@@ -1056,12 +1011,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  actions:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/policy_action'
+                $ref: '#/components/schemas/policy_actions'
         401:
           $ref: '#/components/responses/401'
         403:
@@ -1084,12 +1034,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                actions:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/policy_action'
+              $ref: '#/components/schemas/policy_actions'
       responses:
         200:
           description: OK
@@ -1117,12 +1062,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                actions:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/policy_action'
+              $ref: '#/components/schemas/policy_actions'
       responses:
         200:
           description: OK
@@ -1463,8 +1403,7 @@ components:
       in: query
       required: true
       schema:
-        type: string
-        enum: [group, role]
+        $ref: '#/components/schemas/custom_identifier'
     resource_type_name:
       name: resource_type_name
       in: path
@@ -1486,13 +1425,12 @@ components:
       schema:
         type: string
         enum: [add, remove]
-    status:
+    user_status:
       name: status
       in: query
       required: true
       schema:
-        type: string
-        enum: ['enabled', 'disabled']
+        $ref: '#/components/schemas/user_status'
     next_token:
       name: next_token
       in: query
@@ -1539,6 +1477,9 @@ components:
           $ref: '#/components/schemas/paged_results'
         resource_type:
           type: string
+    resource_name:
+      type: string
+      pattern: 'arn:([\w\-\*]+:){2,4}[\w\-\*/]+'
     resource_member:
       type: object
       properties:
@@ -1564,6 +1505,13 @@ components:
     policy_action:
       type: string
       pattern: '[A-z]\w*[^\W_]:[A-z]\w*[^\W_]'
+    policy_actions:
+      type: object
+      properties:
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/policy_action'
     members:
       type: object
       properties:
@@ -1574,6 +1522,7 @@ components:
     policy_document:
       description: A resource policy, used for controlling access to a resource.
       type: object
+      nullable: true
       properties:
         Statements:
           type: array
@@ -1588,20 +1537,15 @@ components:
               Actions:
                 type: array
                 items:
-                  type: string
+                  $ref: '#/components/schemas/policy_action'
               Resource:
                 type: array
                 items:
-                  type: string
-    policy:
-      type: object
-      properties:
-        policy:
-          type: string
+                  $ref: '#/components/schemas/resource_name'
     policies:
       type: array
       items:
-        type: object
+        $ref: '#/components/schemas/policy_document'
     groups:
       type: object
       properties:
@@ -1610,7 +1554,7 @@ components:
     roles:
       type: object
       properties:
-        groups:
+        roles:
           $ref: '#/components/schemas/paged_results'
     users:
       type: object
@@ -1623,13 +1567,16 @@ components:
       minLength: 1
       maxLength: 128
       pattern: '^[0-9a-zA-Z.@_\-$,=]*$'
+    user_status:
+      type: string
+      enum: ['enabled', 'disabled']
     User:
       type: object
       properties:
         user_id:
           $ref: '#/components/schemas/custom_identifier'
         status:
-          type: string
+          $ref: '#/components/schemas/user_status'
         policies:
           type: object
           nullable: true
@@ -1639,8 +1586,7 @@ components:
         group_id:
           $ref: '#/components/schemas/custom_identifier'
         policies:
-          type: object
-          nullable: true
+          $ref: '#/components/schemas/policy_document'
         roles:
           type: array
           items:
@@ -1655,7 +1601,7 @@ components:
         role_id:
           $ref: '#/components/schemas/custom_identifier'
         policies:
-          type: object
+          $ref: '#/components/schemas/policy_document'
   responses:
     userinfo:
       description: OK
