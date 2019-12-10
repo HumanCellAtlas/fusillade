@@ -63,7 +63,7 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
             with self.subTest(test['json_request_body']):
                 _run_test(test)
 
-        with self.subTest("User Disabled"):
+        with self.subTest("User disabled"):
             resp = self.app.put(furl(f"/v1/user/{email}",
                                      query_params={'user_id': email, 'status': 'disabled'}).url,
                                 headers=headers)

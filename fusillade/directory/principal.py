@@ -432,7 +432,7 @@ class User(Principal):
         """
         try:
             # check if the node has been created in cloud directory.
-            result = self.status == 'Enabled'
+            result = self.status == 'enabled'
         except FusilladeNotFoundException:
             # node does not exist, create the node.
             self.provision_user(self.name)
@@ -445,7 +445,7 @@ class User(Principal):
             UpdateObjectParams(self._facet,
                                'status',
                                ValueTypes.StringValue,
-                               'Enabled',
+                               'enabled',
                                UpdateActions.CREATE_OR_UPDATE)
         ]
         self.cd.update_object_attribute(self.object_ref, update_params)
@@ -458,7 +458,7 @@ class User(Principal):
             UpdateObjectParams(self._facet,
                                'status',
                                ValueTypes.StringValue,
-                               'Disabled',
+                               'disabled',
                                UpdateActions.CREATE_OR_UPDATE)
         ]
         self.cd.update_object_attribute(self.object_ref, update_params)
@@ -492,7 +492,7 @@ class User(Principal):
         if groups:
             Group.exists(groups)
 
-        user = User.create(name, statement, creator=_creator, status='Enabled')
+        user = User.create(name, statement, creator=_creator, status='enabled')
 
         roles = roles + cls.default_roles if roles else cls.default_roles
         user.add_roles(roles)
