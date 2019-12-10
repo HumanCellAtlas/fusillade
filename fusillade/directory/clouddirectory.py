@@ -474,11 +474,11 @@ class CloudDirectory:
                 result[key] = attr['Value'][ValueTypes.StringValue.name]
             elif ValueTypes.BinaryValue.name in attr['Value'].keys():
                 result[key] = attr['Value'][ValueTypes.BinaryValue.name]
-            elif ValueTypes.BinaryValue.name in attr['Value'].keys():
+            elif ValueTypes.BooleanValue.name in attr['Value'].keys():
                 result[key] = attr['Value'][ValueTypes.BooleanValue.name]
-            elif ValueTypes.BinaryValue.name in attr['Value'].keys():
+            elif ValueTypes.NumberValue.name in attr['Value'].keys():
                 result[key] = attr['Value'][ValueTypes.NumberValue.name]
-            elif ValueTypes.BinaryValue.name in attr['Value'].keys():
+            elif ValueTypes.DatetimeValue.name in attr['Value'].keys():
                 result[key] = attr['Value'][ValueTypes.DatetimeValue.name]
         return result
 
@@ -811,7 +811,7 @@ class CloudDirectory:
 
     def get_policies(self, policy_ids: List[str]) -> Dict[str, Union[List[Dict[str, str]], List[str]]]:
         """
-        Get's policy statements and attributes.
+        Gets policy statements and attributes.
 
         :param policy_paths: a list of paths leading to policy nodes stored in cloud directory
         :param policy_type: the type of policies to retrieve from the policy nodes
