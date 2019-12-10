@@ -146,13 +146,13 @@ class TestUser(unittest.TestCase, AssertJSONMixin):
         user = User.provision_user(name)
 
         with self.subTest("A user's status is enabled when provisioned."):
-            self.assertEqual(user.status, 'Enabled')
+            self.assertEqual(user.status, 'enabled')
         with self.subTest("A user's status is disabled when user.disable is called."):
             user.disable()
-            self.assertEqual(user.status, 'Disabled')
+            self.assertEqual(user.status, 'disabled')
         with self.subTest("A user's status is enabled when user.enable is called."):
             user.enable()
-            self.assertEqual(user.status, 'Enabled')
+            self.assertEqual(user.status, 'enabled')
 
     def test_roles(self):
         name = "test_sete_policy@test.com"
