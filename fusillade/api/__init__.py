@@ -126,9 +126,7 @@ class ChaliceWithConnexion(chalice.Chalice):
                 flask_res = self.connexion_full_dispatch_request()
                 status_code = flask_res._status_code
             except Exception:
-                self.log.exception(json.dumps(dict(
-                    msg=f'The request failed!'
-                )))
+                self.log.exception('The request failed!')
                 status_code = 500
             finally:
                 self.log.info(dict(
