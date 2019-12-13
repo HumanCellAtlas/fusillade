@@ -77,7 +77,7 @@ def evaluate_policy(
     if resource_policy:
         params.update(
             ResourcePolicy=resource_policy,
-            CallerArn='arn:aws:iam::634134578715:user/anyone')  # TODO this should be an AWS fusillade service account
+            CallerArn='arn:aws:iam::FFFFFFFF:user/anyone')  # This is intentionally FFFFFFFF
     for _response in simulate_custom_policy_paginator.paginate(**params):
         logger.info(_response['ResponseMetadata'])
         logger.debug(_response['EvaluationResults'])
