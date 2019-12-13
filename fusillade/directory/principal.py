@@ -39,7 +39,11 @@ class PolicyMixin:
         """
         operations = list()
         verify_policy(statement, policy_type)
-        object_attribute_list = self.cd.get_policy_attribute_list('IAMPolicy', statement, **kwargs)
+        object_attribute_list = self.cd.get_policy_attribute_list(
+            'IAMPolicy',
+            statement,
+            arn=f'{self.arn_prefix}:policy/{self.object_type}/{self.name}',
+            **kwargs)
         policy_link_name = self.get_policy_name(policy_type)
         parent_path = get_obj_type_path('policy')
         operations.append(
@@ -176,7 +180,12 @@ class CreateMixin(PolicyMixin):
             get_obj_type_path(cls.object_type),
             new_node.hash_name(name),
             new_node._facet,
-            new_node.cd.get_object_attribute_list(facet=new_node._facet, name=name, created_by=_creator, **kwargs)
+            new_node.cd.get_object_attribute_list(
+                facet=new_node._facet,
+                name=name,
+                created_by=_creator,
+                arn=f'{new_node.arn_prefix}:{new_node.object_type}/{new_node.name}',
+                **kwargs)
         ))
         if creator:
             ops.append(User(name=creator).batch_add_ownership(new_node))
@@ -351,6 +360,7 @@ class User(Principal):
     default_roles = []  # TODO: make configurable
     default_groups = ['user_default']  # TODO: make configurable
     object_type = 'user'
+    arn_prefix = f"arn:aws:iam::{os.environ['FUS_DEPLOYMENT_STAGE']}"
 
     def __init__(self, name: str = None, object_ref: str = None):
         """

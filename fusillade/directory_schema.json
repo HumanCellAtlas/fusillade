@@ -19,6 +19,15 @@
           },
           "requiredBehavior": "REQUIRED_ALWAYS"
         },
+        "arn": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": true,
+            "attributeRules": {
+            }
+          },
+          "requiredBehavior": "NOT_REQUIRED"
+        },
         "created_by": {
           "attributeDefinition": {
             "attributeType": "STRING",
@@ -63,6 +72,15 @@
             }
           },
           "requiredBehavior": "REQUIRED_ALWAYS"
+        },
+        "arn": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": true,
+            "attributeRules": {
+            }
+          },
+          "requiredBehavior": "NOT_REQUIRED"
         },
         "created_by": {
           "attributeDefinition": {
@@ -114,6 +132,15 @@
             "attributeType": "STRING",
             "isImmutable": true,
             "attributeRules": {}
+          },
+          "requiredBehavior": "NOT_REQUIRED"
+        },
+        "arn": {
+          "attributeDefinition": {
+            "attributeType": "STRING",
+            "isImmutable": true,
+            "attributeRules": {
+            }
           },
           "requiredBehavior": "NOT_REQUIRED"
         }

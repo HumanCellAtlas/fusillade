@@ -15,9 +15,10 @@ class CloudNode:
     """
     Contains shared code across the different types of nodes stored in Fusillade CloudDirectory
     """
-    _attributes = ["name"]  # the different attributes of a node stored
-    _facet = 'LeafFacet'
-    object_type = 'node'
+    _attributes: List[str] = ["name", "arn"]  # the different attributes of a node stored
+    _facet: str = 'LeafFacet'
+    object_type: str = None
+    arn_prefix: str = Config.fus_prefix
 
     def __init__(self,
                  name: str = None,
@@ -36,6 +37,7 @@ class CloudNode:
             self._name: str = None
             self._path_name: str = None
             self.object_ref: str = object_ref
+        self._arn: str = None
         self.attached_policies: Dict[str, str] = dict()
 
     def from_name(self, name):
@@ -44,9 +46,9 @@ class CloudNode:
         self.object_ref: str = get_obj_type_path(self.object_type) + self._path_name
 
     @staticmethod
-    def hash_name(name):
+    def hash_name(arn):
         """Generate the cloud directory path name from the nodes name."""
-        return hashlib.sha1(bytes(name, "utf-8")).hexdigest()
+        return hashlib.sha1(bytes(arn, "utf-8")).hexdigest()
 
     def _get_link_name(self, parent_path: str, child_path: str):
         return self.hash_name(parent_path + child_path)
@@ -177,6 +179,12 @@ class CloudNode:
             self._get_attributes(self._attributes)
             self._path_name = self.hash_name(self._name)
         return self._name
+
+    @property
+    def arn(self):
+        if not self._arn:
+            self._get_attributes(self._attributes)
+        return self._arn
 
     def _get_attributes(self, attributes: List[str]):
         """
