@@ -29,8 +29,10 @@ def normalize_json(src: typing.Union[str, dict]):
     "Normalize the shape of json to make comparing easier"
     if isinstance(src, dict):
         pass
-    if isinstance(src, str):
+    elif isinstance(src, str):
         src = json.loads(src)
+    elif isinstance(src, bytes):
+        src = json.loads(src.decode())
     return json.dumps(src, sort_keys=True)
 
 
