@@ -8,8 +8,7 @@ class Config:
     _admin_emails: list = None
     _oauth2_config = None
     app = None
-    audience = ["https://dev.data.humancellatlas.org/",
-                "https://auth.data.humancellatlas.org/"]
+    audience = None
     _openid_provider = None
     version = "unversioned"
     directory_schema_version = {"Version": '0', "MinorVersion": '0'}
@@ -58,6 +57,8 @@ class Config:
 
     @classmethod
     def get_audience(cls):
+        if not cls.audience:
+            cls.audience = os.environ['FUS_AUDIENCE']
         return cls.audience
 
     @classmethod
