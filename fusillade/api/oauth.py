@@ -37,10 +37,10 @@ def authorize():
     openid_provider = Config.get_openid_provider()
     query_params["openid_provider"] = openid_provider
     query_params['response_type'] = "code"
-    query_params['audience'] = Config.get_audience()
     client_id = query_params.get("client_id")
     client_id = client_id if client_id != 'None' else None
     if client_id:
+        query_params['audience'] = Config.get_audience()
         auth_params = query_params
     else:
         state = base64.b64encode(json.dumps(query_params).encode()).decode()
