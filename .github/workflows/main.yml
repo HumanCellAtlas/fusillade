@@ -11,4 +11,4 @@ jobs:
     - name: Black Code Formatter
       uses: lgeiger/black-action@v1.0.1
       with: 
-        args: -t py36 --check ./fusillade ./scripts ./tests
+        args: . -t py36 --check
