@@ -11,6 +11,9 @@ env:
 
 before_install:
   - source environment
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
+  - ./cc-test-reporter before-build
 
 install:
   - pip install -r requirements-dev.txt
@@ -19,4 +22,5 @@ script:
   - make test
 
 after_success:
+  - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
   - bash <(curl -s https://codecov.io/bash)
