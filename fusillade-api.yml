@@ -1271,7 +1271,7 @@ paths:
                 type: object
                 properties:
                   resource_arn:
-                    $ref: '#/component/schemas/resource_arn'
+                    $ref: '#/components/schemas/resource_arn'
                   resource_id:
                     $ref: '#/components/schemas/custom_identifier'
         401:
@@ -1484,7 +1484,7 @@ components:
         resource_ids:
           type: array
           items:
-            $ref: '#/component/schemas/resource_arn'
+            $ref: '#/components/schemas/resource_arn'
         resource_type:
           type: string
     resource_arn:
