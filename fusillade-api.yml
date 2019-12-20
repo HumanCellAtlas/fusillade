@@ -955,12 +955,15 @@ paths:
         content:
           application/json:
             schema:
-              allOf:
-                - type: object
-                  properties:
-                    owner_policy:
-                      $ref: '#/components/schemas/policy_document'
-                - $ref: '#/components/schemas/policy_actions'
+                required:
+                  - actions
+                properties:
+                  owner_policy:
+                    $ref: '#/components/schemas/policy_document'
+                  actions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/policy_action'
       responses:
         201:
           description: The new resource type has been created.
