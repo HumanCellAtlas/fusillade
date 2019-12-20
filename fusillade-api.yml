@@ -898,7 +898,7 @@ paths:
     get:
       summary:  List available resource types
       description: List available resource types
-      operationId: fusillade.api.resource.get
+      operationId: fusillade.api.resources.get
       security:
         - BearerAuth: []
       parameters:
