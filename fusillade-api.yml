@@ -894,7 +894,7 @@ paths:
           description: Unexpected error.
       tags:
         - role
-  /v1/resource:
+  /v1/resources:
     get:
       summary:  List available resource types
       description: List available resource types

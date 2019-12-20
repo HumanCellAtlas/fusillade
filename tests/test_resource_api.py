@@ -99,7 +99,7 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
         for i in range(11):
             self.app.post(f'/v1/resource/{ResourceTypeName.get()}', data=json.dumps({'actions': ['tr:action1']}),
                           headers=admin_headers)
-        self._test_paging('/v1/resource', admin_headers, 10, 'resources')
+        self._test_paging('/v1/resources', admin_headers, 10, 'resources')
 
     def test_get_resource_policy(self):
         """Pages of resource are retrieved when using the get resource API"""
