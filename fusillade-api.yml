@@ -1077,11 +1077,11 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resource/{resource_type_name}/policy:
+  /v1/resource/{resource_type_name}/policies:
     get:
       summary: List the available policies for this resource type.
       description: List the available policies for this resource type.
-      operationId: fusillade.api.resource.resource_type_name.policy.get
+      operationId: fusillade.api.resource.resource_type_name.policies.get
       security:
         - BearerAuth: []
       parameters:
@@ -1226,11 +1226,11 @@ paths:
           $ref: '#/components/responses/404'
         default:
           description: Unexpected error.
-  /v1/resource/{resource_type_name}/id:
+  /v1/resource/{resource_type_name}/ids:
     get:
       summary: List ids of all resources matching the specified resource type.
       description: List ids of all resources matching the specified resource type.
-      operationId: fusillade.api.resource.resource_type_name.id.get
+      operationId: fusillade.api.resource.resource_type_name.ids.get
       security:
         - BearerAuth: []
       parameters:
