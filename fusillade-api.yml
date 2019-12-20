@@ -294,7 +294,7 @@ paths:
                   maxItems: 1
                   minItems: 1
                   items:
-                    $ref: '#/components/schemas/resource_name'
+                    $ref: '#/components/schemas/resource_arn'
       responses:
         200:
           description: The result of the policy evaluation.
@@ -1265,6 +1265,15 @@ paths:
       responses:
         200:
           description: Resource was found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resource_arn:
+                    $ref: '#/component/schemas/resource_arn'
+                  resource_id:
+                    $ref: '#/components/schemas/custom_identifier'
         401:
           $ref: '#/components/responses/401'
         403:
@@ -1473,10 +1482,14 @@ components:
       type: object
       properties:
         resource_ids:
-          $ref: '#/components/schemas/paged_results'
+          type: array
+          items:
+            $ref: '#/component/schemas/resource_arn'
         resource_type:
           type: string
-    resource_name:
+    resource_arn:
+      description: The unique name used to identify a resource within fusillade. This value should be used for the
+        resource parameter when using POST /policies/evaluate to evalaute access to a resource.
       type: string
       pattern: 'arn:([\w\-\*]+:){2,4}[\w\-\*/]+'
     resource_member:
@@ -1540,7 +1553,7 @@ components:
               Resource:
                 type: array
                 items:
-                  $ref: '#/components/schemas/resource_name'
+                  type: string
     policies:
       type: array
       items:

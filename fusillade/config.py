@@ -17,6 +17,7 @@ class Config:
     _directory_name = None
     group_max = 10
     oidc_email_claim = 'https://auth.data.humancellatlas.org/email'
+    arn_prefix = f"arn:fus:hca::{os.environ['FUS_DEPLOYMENT_STAGE']}:"
 
     @classmethod
     def get_admin_emails(cls):

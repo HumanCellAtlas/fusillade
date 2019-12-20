@@ -606,3 +606,8 @@ class ResourceId(CloudNode):
     def get_resource_policy(self, principals: List[Type['Principal']]):
         resource_policy = self.check_access(principals)
         return self.cd.get_policies(resource_policy)
+
+    def get_info(self) -> Dict[str, Any]:
+        info = super(ResourceId, self).get_info()
+        info['resource_arn'] = f"{Config.arn_prefix}:{self.resource_type}/{self.name}"
+        return info
