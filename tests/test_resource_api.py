@@ -99,7 +99,7 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
         for i in range(11):
             self.app.post(f'/v1/resource/{ResourceTypeName.get()}', data=json.dumps({'actions': ['tr:action1']}),
                           headers=admin_headers)
-        self._test_paging('/v1/resource', admin_headers, 10, 'resources')
+        self._test_paging('/v1/resources', admin_headers, 10, 'resources')
 
     def test_get_resource_policy(self):
         """Pages of resource are retrieved when using the get resource API"""
@@ -113,7 +113,7 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
                                      {'policy': create_test_ResourcePolicy('tp{i}', actions=['trp:action1'])}),
                                  headers=admin_headers)
             self.assertEqual(resp.status_code, 201)
-        self._test_paging(f'/v1/resource/{test_resource}/policy', admin_headers, 10, 'policies')
+        self._test_paging(f'/v1/resource/{test_resource}/policies', admin_headers, 10, 'policies')
 
     def test_resource_policy(self):
         """Create delete and update a resource policy"""
@@ -274,7 +274,7 @@ class TestResourceIdApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
         """Pages of resource ids are retrieved when using the get resource API"""
         for i in range(11):
             self.app.post(f'/v1/resource/{self.test_resource}/id/test{i}', headers=admin_headers)
-        self._test_paging(f'/v1/resource/{self.test_resource}/id', admin_headers, 10, 'resource_ids')
+        self._test_paging(f'/v1/resource/{self.test_resource}/ids', admin_headers, 10, 'resource_ids')
 
     def test_resource_id(self):
         """Create a resource id, check that it exists, and delete it"""
