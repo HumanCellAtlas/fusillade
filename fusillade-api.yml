@@ -1123,7 +1123,7 @@ paths:
               schema:
                 type: object
                 properties:
-                  policy_document:
+                  policy:
                     $ref: '#/components/schemas/policy_document'
                   policy_type:
                     $ref: '#/components/schemas/policy_type'
@@ -1155,9 +1155,9 @@ paths:
                 policy:
                   type: object
                   properties:
-                    document:
+                    policy:
                       $ref: '#/components/schemas/policy_document'
-                    type:
+                    policy_type:
                       $ref: '#/components/schemas/policy_type'
       tags:
         - resource
