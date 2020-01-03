@@ -152,7 +152,7 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
             f"/v1/resource/{test_resource}/policy/{test_policy_name}",
             headers=admin_headers
         )
-        self.assertJSONEqual(json.loads(resp.body), test_policy)
+        self.assertJSONEqual(json.loads(resp.body)['policy'], test_policy)
 
         # 200 returned when modifying the policy with valid actions
         test_policy = create_test_ResourcePolicy('tp{i}', actions=expected_actions[:2])
@@ -166,7 +166,7 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
             f"/v1/resource/{test_resource}/policy/{test_policy_name}",
             headers=admin_headers
         )
-        self.assertJSONEqual(json.loads(resp.body), test_policy)
+        self.assertJSONEqual(json.loads(resp.body)['policy'], test_policy)
 
         # 400 returned when modifying the policy with invalid actions
         test_policy2 = create_test_ResourcePolicy('tp{i}', actions=['invalid:actions'])
@@ -180,7 +180,7 @@ class TestResourceApi(BaseAPITest, AssertJSONMixin, unittest.TestCase):
             f"/v1/resource/{test_resource}/policy/{test_policy_name}",
             headers=admin_headers
         )
-        self.assertJSONEqual(json.loads(resp.body), test_policy)
+        self.assertJSONEqual(json.loads(resp.body)['policy'], test_policy)
 
         # delete the policy
         resp = self.app.delete(
