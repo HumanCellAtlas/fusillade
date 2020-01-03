@@ -328,7 +328,7 @@ class ResourceType(CloudNode):
             attrs = dict([(attr['Key']['Name'], attr['Value'].popitem()[1]) for attr in resp['Attributes']])
         except cd_client.exceptions.ResourceNotFoundException:
             raise FusilladeNotFoundException(f"{self.get_policy_path(policy_name)} does not exist.")
-        attrs['policy_document'] = json.loads(attrs['policy_document'])
+        attrs['policy'] = json.loads(attrs['policy_document'])
         return attrs
 
     def policy_exists(self, policy_name: str):
