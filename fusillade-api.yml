@@ -1522,7 +1522,7 @@ components:
       type: object
       nullable: true
       properties:
-        Statements:
+        Statement:
           type: array
           items:
             type: object
@@ -1532,7 +1532,7 @@ components:
               Effect:
                 type: string
                 enum: ['Allow', 'Deny']
-              Actions:
+              Action:
                 type: array
                 items:
                   $ref: '#/components/schemas/policy_action'
