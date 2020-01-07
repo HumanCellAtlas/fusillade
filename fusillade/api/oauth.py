@@ -40,6 +40,7 @@ def authorize():
     client_id = query_params.get("client_id")
     client_id = client_id if client_id != 'None' else None
     if client_id:
+        query_params['audience'] = Config.get_audience()
         auth_params = query_params
     else:
         state = base64.b64encode(json.dumps(query_params).encode()).decode()
@@ -50,6 +51,7 @@ def authorize():
                            scope="openid email profile",
                            redirect_uri=oauth2_config[openid_provider]["redirect_uri"],
                            state=state,
+                           audience=Config.get_audience(),
                            prompt=query_params.get('prompt') if query_params.get('prompt') == 'none' else 'login')
 
     dest = furl(get_openid_config(openid_provider)["authorization_endpoint"], query_params=auth_params)

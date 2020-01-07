@@ -114,7 +114,7 @@ def get_service_jwt(service_credentials, email=True, audience=None):
     exp = iat + 3600
     payload = {'iss': service_credentials["client_email"],
                'sub': service_credentials["client_email"],
-               'aud': audience or Config.audience,
+               'aud': audience or Config.get_audience(),
                'iat': iat,
                'exp': exp,
                'scope': ['email', 'openid', 'offline_access'],
