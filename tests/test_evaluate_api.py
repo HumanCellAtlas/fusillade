@@ -84,14 +84,14 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
 
         # create a resource type
         resp = self.app.post(
-            f'/v1/resource/{resource_type}',
+            f'/v1/resources/{resource_type}',
             data=json.dumps({'actions': actions}),
             headers=admin_headers)
         self.assertEqual(resp.status_code, 201)
 
         # create a resource policy read
         resp = self.app.post(
-            f"/v1/resource/{resource_type}/policy/read",
+            f"/v1/resources/{resource_type}/policy/read",
             data=json.dumps({'policy': create_test_ResourcePolicy(
                 'read',
                 actions=['rt:read'],
@@ -104,7 +104,7 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
 
         # create a resource policy rw
         resp = self.app.post(
-            f"/v1/resource/{resource_type}/policy/rw",
+            f"/v1/resources/{resource_type}/policy/rw",
             data=json.dumps({
                 'policy': create_test_ResourcePolicy(
                     'rw',
@@ -119,7 +119,7 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
 
         # create a resource id
         resp = self.app.post(
-            f'/v1/resource/{resource_type}/id/{resource_id}',
+            f'/v1/resources/{resource_type}/id/{resource_id}',
             headers=admin_headers)
         self.assertEqual(resp.status_code, 201)
 
@@ -202,7 +202,7 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
              'access_level': 'read'}
         ]
         resp = self.app.put(
-            f'/v1/resource/{resource_type}/id/{resource_id}/members',
+            f'/v1/resources/{resource_type}/id/{resource_id}/members',
             data=json.dumps(request_body),
             headers=admin_headers
         )
@@ -239,7 +239,7 @@ class TestEvaluateApi(BaseAPITest, unittest.TestCase):
              'access_level': 'rw'}
         ]
         resp = self.app.put(
-            f'/v1/resource/{resource_type}/id/{resource_id}/members',
+            f'/v1/resources/{resource_type}/id/{resource_id}/members',
             data=json.dumps(request_body),
             headers=admin_headers
         )
