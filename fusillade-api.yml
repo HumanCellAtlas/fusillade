@@ -917,7 +917,7 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resource/{resource_type_name}:
+  /v1/resources/{resource_type_name}:
     get:
       summary: List all resources for this resource type
       description: List all resources for this resource type
@@ -995,7 +995,7 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resource/{resource_type_name}/actions:
+  /v1/resources/{resource_type_name}/actions:
     get:
       summary: List all actions for this resource type.
       description: List all actions for this resource type.
@@ -1077,7 +1077,7 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resource/{resource_type_name}/policies:
+  /v1/resources/{resource_type_name}/policies:
     get:
       summary: List the available policies for this resource type.
       description: List the available policies for this resource type.
@@ -1225,7 +1225,7 @@ paths:
           $ref: '#/components/responses/404'
         default:
           description: Unexpected error.
-  /v1/resource/{resource_type_name}/ids:
+  /v1/resources/{resource_type_name}/ids:
     get:
       summary: List ids of all resources matching the specified resource type.
       description: List ids of all resources matching the specified resource type.
@@ -1251,7 +1251,7 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resource/{resource_type_name}/id/{resource_id}:
+  /v1/resources/{resource_type_name}/id/{resource_id}:
     get:
       summary: Check if a resource of type resource_type_name with id resource_id exist.
       description: Check if a resource of type resource_type_name with id resource_id exist.
@@ -1318,7 +1318,7 @@ paths:
           description: Unexpected error.
       tags:
         - resource
-  /v1/resource/{resource_type_name}/id/{resource_id}/members:
+  /v1/resources/{resource_type_name}/id/{resource_id}/members:
     get:
       summary: List all members that have access to this resource.
       description: List all members that have access to this resource. Members include users, and groups with any
