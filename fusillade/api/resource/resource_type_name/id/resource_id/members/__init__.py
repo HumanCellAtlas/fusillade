@@ -25,6 +25,6 @@ def put(token_info: dict, resource_type_name, resource_id):
     rt = ResourceId(resource_type_name, resource_id)
     rt.modify_principals(members)
     return make_response(jsonify({
-        'msg': f"Access levels modified.",
+        'msg': "Access levels modified.",
         'resource_type': rt.name,
         'resource_id': resource_id}), 200)
