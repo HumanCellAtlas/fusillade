@@ -8,9 +8,12 @@ env:
   global:
   - AWS_DEFAULT_REGION=us-east-1
   - AWS_DEFAULT_OUTPUT=json
-
+  - CC_TEST_REPORTER_ID=5b8ff869baee7699b43a68485783bd0fd3f32abe7b3b40c08e58a2e4614ac536
 before_install:
   - source environment
+  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+  - chmod +x ./cc-test-reporter
+  - ./cc-test-reporter before-build
 
 install:
   - pip install -r requirements-dev.txt
@@ -19,4 +22,5 @@ script:
   - make test
 
 after_success:
+  - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
   - bash <(curl -s https://codecov.io/bash)
