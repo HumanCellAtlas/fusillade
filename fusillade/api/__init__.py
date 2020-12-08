@@ -68,9 +68,8 @@ class ChaliceWithConnexion(chalice.Chalice):
         # Most of the Fusillade web app's logging is done through the FusilladeChaliceApp.app logger not the Flask
         # app's logger.
         app.app.logger_name = 'fus.api'
-        debug = Config.log_level() > 1
-        app.app.debug = debug
-        app.app.logger.info('Flask debug is %s.', 'enabled' if debug else 'disabled')
+        app.app.config.update(Config.get_flask_config())
+        app.app.logger.info('Flask debug is %s.', 'enabled' if app.app.debug else 'disabled')
 
         resolver = RestyResolver("fusillade.api", collection_endpoint_name="list")
         self.connexion_apis.append(app.add_api(self.swagger_spec_path,
