@@ -8,7 +8,7 @@ import os
 import jwt
 import requests
 from connexion.lifecycle import ConnexionResponse
-from flask import json, request, make_response
+from flask import json, request, make_response, session
 from furl import furl
 
 from fusillade import Config
@@ -17,9 +17,10 @@ from fusillade.utils.security import get_openid_config, get_public_key
 
 
 def login():
+    query_params = request.args
     return ConnexionResponse(
         status_code=requests.codes.moved,
-        headers=dict(Location='/oauth/authorize'))
+        headers=dict(Location=furl('/oauth/authorize', query_params=query_params).url))
 
 
 def logout():
@@ -29,7 +30,9 @@ def logout():
     client_id = oauth2_config[openid_provider]["client_id"] if not query_params else query_params.get('client_id')
     url = furl(f"https://{openid_provider}/v2/logout",
                query_params=dict(client_id=client_id)).url
-    return ConnexionResponse(status_code=requests.codes.ok, headers=dict(Location=url))
+    session.pop('access_token')
+    return ConnexionResponse(status_code=requests.codes.found,
+                             headers={'Location': url})
 
 
 def authorize():
@@ -167,13 +170,8 @@ def cb():
     redirect_uri = redirect_uri if redirect_uri != 'None' else None
     # TODO need to parse the error message if login is required and redirect to login
     if query_params.get('error'):
-        if redirect_uri:
-            ConnexionResponse(status_code=requests.codes.unauthorized, headers=dict(Location=redirect_uri))
-        else:
-            return {
-                "query": query_params,
-            }
-
+        # redirect to authorize() if logging required
+        ConnexionResponse(status_code=requests.codes.found, headers=dict(Location='/oauth/authorize'))
     elif redirect_uri and client_id:
         # OIDC proxy flow
         resp_params = dict(code=query_params["code"], state=state.get("state"))
@@ -182,6 +180,7 @@ def cb():
     else:
         # Simple flow
         oauth2_config = Config.get_oauth2_config()
+        # Retrieve Access Token and authenticate user using OIDC
         res = requests.post(token_endpoint, dict(code=query_params["code"],
                                                  client_id=oauth2_config[openid_provider]["client_id"],
                                                  client_secret=oauth2_config[openid_provider]["client_secret"],
@@ -196,18 +195,24 @@ def cb():
         tok = jwt.decode(res.json()["id_token"],
                          key=public_key,
                          audience=oauth2_config[openid_provider]["client_id"])
-        assert tok["email_verified"]
+        assert tok["email_verified"]  # TODO return a specific error when email is not verfied.
+        headers = dict()
+        resp = res.json()
+        session['access_token'] = resp['access_token']
         if redirect_uri:
             # Simple flow - redirect with QS
-            resp_params = dict(res.json(), decoded_token=json.dumps(tok), state=state.get("state"))
+            resp_params = dict(resp, decoded_token=json.dumps(tok), state=state.get("state"))
             dest = furl(state["redirect_uri"]).add(resp_params).url
-            return ConnexionResponse(status_code=requests.codes.found, headers=dict(Location=dest))
+            headers['Location'] = dest
+            return ConnexionResponse(status_code=requests.codes.found, headers=headers)
         else:
             # Simple flow - JSON
-            return {
-                "headers": dict(request.headers),
-                "query": query_params,
-                "token_endpoint": token_endpoint,
-                "res": res.json(),
-                "tok": tok,
-            }
+            headers.update(request.headers)
+            return ConnexionResponse(status_code=requests.codes.ok,
+                                     headers=headers,
+                                     body={
+                                         "query": query_params,
+                                         "token_endpoint": token_endpoint,
+                                         "res": resp,
+                                         "tok": tok,
+                                     })

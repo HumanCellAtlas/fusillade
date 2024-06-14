@@ -1,5 +1,7 @@
 import json
 import os
+import secrets
+from datetime import timedelta
 
 import boto3
 
@@ -16,6 +18,7 @@ class Config:
     _directory_name = None
     group_max = 10
     oidc_email_claim = 'https://auth.data.humancellatlas.org/email'
+    cookie_age = 600
 
     @classmethod
     def get_admin_emails(cls):
@@ -70,6 +73,19 @@ class Config:
     @classmethod
     def log_level(cls):
         return int(os.environ.get("DEBUG", "1"))
+
+    @classmethod
+    def get_flask_config(cls):
+        return dict(
+            SECRET_KEY=secrets.token_hex(32),
+            DEBUG=Config.log_level() > 1,
+            SESSION_COOKIE_HTTPONLY=True,
+            SESSION_COOKIE_SECURE=True,
+            SESSION_COOKIE_SAMESITE='Strict',
+            # SESSION_COOKIE_DOMAIN='humancellatlas.org',
+            PERMANENT_SESSION_LIFETIME=timedelta(hours=3),
+            SESSION_REFRESH_EACH_REQUEST=True
+        )
 
 
 proj_path = os.path.dirname(__file__)
