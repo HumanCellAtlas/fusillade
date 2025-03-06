@@ -3,7 +3,7 @@ asn1crypto==0.24.0
 attrs==19.1.0
 boto3==1.9.222
 botocore==1.12.222
-certifi==2019.6.16
+certifi==2022.12.7
 cffi==1.12.3
 chalice==1.11.0
 chardet==3.0.4
